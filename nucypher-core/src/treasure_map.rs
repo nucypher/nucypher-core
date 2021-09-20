@@ -12,7 +12,7 @@ use crate::message_kit::MessageKit;
 use crate::serde::{serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-struct ChecksumAddress(
+pub(crate) struct ChecksumAddress(
     #[serde(
         serialize_with = "serde_serialize_bytes_as_hex",
         deserialize_with = "serde_deserialize_bytes_as_hex"
@@ -21,24 +21,24 @@ struct ChecksumAddress(
 );
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-struct PublicUrsula {
+pub(crate) struct PublicUrsula {
     checksum_address: ChecksumAddress,
     encrypting_key: PublicKey,
 }
 
-enum TreasureMapError {
+pub(crate) enum TreasureMapError {
     IncorrectThresholdSize,
     TooFewDestinations,
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-struct TreasureMap {
+pub(crate) struct TreasureMap {
     threshold: usize,
-    hrac: HRAC,
+    pub(crate) hrac: HRAC,
     // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
     // There seems to be a BTreeMap available for no_std environments,
     // but let's just use vector for now.
-    destinations: Vec<(ChecksumAddress, MessageKit)>,
+    pub(crate) destinations: Vec<(ChecksumAddress, MessageKit)>,
 }
 
 // We need to pick some serialization method of the multitude Serde provides.

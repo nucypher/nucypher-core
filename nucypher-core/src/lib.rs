@@ -8,5 +8,6 @@ extern crate alloc;
 mod authorized_kfrag;
 mod hrac;
 mod message_kit;
+mod reencryption_request;
 mod serde;
 mod treasure_map;
