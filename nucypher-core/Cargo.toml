@@ -1,0 +1,21 @@
+[package]
+name = "nucypher-core"
+version = "0.0.1"
+authors = ["Bogdan Opanchuk <bogdan@opanchuk.net>"]
+edition = "2018"
+license = "GPL-3.0-only"
+description = "Nucypher network core datastructures"
+repository = "https://github.com/nucypher/nucypher-core/tree/master/nucypher-core"
+readme = "README.md"
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+umbral-pre = "0.3"
+serde = { version = "1", default-features = false, features = ["derive"] }
+
+generic-array = "*"
+typenum = "*"
+sha3 = "*"
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+base64 = { version = "0.13", default-features = false, features = ["alloc"] }
+rmp-serde = "0.15"
