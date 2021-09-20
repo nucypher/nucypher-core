@@ -9,5 +9,6 @@ mod authorized_kfrag;
 mod hrac;
 mod message_kit;
 mod reencryption_request;
+mod reencryption_response;
 mod serde;
 mod treasure_map;
