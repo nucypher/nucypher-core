@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "nucypher-core",
+    "nucypher-core-python",
 ]
 
 # Prevents feature conflicts between [dependencies] and [dev-dependencies]

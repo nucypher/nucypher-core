@@ -9,7 +9,7 @@ use crate::treasure_map::{ChecksumAddress, TreasureMap};
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-struct ReencryptionRequest {
+pub struct ReencryptionRequest {
     hrac: HRAC,
     alice_verifying_key: PublicKey,
     bob_verifying_key: PublicKey,

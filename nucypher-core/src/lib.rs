@@ -12,3 +12,6 @@ mod reencryption_request;
 mod reencryption_response;
 mod serde;
 mod treasure_map;
+
+pub use reencryption_request::ReencryptionRequest;
+pub use reencryption_response::ReencryptionResponse;

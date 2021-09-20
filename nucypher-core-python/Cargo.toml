@@ -1,0 +1,16 @@
+[package]
+name = "nucypher-core-python"
+authors = ["Bogdan Opanchuk <bogdan@opanchuk.net>"]
+version = "0.0.1"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.14", features = ["extension-module"] }
+nucypher-core = { path = "../nucypher-core" }
+#generic-array = "0.14"
+
+[build-dependencies]
+pyo3-build-config = "*"

@@ -9,7 +9,7 @@ use umbral_pre::{
 
 /// A response from Ursula with reencrypted capsule frags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-struct ReencryptionResponse {
+pub struct ReencryptionResponse {
     cfrags: Box<[CapsuleFrag]>,
     signature: Signature,
 }
