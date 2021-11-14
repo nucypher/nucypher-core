@@ -17,19 +17,13 @@ use crate::serde::{
 };
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub(crate) struct ChecksumAddress(
+pub struct ChecksumAddress(
     #[serde(
         serialize_with = "serde_serialize_bytes_as_hex",
         deserialize_with = "serde_deserialize_bytes_as_hex"
     )]
     GenericArray<u8, U20>,
 );
-
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub(crate) struct PublicUrsula {
-    checksum_address: ChecksumAddress,
-    encrypting_key: PublicKey,
-}
 
 pub(crate) enum TreasureMapError {
     IncorrectThresholdSize,

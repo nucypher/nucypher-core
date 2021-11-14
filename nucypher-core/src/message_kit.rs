@@ -8,7 +8,7 @@ use umbral_pre::{
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct MessageKit {
-    capsule: Capsule,
+    pub(crate) capsule: Capsule,
     ciphertext: Box<[u8]>,
 }
 
