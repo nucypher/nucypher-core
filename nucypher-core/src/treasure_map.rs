@@ -45,7 +45,7 @@ pub(crate) struct TreasureMap {
     // but let's just use vector for now.
     pub(crate) destinations: Vec<(ChecksumAddress, EncryptedKeyFrag)>,
     policy_encrypting_key: PublicKey,
-    publisher_verifying_key: PublicKey,
+    pub(crate) publisher_verifying_key: PublicKey,
 }
 
 impl TreasureMap {

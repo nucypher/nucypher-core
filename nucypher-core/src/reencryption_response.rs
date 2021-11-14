@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    Capsule, CapsuleFrag, DeserializableFromArray, SerializableToArray, Signature, Signer,
-    VerifiedCapsuleFrag,
+    Capsule, CapsuleFrag, DeserializableFromArray, PublicKey, SerializableToArray, Signature,
+    Signer, VerifiedCapsuleFrag,
 };
 
 /// A response from Ursula with reencrypted capsule frags.
@@ -14,29 +14,71 @@ pub struct ReencryptionResponse {
     signature: Signature,
 }
 
-impl ReencryptionResponse {
-    pub fn new(capsules: &[Capsule], vcfrags: &[VerifiedCapsuleFrag], signer: &Signer) -> Self {
-        let capsule_bytes = capsules.iter().fold(Vec::<u8>::new(), |mut acc, capsule| {
-            acc.extend(capsule.to_array().as_ref());
-            acc
-        });
+fn signed_message(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
+    let capsule_bytes = capsules.iter().fold(Vec::<u8>::new(), |mut acc, capsule| {
+        acc.extend(capsule.to_array().as_ref());
+        acc
+    });
 
+    let cfrag_bytes = cfrags.iter().fold(Vec::<u8>::new(), |mut acc, cfrag| {
+        acc.extend(cfrag.to_array().as_ref());
+        acc
+    });
+
+    [capsule_bytes, cfrag_bytes].concat()
+}
+
+impl ReencryptionResponse {
+    pub fn new(signer: &Signer, capsules: &[Capsule], vcfrags: &[VerifiedCapsuleFrag]) -> Self {
         // un-verify
         let cfrags: Vec<_> = vcfrags
             .iter()
             .map(|vcfrag| CapsuleFrag::from_array(&vcfrag.to_array()).unwrap())
             .collect();
 
-        let cfrag_bytes = cfrags.iter().fold(Vec::<u8>::new(), |mut acc, cfrag| {
-            acc.extend(cfrag.to_array().as_ref());
-            acc
-        });
-
-        let signature = signer.sign(&[capsule_bytes, cfrag_bytes].concat());
+        let signature = signer.sign(&signed_message(&capsules, &cfrags));
 
         ReencryptionResponse {
             cfrags: cfrags.into_boxed_slice(),
             signature,
         }
+    }
+
+    pub fn verify(
+        &self,
+        capsules: &[Capsule],
+        alice_verifying_key: &PublicKey,
+        ursula_verifying_key: &PublicKey,
+        policy_encrypting_key: &PublicKey,
+        bob_encrypting_key: &PublicKey,
+    ) -> Option<Box<[VerifiedCapsuleFrag]>> {
+        if capsules.len() != self.cfrags.len() {
+            // Mismatched number of capsules and cfrags
+            return None;
+        }
+
+        // Validate re-encryption signature
+        if !self.signature.verify(
+            &ursula_verifying_key,
+            &signed_message(capsules, &self.cfrags),
+        ) {
+            return None;
+        }
+
+        let vcfrags = self
+            .cfrags
+            .iter()
+            .zip(capsules.iter())
+            .map(|(cfrag, capsule)| {
+                cfrag.verify(
+                    capsule,
+                    alice_verifying_key,
+                    policy_encrypting_key,
+                    bob_encrypting_key,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>();
+
+        vcfrags.ok().map(|vcfrags| vcfrags.into_boxed_slice())
     }
 }

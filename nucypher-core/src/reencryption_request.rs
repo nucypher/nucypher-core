@@ -11,7 +11,7 @@ use crate::treasure_map::{ChecksumAddress, TreasureMap};
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ReencryptionRequest {
     hrac: HRAC,
-    alice_verifying_key: PublicKey,
+    publisher_verifying_key: PublicKey,
     bob_verifying_key: PublicKey,
     encrypted_kfrag: EncryptedKeyFrag,
     capsules: Box<[Capsule]>,
@@ -19,10 +19,9 @@ pub struct ReencryptionRequest {
 
 impl ReencryptionRequest {
     fn new(
-        capsules: &[Capsule],
         ursula_address: &ChecksumAddress,
+        capsules: &[Capsule],
         treasure_map: &TreasureMap,
-        alice_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
     ) -> Self {
         let (_address, encrypted_kfrag) = treasure_map
@@ -33,7 +32,7 @@ impl ReencryptionRequest {
 
         Self {
             hrac: treasure_map.hrac,
-            alice_verifying_key: *alice_verifying_key,
+            publisher_verifying_key: treasure_map.publisher_verifying_key,
             bob_verifying_key: *bob_verifying_key,
             encrypted_kfrag: encrypted_kfrag.clone(),
             capsules: capsules.into(),
