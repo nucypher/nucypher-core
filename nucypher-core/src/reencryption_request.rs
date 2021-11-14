@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use umbral_pre::{Capsule, PublicKey};
 
 use crate::hrac::HRAC;
-use crate::message_kit::MessageKit;
+use crate::key_frag::EncryptedKeyFrag;
 use crate::treasure_map::{ChecksumAddress, TreasureMap};
 
 /// A request for an Ursula to reencrypt for several capsules.
@@ -13,7 +13,7 @@ pub struct ReencryptionRequest {
     hrac: HRAC,
     alice_verifying_key: PublicKey,
     bob_verifying_key: PublicKey,
-    encrypted_kfrag: MessageKit,
+    encrypted_kfrag: EncryptedKeyFrag,
     capsules: Box<[Capsule]>,
 }
 

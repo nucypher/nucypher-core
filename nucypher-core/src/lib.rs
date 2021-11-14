@@ -5,8 +5,8 @@
 
 extern crate alloc;
 
-mod authorized_kfrag;
 mod hrac;
+mod key_frag;
 mod message_kit;
 mod reencryption_request;
 mod reencryption_response;
