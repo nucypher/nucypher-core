@@ -14,6 +14,7 @@ mod retrieval_kit;
 mod revocation_order;
 mod serde;
 mod treasure_map;
+mod node_metadata;
 
 pub use reencryption_request::ReencryptionRequest;
 pub use reencryption_response::ReencryptionResponse;
