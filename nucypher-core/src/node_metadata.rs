@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 use typenum::U32;
 use umbral_pre::{PublicKey, Signature, Signer};
 
-use crate::serde::standard_serialize;
-use crate::serde::{serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex};
+use crate::fleet_state::FleetStateChecksum;
+use crate::serde::{
+    serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_serialize,
+};
 use crate::treasure_map::ChecksumAddress;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
-    public_address: ChecksumAddress,
+    pub(crate) public_address: ChecksumAddress,
     domain: String,
     timestamp_epoch: u32,
     verifying_key: PublicKey,
@@ -28,7 +30,7 @@ impl NodeMetadataPayload {}
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
     signature: Signature,
-    payload: NodeMetadataPayload,
+    pub(crate) payload: NodeMetadataPayload,
 }
 
 impl NodeMetadata {
@@ -51,23 +53,6 @@ impl NodeMetadata {
         } else {
             return None;
         }
-    }
-}
-
-type FleetChecksumSize = U32;
-
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct FleetStateChecksum(
-    #[serde(
-        serialize_with = "serde_serialize_bytes_as_hex",
-        deserialize_with = "serde_deserialize_bytes_as_hex"
-    )]
-    GenericArray<u8, FleetChecksumSize>,
-);
-
-impl AsRef<[u8]> for FleetStateChecksum {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
     }
 }
 

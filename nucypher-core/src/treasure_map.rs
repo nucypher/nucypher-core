@@ -16,7 +16,7 @@ use crate::serde::{
     standard_serialize,
 };
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ChecksumAddress(
     #[serde(
         serialize_with = "serde_serialize_bytes_as_hex",

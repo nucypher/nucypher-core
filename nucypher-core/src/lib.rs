@@ -5,6 +5,7 @@
 
 extern crate alloc;
 
+mod fleet_state;
 mod hrac;
 mod key_frag;
 mod message_kit;
