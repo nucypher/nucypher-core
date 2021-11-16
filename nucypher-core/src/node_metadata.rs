@@ -5,16 +5,16 @@ use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
 use typenum::U32;
 use umbral_pre::{PublicKey, Signature, Signer};
+use ethereum_types::Address;
 
 use crate::fleet_state::FleetStateChecksum;
 use crate::serde::{
     serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_serialize,
 };
-use crate::treasure_map::ChecksumAddress;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
-    pub(crate) public_address: ChecksumAddress,
+    pub(crate) public_address: Address,
     domain: String,
     timestamp_epoch: u32,
     verifying_key: PublicKey,

@@ -2,15 +2,16 @@ use alloc::boxed::Box;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
+use ethereum_types::Address;
 
 use crate::message_kit::MessageKit;
-use crate::treasure_map::ChecksumAddress;
+
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RetrievalKit {
     capsule: Capsule,
     // TODO: change to a set, find one that works in no-std
-    queried_addresses: Option<Box<[ChecksumAddress]>>,
+    queried_addresses: Option<Box<[Address]>>,
 }
 
 impl RetrievalKit {
@@ -21,7 +22,7 @@ impl RetrievalKit {
         }
     }
 
-    pub fn new(capsule: &Capsule, queried_addresses: &[ChecksumAddress]) -> Self {
+    pub fn new(capsule: &Capsule, queried_addresses: &[Address]) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,

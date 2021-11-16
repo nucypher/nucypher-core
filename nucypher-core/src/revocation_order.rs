@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 use umbral_pre::{PublicKey, Signature, Signer};
+use ethereum_types::Address;
 
 use crate::key_frag::EncryptedKeyFrag;
 use crate::serde::standard_serialize;
-use crate::treasure_map::ChecksumAddress;
+
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 struct RevocationOrder {
-    ursula_address: ChecksumAddress,
+    ursula_address: Address,
     encrypted_kfrag: EncryptedKeyFrag,
     signature: Signature,
 }
@@ -15,7 +16,7 @@ struct RevocationOrder {
 impl RevocationOrder {
     pub fn new(
         signer: &Signer,
-        ursula_address: &ChecksumAddress,
+        ursula_address: &Address,
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
         Self {

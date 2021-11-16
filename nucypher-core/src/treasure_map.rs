@@ -8,6 +8,7 @@ use umbral_pre::{
     decrypt_original, encrypt, Capsule, PublicKey, SecretKey, SerializableToArray, Signature,
     Signer, VerifiedKeyFrag,
 };
+use ethereum_types::Address;
 
 use crate::hrac::HRAC;
 use crate::key_frag::{AuthorizedKeyFrag, EncryptedKeyFrag};
@@ -15,21 +16,6 @@ use crate::serde::{
     serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_deserialize,
     standard_serialize,
 };
-
-#[derive(PartialEq, PartialOrd, Eq, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ChecksumAddress(
-    #[serde(
-        serialize_with = "serde_serialize_bytes_as_hex",
-        deserialize_with = "serde_deserialize_bytes_as_hex"
-    )]
-    GenericArray<u8, U20>,
-);
-
-impl AsRef<[u8]> for ChecksumAddress {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
 
 pub(crate) enum TreasureMapError {
     IncorrectThresholdSize,
@@ -43,7 +29,7 @@ pub(crate) struct TreasureMap {
     // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
     // There seems to be a BTreeMap available for no_std environments,
     // but let's just use vector for now.
-    pub(crate) destinations: Vec<(ChecksumAddress, EncryptedKeyFrag)>,
+    pub(crate) destinations: Vec<(Address, EncryptedKeyFrag)>,
     policy_encrypting_key: PublicKey,
     pub(crate) publisher_verifying_key: PublicKey,
 }
@@ -56,7 +42,7 @@ impl TreasureMap {
         policy_encrypting_key: &PublicKey,
         // TODO: would be nice to enforce that checksum addresses are not repeated,
         // but there is no "map-like" trait in Rust, and a specific map class seems too restrictive...
-        assigned_kfrags: &[(ChecksumAddress, PublicKey, VerifiedKeyFrag)],
+        assigned_kfrags: &[(Address, PublicKey, VerifiedKeyFrag)],
         threshold: usize,
     ) -> Result<Self, TreasureMapError> {
         if threshold < 1 || threshold > 255 {
