@@ -11,6 +11,7 @@ mod message_kit;
 mod reencryption_request;
 mod reencryption_response;
 mod retrieval_kit;
+mod revocation_order;
 mod serde;
 mod treasure_map;
 

@@ -25,6 +25,12 @@ pub struct ChecksumAddress(
     GenericArray<u8, U20>,
 );
 
+impl AsRef<[u8]> for ChecksumAddress {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 pub(crate) enum TreasureMapError {
     IncorrectThresholdSize,
     TooFewDestinations,
