@@ -2,21 +2,11 @@ use generic_array::sequence::Split;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
-use typenum::U16;
+use typenum::{Unsigned, U16};
 use umbral_pre::{PublicKey, SerializableToArray};
 
-use crate::serde::{serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex};
-
-type HracSize = U16;
-
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct HRAC(
-    #[serde(
-        serialize_with = "serde_serialize_bytes_as_hex",
-        deserialize_with = "serde_deserialize_bytes_as_hex"
-    )]
-    GenericArray<u8, HracSize>,
-);
+pub struct HRAC([u8; 16]);
 
 impl HRAC {
     pub fn new(
@@ -30,8 +20,9 @@ impl HRAC {
             .chain(label)
             .finalize();
 
-        let (hrac, _rest): (GenericArray<u8, HracSize>, GenericArray<u8, _>) = digest.split();
-        Self(hrac)
+        // No problem with hardcoding here, since the size will be checked in compile-time
+        let (hrac, _rest): (GenericArray<u8, U16>, GenericArray<u8, _>) = digest.split();
+        Self(hrac.into())
     }
 }
 

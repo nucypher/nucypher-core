@@ -1,11 +1,10 @@
 use alloc::boxed::Box;
 
+use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
-use ethereum_types::Address;
 
 use crate::message_kit::MessageKit;
-
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RetrievalKit {

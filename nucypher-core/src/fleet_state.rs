@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 
 use crate::node_metadata::NodeMetadata;
-use crate::serde::{
-    serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_serialize,
-};
+use crate::serde::standard_serialize;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct FleetStateChecksum([u8; 32]);

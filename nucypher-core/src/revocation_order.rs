@@ -1,10 +1,9 @@
+use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{PublicKey, Signature, Signer};
-use ethereum_types::Address;
 
 use crate::key_frag::EncryptedKeyFrag;
 use crate::serde::standard_serialize;
-
 
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 struct RevocationOrder {

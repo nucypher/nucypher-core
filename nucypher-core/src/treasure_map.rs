@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use ethereum_types::Address;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
 use typenum::U20;
@@ -8,14 +9,10 @@ use umbral_pre::{
     decrypt_original, encrypt, Capsule, PublicKey, SecretKey, SerializableToArray, Signature,
     Signer, VerifiedKeyFrag,
 };
-use ethereum_types::Address;
 
 use crate::hrac::HRAC;
 use crate::key_frag::{AuthorizedKeyFrag, EncryptedKeyFrag};
-use crate::serde::{
-    serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_deserialize,
-    standard_serialize,
-};
+use crate::serde::{standard_deserialize, standard_serialize};
 
 pub(crate) enum TreasureMapError {
     IncorrectThresholdSize,

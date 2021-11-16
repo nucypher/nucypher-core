@@ -1,16 +1,14 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 
+use ethereum_types::Address;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
 use typenum::U32;
 use umbral_pre::{PublicKey, Signature, Signer};
-use ethereum_types::Address;
 
 use crate::fleet_state::FleetStateChecksum;
-use crate::serde::{
-    serde_deserialize_bytes_as_hex, serde_serialize_bytes_as_hex, standard_serialize,
-};
+use crate::serde::standard_serialize;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {

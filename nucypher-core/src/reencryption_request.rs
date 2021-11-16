@@ -1,12 +1,12 @@
 use alloc::boxed::Box;
 
+use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{Capsule, PublicKey};
-use ethereum_types::Address;
 
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::treasure_map::{TreasureMap};
+use crate::treasure_map::TreasureMap;
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
