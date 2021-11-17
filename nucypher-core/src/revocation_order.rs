@@ -5,14 +5,16 @@ use umbral_pre::{PublicKey, Signature, Signer};
 use crate::key_frag::EncryptedKeyFrag;
 use crate::serde::standard_serialize;
 
+/// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
-struct RevocationOrder {
+pub struct RevocationOrder {
     ursula_address: Address,
     encrypted_kfrag: EncryptedKeyFrag,
     signature: Signature,
 }
 
 impl RevocationOrder {
+    /// Create and sign a new revocation order.
     pub fn new(
         signer: &Signer,
         ursula_address: &Address,
@@ -31,6 +33,7 @@ impl RevocationOrder {
         }
     }
 
+    /// Verifies the revocation order against Alice's key.
     pub fn verify_signature(self, alice_verifying_key: &PublicKey) -> bool {
         // TODO: return an Option of something instead of returning `bool`?
         let message = [

@@ -2,14 +2,13 @@ use alloc::boxed::Box;
 use alloc::string::String;
 
 use ethereum_types::Address;
-use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
-use typenum::U32;
 use umbral_pre::{PublicKey, Signature, Signer};
 
 use crate::fleet_state::FleetStateChecksum;
 use crate::serde::standard_serialize;
 
+/// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
     pub(crate) public_address: Address,
@@ -25,6 +24,7 @@ pub struct NodeMetadataPayload {
 
 impl NodeMetadataPayload {}
 
+/// Signed node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
     signature: Signature,
@@ -32,6 +32,7 @@ pub struct NodeMetadata {
 }
 
 impl NodeMetadata {
+    /// Creates and signs a new metadata object.
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
         Self {
             signature: signer.sign(&standard_serialize(&payload)),
@@ -39,6 +40,7 @@ impl NodeMetadata {
         }
     }
 
+    /// Verifies signed node metadata and returns the contained payload.
     pub fn verify(self) -> Option<NodeMetadataPayload> {
         // Note: in order for this to make sense, `verifying_key` must be checked independently.
         // Currently it is done in `validate_worker()` (using `decentralized_identity_evidence`)
@@ -54,6 +56,7 @@ impl NodeMetadata {
     }
 }
 
+/// A request for metadata exchange.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataRequest {
     fleet_state_checksum: FleetStateChecksum,
@@ -61,6 +64,7 @@ pub struct MetadataRequest {
 }
 
 impl MetadataRequest {
+    /// Creates a new request.
     pub fn new(
         fleet_state_checksum: FleetStateChecksum,
         announce_nodes: Option<Box<[NodeMetadata]>>,
@@ -79,6 +83,7 @@ pub struct VerifiedMetadataResponse {
     other_nodes: Option<Box<NodeMetadata>>,
 }
 
+/// A response returned by an Ursula containing known node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataResponse {
     signature: Signature,
@@ -86,6 +91,7 @@ pub struct MetadataResponse {
 }
 
 impl MetadataResponse {
+    /// Creates and signs a new metadata response.
     pub fn new(signer: &Signer, response: &VerifiedMetadataResponse) -> Self {
         Self {
             signature: signer.sign(&standard_serialize(response)),
@@ -93,6 +99,7 @@ impl MetadataResponse {
         }
     }
 
+    /// Verifies the metadata response and returns the contained payload.
     pub fn verify(&self, verifying_pk: &PublicKey) -> Option<VerifiedMetadataResponse> {
         if self
             .signature

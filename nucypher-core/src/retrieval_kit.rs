@@ -6,6 +6,9 @@ use umbral_pre::Capsule;
 
 use crate::message_kit::MessageKit;
 
+/// An object encapsulating the information necessary for retrieval of cfrags from Ursulas.
+/// Contains the capsule and the checksum addresses of Ursulas from which the requester
+/// already received cfrags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RetrievalKit {
     capsule: Capsule,
@@ -14,6 +17,7 @@ pub struct RetrievalKit {
 }
 
 impl RetrievalKit {
+    /// Creates a new retrival kit from a message kit.
     pub fn from_message_kit(message_kit: &MessageKit) -> Self {
         Self {
             capsule: message_kit.capsule,
@@ -21,6 +25,7 @@ impl RetrievalKit {
         }
     }
 
+    /// Creates a new retrieval kit recording the addresses already queried for reencryption.
     pub fn new(capsule: &Capsule, queried_addresses: &[Address]) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {

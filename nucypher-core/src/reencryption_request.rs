@@ -19,7 +19,8 @@ pub struct ReencryptionRequest {
 }
 
 impl ReencryptionRequest {
-    fn new(
+    /// Creates a new reencryption request.
+    pub fn new(
         ursula_address: &Address,
         capsules: &[Capsule],
         treasure_map: &TreasureMap,

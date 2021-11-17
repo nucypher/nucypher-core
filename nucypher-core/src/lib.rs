@@ -1,3 +1,5 @@
+//! A collection of objects defining the protocol for NyCypher nodes (Ursulas).
+
 #![doc(html_root_url = "https://docs.rs/nucypher-core")]
 #![forbid(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
@@ -17,5 +19,12 @@ mod revocation_order;
 mod serde;
 mod treasure_map;
 
+pub use hrac::HRAC;
+pub use key_frag::EncryptedKeyFrag;
+pub use message_kit::MessageKit;
+pub use node_metadata::{MetadataRequest, MetadataResponse, NodeMetadata};
 pub use reencryption_request::ReencryptionRequest;
 pub use reencryption_response::ReencryptionResponse;
+pub use retrieval_kit::RetrievalKit;
+pub use revocation_order::RevocationOrder;
+pub use treasure_map::{EncryptedTreasureMap, TreasureMap};

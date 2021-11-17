@@ -29,6 +29,7 @@ fn signed_message(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
 }
 
 impl ReencryptionResponse {
+    /// Creates and signs a new reencryption response.
     pub fn new(signer: &Signer, capsules: &[Capsule], vcfrags: &[VerifiedCapsuleFrag]) -> Self {
         // un-verify
         let cfrags: Vec<_> = vcfrags
@@ -44,6 +45,7 @@ impl ReencryptionResponse {
         }
     }
 
+    /// Verifies the reencryption response and returns the contained kfrags on success.
     pub fn verify(
         &self,
         capsules: &[Capsule],

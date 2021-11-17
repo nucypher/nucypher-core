@@ -10,13 +10,13 @@ use crate::hrac::HRAC;
 use crate::serde::{standard_deserialize, standard_serialize};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct AuthorizedKeyFrag {
+struct AuthorizedKeyFrag {
     signature: Signature,
     kfrag: KeyFrag,
 }
 
 impl AuthorizedKeyFrag {
-    pub(crate) fn new(signer: &Signer, hrac: &HRAC, verified_kfrag: &VerifiedKeyFrag) -> Self {
+    fn new(signer: &Signer, hrac: &HRAC, verified_kfrag: &VerifiedKeyFrag) -> Self {
         // Alice makes plain to Ursula that, upon decrypting this message,
         // this particular KFrag is authorized for use in the policy identified by this HRAC.
 
@@ -28,7 +28,7 @@ impl AuthorizedKeyFrag {
         Self { signature, kfrag }
     }
 
-    pub(crate) fn verify(
+    pub fn verify(
         &self,
         hrac: &HRAC,
         publisher_verifying_key: &PublicKey,
@@ -48,6 +48,7 @@ impl AuthorizedKeyFrag {
     }
 }
 
+/// Encrypted and signed key frag.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedKeyFrag {
     capsule: Capsule,
@@ -55,21 +56,32 @@ pub struct EncryptedKeyFrag {
 }
 
 impl EncryptedKeyFrag {
+    /// Encrypts and signs a key frag.
     pub fn new(
+        signer: &Signer,
         recipient_key: &PublicKey,
-        authorized_kfrag: &AuthorizedKeyFrag,
+        hrac: &HRAC,
+        verified_kfrag: &VerifiedKeyFrag,
     ) -> Result<Self, EncryptionError> {
+        let auth_kfrag = AuthorizedKeyFrag::new(signer, hrac, verified_kfrag);
         // Using Umbral for asymmetric encryption here for simplicity,
         // even though we do not plan to re-encrypt the capsule.
-        let (capsule, ciphertext) = encrypt(recipient_key, &standard_serialize(&authorized_kfrag))?;
+        let (capsule, ciphertext) = encrypt(recipient_key, &standard_serialize(&auth_kfrag))?;
         Ok(Self {
             capsule,
             ciphertext,
         })
     }
 
-    pub fn decrypt(self, sk: &SecretKey) -> Option<AuthorizedKeyFrag> {
+    /// Decrypts and verifies a key frag.
+    pub fn decrypt(
+        self,
+        sk: &SecretKey,
+        hrac: &HRAC,
+        publisher_verifying_key: &PublicKey,
+    ) -> Option<VerifiedKeyFrag> {
         let auth_kfrag_bytes = decrypt_original(sk, &self.capsule, self.ciphertext).unwrap();
-        Some(standard_deserialize::<AuthorizedKeyFrag>(&auth_kfrag_bytes))
+        let auth_kfrag = standard_deserialize::<AuthorizedKeyFrag>(&auth_kfrag_bytes);
+        auth_kfrag.verify(hrac, publisher_verifying_key)
     }
 }

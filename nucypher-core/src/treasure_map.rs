@@ -2,25 +2,24 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use ethereum_types::Address;
-use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
-use typenum::U20;
 use umbral_pre::{
     decrypt_original, encrypt, Capsule, PublicKey, SecretKey, SerializableToArray, Signature,
     Signer, VerifiedKeyFrag,
 };
 
 use crate::hrac::HRAC;
-use crate::key_frag::{AuthorizedKeyFrag, EncryptedKeyFrag};
+use crate::key_frag::EncryptedKeyFrag;
 use crate::serde::{standard_deserialize, standard_serialize};
 
-pub(crate) enum TreasureMapError {
+pub enum TreasureMapError {
     IncorrectThresholdSize,
     TooFewDestinations,
 }
 
+/// A structure containing `KeyFrag` objects encrypted for Ursulas chosen for this policy.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct TreasureMap {
+pub struct TreasureMap {
     threshold: usize,
     pub(crate) hrac: HRAC,
     // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
@@ -55,8 +54,9 @@ impl TreasureMap {
         for (ursula_checksum_address, ursula_encrypting_key, verified_kfrag) in
             assigned_kfrags.iter()
         {
-            let akfrag = AuthorizedKeyFrag::new(signer, hrac, verified_kfrag);
-            let encrypted_kfrag = EncryptedKeyFrag::new(&ursula_encrypting_key, &akfrag).unwrap();
+            let encrypted_kfrag =
+                EncryptedKeyFrag::new(signer, &ursula_encrypting_key, hrac, verified_kfrag)
+                    .unwrap();
             destinations.push((*ursula_checksum_address, encrypted_kfrag));
         }
 
@@ -69,7 +69,8 @@ impl TreasureMap {
         })
     }
 
-    fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
+    /// Encrypts the treasure map for Bob.
+    pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
         EncryptedTreasureMap::new(signer, recipient_key, self)
     }
 }
@@ -108,8 +109,9 @@ impl AuthorizedTreasureMap {
     }
 }
 
+/// A treasure map encrypted for Bob.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-struct EncryptedTreasureMap {
+pub struct EncryptedTreasureMap {
     capsule: Capsule,
     ciphertext: Box<[u8]>,
 }
@@ -133,8 +135,14 @@ impl EncryptedTreasureMap {
         }
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> AuthorizedTreasureMap {
+    /// Decrypts and verifies the treasure map.
+    pub fn decrypt(
+        &self,
+        sk: &SecretKey,
+        publisher_verifying_key: &PublicKey,
+    ) -> Option<TreasureMap> {
         let plaintext = decrypt_original(sk, &self.capsule, &self.ciphertext).unwrap();
-        standard_deserialize::<AuthorizedTreasureMap>(&plaintext)
+        let auth_tmap = standard_deserialize::<AuthorizedTreasureMap>(&plaintext);
+        auth_tmap.verify(&sk.public_key(), publisher_verifying_key)
     }
 }

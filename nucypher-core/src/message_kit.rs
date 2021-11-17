@@ -6,6 +6,7 @@ use umbral_pre::{
     PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
+/// Encrypted message prepared for re-encryption.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct MessageKit {
     pub(crate) capsule: Capsule,
@@ -13,6 +14,7 @@ pub struct MessageKit {
 }
 
 impl MessageKit {
+    /// Creates a new encrypted message for the given policy key.
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
@@ -24,10 +26,12 @@ impl MessageKit {
         })
     }
 
+    /// Decrypts the message using the original (Alice's) key.
     pub fn decrypt_original(&self, sk: &SecretKey) -> Result<Box<[u8]>, DecryptionError> {
         decrypt_original(sk, &self.capsule, &self.ciphertext)
     }
 
+    /// Decrypts the message using the Bob's key and re-encrypted capsule frags.
     pub fn decrypt_reencrypted(
         &self,
         sk: &SecretKey,
