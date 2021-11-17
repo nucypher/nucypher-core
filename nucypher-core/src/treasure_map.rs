@@ -41,7 +41,7 @@ impl TreasureMap {
         assigned_kfrags: &[(Address, PublicKey, VerifiedKeyFrag)],
         threshold: usize,
     ) -> Result<Self, TreasureMapError> {
-        if threshold < 1 || threshold > 255 {
+        if !(1..=255).contains(&threshold) {
             return Err(TreasureMapError::IncorrectThresholdSize);
         }
 
@@ -55,8 +55,7 @@ impl TreasureMap {
             assigned_kfrags.iter()
         {
             let encrypted_kfrag =
-                EncryptedKeyFrag::new(signer, &ursula_encrypting_key, hrac, verified_kfrag)
-                    .unwrap();
+                EncryptedKeyFrag::new(signer, ursula_encrypting_key, hrac, verified_kfrag).unwrap();
             destinations.push((*ursula_checksum_address, encrypted_kfrag));
         }
 

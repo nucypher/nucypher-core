@@ -37,7 +37,7 @@ impl ReencryptionResponse {
             .map(|vcfrag| CapsuleFrag::from_array(&vcfrag.to_array()).unwrap())
             .collect();
 
-        let signature = signer.sign(&signed_message(&capsules, &cfrags));
+        let signature = signer.sign(&signed_message(capsules, &cfrags));
 
         ReencryptionResponse {
             cfrags: cfrags.into_boxed_slice(),
@@ -61,7 +61,7 @@ impl ReencryptionResponse {
 
         // Validate re-encryption signature
         if !self.signature.verify(
-            &ursula_verifying_key,
+            ursula_verifying_key,
             &signed_message(capsules, &self.cfrags),
         ) {
             return None;

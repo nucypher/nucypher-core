@@ -49,9 +49,9 @@ impl NodeMetadata {
             &self.payload.verifying_key,
             &standard_serialize(&self.payload),
         ) {
-            return Some(self.payload);
+            Some(self.payload)
         } else {
-            return None;
+            None
         }
     }
 }

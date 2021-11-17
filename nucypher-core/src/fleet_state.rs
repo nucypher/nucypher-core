@@ -1,5 +1,3 @@
-use alloc::vec::Vec;
-
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 
@@ -11,7 +9,7 @@ pub struct FleetStateChecksum([u8; 32]);
 
 impl FleetStateChecksum {
     pub fn from_nodes(this_node: Option<NodeMetadata>, other_nodes: &[NodeMetadata]) -> Self {
-        let mut nodes = other_nodes.iter().cloned().collect::<Vec<_>>();
+        let mut nodes = other_nodes.to_vec();
         match this_node {
             None => {}
             Some(node) => nodes.push(node),
