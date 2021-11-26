@@ -2,6 +2,28 @@ use alloc::boxed::Box;
 
 use serde::{Deserialize, Serialize};
 
+pub trait SerializableToBytes {
+    fn to_bytes(&self) -> Box<[u8]>;
+}
+
+impl<T: Serialize> SerializableToBytes for T {
+    fn to_bytes(&self) -> Box<[u8]> {
+        rmp_serde::to_vec(self).unwrap().into_boxed_slice()
+    }
+}
+
+pub trait DeserializableFromBytes<'a> {
+    fn from_bytes(bytes: &'a [u8]) -> Self;
+}
+
+impl<'a, T: Deserialize<'a>> DeserializableFromBytes<'a> for T {
+    fn from_bytes(bytes: &'a [u8]) -> Self {
+        rmp_serde::from_read_ref(bytes).unwrap()
+    }
+}
+
+pub trait Versioned<'a>: SerializableToBytes + DeserializableFromBytes<'a> {}
+
 // We need to pick some serialization method of the multitude Serde provides.
 // Using MessagePack for now.
 pub(crate) fn standard_serialize<T: Serialize>(obj: &T) -> Box<[u8]> {

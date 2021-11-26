@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.14", features = ["extension-module"] }
 nucypher-core = { path = "../nucypher-core" }
 #generic-array = "0.14"
+umbral-pre = { path = "/Users/bogdan/wb/github/umbral/umbral-pre", features = ["bindings-python"] }
+ethereum-types = "*"
 
 [build-dependencies]
 pyo3-build-config = "*"

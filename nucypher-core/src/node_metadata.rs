@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
@@ -11,15 +12,15 @@ use crate::serde::standard_serialize;
 /// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
-    pub(crate) public_address: Address,
-    domain: String,
-    timestamp_epoch: u32,
-    verifying_key: PublicKey,
-    encrypting_key: PublicKey,
-    certificate_bytes: Box<[u8]>, // serialized SSL certificate in PEM format
-    host: String,
-    port: u16,
-    decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
+    pub public_address: Address,
+    pub domain: String,
+    pub timestamp_epoch: u32,
+    pub verifying_key: PublicKey,
+    pub encrypting_key: PublicKey,
+    pub certificate_bytes: Box<[u8]>, // serialized SSL certificate in PEM format
+    pub host: String,
+    pub port: u16,
+    pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
 }
 
 impl NodeMetadataPayload {}
@@ -41,7 +42,7 @@ impl NodeMetadata {
     }
 
     /// Verifies signed node metadata and returns the contained payload.
-    pub fn verify(self) -> Option<NodeMetadataPayload> {
+    pub fn verify(&self) -> Option<NodeMetadataPayload> {
         // Note: in order for this to make sense, `verifying_key` must be checked independently.
         // Currently it is done in `validate_worker()` (using `decentralized_identity_evidence`)
         // TODO: do this on deserialization?
@@ -49,7 +50,7 @@ impl NodeMetadata {
             &self.payload.verifying_key,
             &standard_serialize(&self.payload),
         ) {
-            Some(self.payload)
+            Some(self.payload.clone())
         } else {
             None
         }
@@ -66,21 +67,30 @@ pub struct MetadataRequest {
 impl MetadataRequest {
     /// Creates a new request.
     pub fn new(
-        fleet_state_checksum: FleetStateChecksum,
-        announce_nodes: Option<Box<[NodeMetadata]>>,
+        fleet_state_checksum: &FleetStateChecksum,
+        announce_nodes: Option<&[NodeMetadata]>,
     ) -> Self {
+        let maybe_nodes = announce_nodes.map(|nodes| nodes.to_vec());
         Self {
-            fleet_state_checksum,
-            announce_nodes,
+            fleet_state_checksum: fleet_state_checksum.clone(),
+            announce_nodes: maybe_nodes.map(|nodes| nodes.into_boxed_slice()),
         }
     }
 }
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct VerifiedMetadataResponse {
-    timestamp_epoch: u32,
     this_node: Option<NodeMetadata>,
-    other_nodes: Option<Box<NodeMetadata>>,
+    other_nodes: Option<Box<[NodeMetadata]>>,
+}
+
+impl VerifiedMetadataResponse {
+    pub fn new(this_node: Option<&NodeMetadata>, other_nodes: Option<&[NodeMetadata]>) -> Self {
+        Self {
+            this_node: this_node.cloned(),
+            other_nodes: other_nodes.map(|nodes| nodes.to_vec().into_boxed_slice()),
+        }
+    }
 }
 
 /// A response returned by an Ursula containing known node metadata.

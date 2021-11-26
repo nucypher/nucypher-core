@@ -34,7 +34,7 @@ impl RevocationOrder {
     }
 
     /// Verifies the revocation order against Alice's key.
-    pub fn verify_signature(self, alice_verifying_key: &PublicKey) -> bool {
+    pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         // TODO: return an Option of something instead of returning `bool`?
         let message = [
             self.ursula_address.as_ref(),

@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+pub mod address;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -19,10 +20,14 @@ mod revocation_order;
 mod serde;
 mod treasure_map;
 
+pub use crate::serde::{DeserializableFromBytes, SerializableToBytes};
+pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;
 pub use message_kit::MessageKit;
-pub use node_metadata::{MetadataRequest, MetadataResponse, NodeMetadata};
+pub use node_metadata::{
+    MetadataRequest, MetadataResponse, NodeMetadata, NodeMetadataPayload, VerifiedMetadataResponse,
+};
 pub use reencryption_request::ReencryptionRequest;
 pub use reencryption_response::ReencryptionResponse;
 pub use retrieval_kit::RetrievalKit;

@@ -8,11 +8,11 @@ use crate::serde::standard_serialize;
 pub struct FleetStateChecksum([u8; 32]);
 
 impl FleetStateChecksum {
-    pub fn from_nodes(this_node: Option<NodeMetadata>, other_nodes: &[NodeMetadata]) -> Self {
+    pub fn from_nodes(this_node: Option<&NodeMetadata>, other_nodes: &[NodeMetadata]) -> Self {
         let mut nodes = other_nodes.to_vec();
         match this_node {
             None => {}
-            Some(node) => nodes.push(node),
+            Some(node) => nodes.push(node.clone()),
         }
 
         // We do not expect node metadata with equal checksum addresses,

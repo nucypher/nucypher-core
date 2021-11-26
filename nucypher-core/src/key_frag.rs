@@ -75,12 +75,12 @@ impl EncryptedKeyFrag {
 
     /// Decrypts and verifies a key frag.
     pub fn decrypt(
-        self,
+        &self,
         sk: &SecretKey,
         hrac: &HRAC,
         publisher_verifying_key: &PublicKey,
     ) -> Option<VerifiedKeyFrag> {
-        let auth_kfrag_bytes = decrypt_original(sk, &self.capsule, self.ciphertext).unwrap();
+        let auth_kfrag_bytes = decrypt_original(sk, &self.capsule, &self.ciphertext).unwrap();
         let auth_kfrag = standard_deserialize::<AuthorizedKeyFrag>(&auth_kfrag_bytes);
         auth_kfrag.verify(hrac, publisher_verifying_key)
     }
