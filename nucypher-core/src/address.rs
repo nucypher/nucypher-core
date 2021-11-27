@@ -2,6 +2,7 @@ use core::str::FromStr;
 
 use ethereum_types::Address;
 
+/// Converts a string with a checksummed Ethereum address into the canonical form (a byte array).
 pub fn to_canonical_address(checksum_address: &str) -> Option<Address> {
     // TODO: check the checksum
     let hex_str = checksum_address.strip_prefix("0x")?;

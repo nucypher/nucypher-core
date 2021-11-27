@@ -1,6 +1,5 @@
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
@@ -12,14 +11,23 @@ use crate::serde::standard_serialize;
 /// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
+    /// The worker's Ethereum address.
     pub public_address: Address,
+    /// The network identifier.
     pub domain: String,
+    /// The timestamp of the metadata creation.
     pub timestamp_epoch: u32,
+    /// The node's verifying key.
     pub verifying_key: PublicKey,
+    /// The node's encrypting key.
     pub encrypting_key: PublicKey,
-    pub certificate_bytes: Box<[u8]>, // serialized SSL certificate in PEM format
+    /// The node's SSL certificate (serialized in PEM format).
+    pub certificate_bytes: Box<[u8]>,
+    /// The hostname of the node's REST service.
     pub host: String,
+    /// The port of the node's REST service.
     pub port: u16,
+    /// The node's verifying key signed by the private key corresponding to `public_address`.
     pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
 }
 
@@ -78,6 +86,7 @@ impl MetadataRequest {
     }
 }
 
+/// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct VerifiedMetadataResponse {
     this_node: Option<NodeMetadata>,
@@ -85,6 +94,7 @@ pub struct VerifiedMetadataResponse {
 }
 
 impl VerifiedMetadataResponse {
+    /// Creates the new metadata response payload.
     pub fn new(this_node: Option<&NodeMetadata>, other_nodes: Option<&[NodeMetadata]>) -> Self {
         Self {
             this_node: this_node.cloned(),

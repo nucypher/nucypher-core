@@ -7,7 +7,7 @@
 
 extern crate alloc;
 
-pub mod address;
+mod address;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -21,6 +21,7 @@ mod serde;
 mod treasure_map;
 
 pub use crate::serde::{DeserializableFromBytes, SerializableToBytes};
+pub use address::to_canonical_address;
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;

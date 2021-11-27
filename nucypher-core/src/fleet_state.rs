@@ -4,10 +4,13 @@ use sha3::{Digest, Sha3_256};
 use crate::node_metadata::NodeMetadata;
 use crate::serde::standard_serialize;
 
+/// An identifier of the fleet state.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct FleetStateChecksum([u8; 32]);
 
 impl FleetStateChecksum {
+    /// Creates a checksum from the given list of node metadata, and, possibly,
+    /// also the metadata of the requesting node.
     pub fn from_nodes(this_node: Option<&NodeMetadata>, other_nodes: &[NodeMetadata]) -> Self {
         let mut nodes = other_nodes.to_vec();
         match this_node {

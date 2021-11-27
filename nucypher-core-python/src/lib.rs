@@ -1,14 +1,7 @@
-//use pyo3::class::basic::CompareOp;
-//use pyo3::create_exception;
-use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
+use pyo3::exceptions::{PyValueError};
 use pyo3::prelude::*;
-//use pyo3::pyclass::PyClass;
-use pyo3::types::{PyBytes, PyUnicode};
-//use pyo3::wrap_pyfunction;
-//use pyo3::PyObjectProtocol;
-use ethereum_types;
+use pyo3::types::{PyBytes};
 
-use nucypher_core;
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -217,7 +210,7 @@ impl Address {
     #[new]
     fn from_checksum_address(checksum_address: &str) -> Self {
         Address {
-            backend: nucypher_core::address::to_canonical_address(checksum_address).unwrap(),
+            backend: nucypher_core::to_canonical_address(checksum_address).unwrap(),
         }
     }
 }
@@ -589,6 +582,7 @@ pub struct NodeMetadataPayload {
 
 #[pymethods]
 impl NodeMetadataPayload {
+    #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
         public_address: Address,
@@ -610,7 +604,7 @@ impl NodeMetadataPayload {
                 encrypting_key: encrypting_key.backend,
                 certificate_bytes: certificate_bytes.into(),
                 host: host.to_string(),
-                port: port,
+                port,
                 decentralized_identity_evidence: decentralized_identity_evidence
                     .map(|v| v.into_boxed_slice()),
             },

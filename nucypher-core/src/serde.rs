@@ -2,7 +2,9 @@ use alloc::boxed::Box;
 
 use serde::{Deserialize, Serialize};
 
+/// The object can be serialized to a byte array.
 pub trait SerializableToBytes {
+    /// Serializes the object.
     fn to_bytes(&self) -> Box<[u8]>;
 }
 
@@ -12,7 +14,9 @@ impl<T: Serialize> SerializableToBytes for T {
     }
 }
 
+/// The object can be deserialized from a byte array.
 pub trait DeserializableFromBytes<'a>: Sized {
+    /// Deserializes the object.
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error>;
 }
 
