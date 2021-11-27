@@ -12,13 +12,13 @@ impl<T: Serialize> SerializableToBytes for T {
     }
 }
 
-pub trait DeserializableFromBytes<'a> {
-    fn from_bytes(bytes: &'a [u8]) -> Self;
+pub trait DeserializableFromBytes<'a>: Sized {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error>;
 }
 
 impl<'a, T: Deserialize<'a>> DeserializableFromBytes<'a> for T {
-    fn from_bytes(bytes: &'a [u8]) -> Self {
-        rmp_serde::from_read_ref(bytes).unwrap()
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error> {
+        rmp_serde::from_read_ref(bytes)
     }
 }
 
