@@ -20,12 +20,12 @@ pub enum TreasureMapError {
 /// A structure containing `KeyFrag` objects encrypted for Ursulas chosen for this policy.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct TreasureMap {
-    threshold: usize,
-    pub(crate) hrac: HRAC,
+    pub threshold: usize,
+    pub hrac: HRAC,
     // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
     // There seems to be a BTreeMap available for no_std environments,
     // but let's just use vector for now.
-    pub(crate) destinations: Vec<(Address, EncryptedKeyFrag)>,
+    pub destinations: Vec<(Address, EncryptedKeyFrag)>,
     policy_encrypting_key: PublicKey,
     pub(crate) publisher_verifying_key: PublicKey,
 }

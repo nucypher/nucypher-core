@@ -1,6 +1,11 @@
-use pyo3::exceptions::{PyValueError};
+use std::collections::BTreeMap;
+
+use pyo3::class::basic::CompareOp;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes};
+use pyo3::types::PyBytes;
+use pyo3::pyclass::PyClass;
+use pyo3::PyObjectProtocol;
 
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
 use umbral_pre::bindings_python::{
@@ -36,6 +41,19 @@ where
     U::from_bytes(data)
         .map(T::from_backend)
         .map_err(|err| PyValueError::new_err(format!("{}", err)))
+}
+
+fn richcmp<T>(obj: &T, other: PyRef<'_, T>, op: CompareOp) -> PyResult<bool>
+where
+    T: PyClass + PartialEq
+{
+    match op {
+        CompareOp::Eq => Ok(obj == &*other),
+        CompareOp::Ne => Ok(obj != &*other),
+        _ => Err(PyTypeError::new_err(
+            "Objects are not ordered",
+        )),
+    }
 }
 
 //
@@ -78,8 +96,8 @@ impl MessageKit {
         })
     }
 
-    pub fn decrypt_original(&self, py: Python, sk: &SecretKey) -> PyResult<PyObject> {
-        let plaintext = self.backend.decrypt_original(&sk.backend).unwrap();
+    pub fn decrypt(&self, py: Python, sk: &SecretKey) -> PyResult<PyObject> {
+        let plaintext = self.backend.decrypt(&sk.backend).unwrap();
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
@@ -108,6 +126,7 @@ impl MessageKit {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(PartialEq)]
 pub struct HRAC {
     backend: nucypher_core::HRAC,
 }
@@ -127,6 +146,13 @@ impl HRAC {
                 label,
             ),
         })
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for HRAC {
+    fn __richcmp__(&self, other: PyRef<HRAC>, op: CompareOp) -> PyResult<bool> {
+        richcmp(self, other, op)
     }
 }
 
@@ -220,7 +246,7 @@ impl Address {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TreasureMap {
     backend: nucypher_core::TreasureMap,
 }
@@ -244,12 +270,19 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: Vec<(Address, PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<&[u8], (PublicKey, VerifiedKeyFrag)>,
         threshold: usize,
     ) -> PyResult<Self> {
         let assigned_kfrags_backend = assigned_kfrags
             .iter()
-            .map(|(address, key, vkfrag)| (address.backend, key.backend, vkfrag.backend.clone()))
+            // TODO: check `address` size
+            .map(|(address, (key, vkfrag))| {
+                (
+                    ethereum_types::Address::from_slice(address),
+                    key.backend,
+                    vkfrag.backend.clone(),
+                )
+            })
             .collect::<Vec<_>>();
         Ok(Self {
             backend: nucypher_core::TreasureMap::new(
@@ -274,6 +307,29 @@ impl TreasureMap {
                 .backend
                 .encrypt(&signer.backend, &recipient_key.backend),
         })
+    }
+
+    #[getter]
+    fn destinations(&self) -> BTreeMap<&[u8], EncryptedKeyFrag> {
+        let mut result = BTreeMap::new();
+        for (address, ekfrag) in &self.backend.destinations {
+            //let address_bytes = Python::with_gil(|py|
+            //    PyBytes::new(py, address.as_ref())).into();
+            let address_bytes = address.as_ref();
+            result.insert(
+                address_bytes, EncryptedKeyFrag { backend: ekfrag.clone() });
+        }
+        result
+    }
+
+    #[getter]
+    fn hrac(&self) -> HRAC {
+        HRAC { backend: self.backend.hrac }
+    }
+
+    #[getter]
+    fn threshold(&self) -> usize {
+        self.backend.threshold
     }
 
     #[staticmethod]
@@ -357,18 +413,20 @@ impl FromBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
 impl ReencryptionRequest {
     #[new]
     pub fn new(
-        ursula_address: &Address,
+        ursula_address: &[u8],
         capsules: Vec<Capsule>,
         treasure_map: &TreasureMap,
         bob_verifying_key: &PublicKey,
     ) -> Self {
+        // TODO: check length
+        let address = ethereum_types::Address::from_slice(ursula_address);
         let capsules_backend = capsules
             .iter()
             .map(|capsule| capsule.backend)
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::ReencryptionRequest::new(
-                &ursula_address.backend,
+                &address,
                 &capsules_backend,
                 &treasure_map.backend,
                 &bob_verifying_key.backend,
@@ -499,14 +557,39 @@ impl RetrievalKit {
     }
 
     #[new]
-    pub fn new(capsule: &Capsule, queried_addresses: Vec<Address>) -> Self {
+    pub fn new(capsule: &Capsule, queried_addresses: Vec<&[u8]>) -> Self {
         let addresses_backend = queried_addresses
             .iter()
-            .map(|address| address.backend)
+            // TODO: check slice length first
+            .map(|address| ethereum_types::Address::from_slice(address))
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, &addresses_backend),
         }
+    }
+
+    #[getter]
+    fn capsule(&self) -> Capsule {
+        Capsule {
+            backend: self.backend.capsule,
+        }
+    }
+
+    #[getter]
+    fn queried_addresses(&self) -> Option<Vec<PyObject>> {
+        self.backend
+            .queried_addresses
+            .as_ref()
+            .map(|queried_addresses| {
+                queried_addresses
+                    .iter()
+                    .map(|address| {
+                        Python::with_gil(|py| -> PyObject {
+                            PyBytes::new(py, address.as_ref()).into()
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
     }
 
     #[staticmethod]
@@ -545,13 +628,15 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        ursula_address: &Address,
+        ursula_address: &[u8],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
+        // TODO: check length
+        let address = ethereum_types::Address::from_slice(ursula_address);
         Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
-                &ursula_address.backend,
+                &address,
                 &encrypted_kfrag.backend,
             ),
         }
@@ -585,7 +670,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        public_address: Address,
+        canonical_address: &[u8],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -595,9 +680,11 @@ impl NodeMetadataPayload {
         port: u16,
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Self {
+        // TODO: check slice length first
+        let address = ethereum_types::Address::from_slice(canonical_address);
         Self {
             backend: nucypher_core::NodeMetadataPayload {
-                public_address: public_address.backend,
+                canonical_address: address,
                 domain: domain.to_string(),
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
@@ -609,6 +696,37 @@ impl NodeMetadataPayload {
                     .map(|v| v.into_boxed_slice()),
             },
         }
+    }
+
+    #[getter]
+    fn canonical_address(&self) -> PyObject {
+        Python::with_gil(|py| -> PyObject {
+            PyBytes::new(py, self.backend.canonical_address.as_ref()).into()
+        })
+    }
+
+    #[getter]
+    fn verifying_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.verifying_key,
+        }
+    }
+
+    #[getter]
+    fn encrypting_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.encrypting_key,
+        }
+    }
+
+    #[getter]
+    fn decentralized_identity_evidence(&self) -> Option<PyObject> {
+        self.backend
+            .decentralized_identity_evidence
+            .as_ref()
+            .map(|evidence| {
+                Python::with_gil(|py| -> PyObject { PyBytes::new(py, evidence).into() })
+            })
     }
 }
 
@@ -643,9 +761,19 @@ impl NodeMetadata {
         })
     }
 
+    pub fn verify(&self) -> PyResult<NodeMetadataPayload> {
+        Ok(self
+            .backend
+            .verify()
+            .map(|payload| NodeMetadataPayload { backend: payload })
+            .unwrap())
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        let result: PyResult<Self> = from_bytes(data);
+        //result.as_ref().map(|metadata| metadata.backend.verify().unwrap());
+        result
     }
 
     fn __bytes__(&self) -> PyResult<PyObject> {
@@ -809,6 +937,7 @@ impl MetadataResponse {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Address>()?;
     m.add_class::<MessageKit>()?;
     m.add_class::<HRAC>()?;
     m.add_class::<EncryptedKeyFrag>()?;
@@ -817,6 +946,11 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<ReencryptionRequest>()?;
     m.add_class::<ReencryptionResponse>()?;
     m.add_class::<RetrievalKit>()?;
+    m.add_class::<RevocationOrder>()?;
+    m.add_class::<NodeMetadata>()?;
+    m.add_class::<NodeMetadataPayload>()?;
+    m.add_class::<MetadataRequest>()?;
+    m.add_class::<MetadataResponse>()?;
 
     let umbral_module = PyModule::new(py, "umbral")?;
 

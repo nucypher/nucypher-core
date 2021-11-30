@@ -12,7 +12,7 @@ use crate::serde::standard_serialize;
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
     /// The worker's Ethereum address.
-    pub public_address: Address,
+    pub canonical_address: Address,
     /// The network identifier.
     pub domain: String,
     /// The timestamp of the metadata creation.
@@ -43,6 +43,7 @@ pub struct NodeMetadata {
 impl NodeMetadata {
     /// Creates and signs a new metadata object.
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
+        // TODO: how can we ensure that `verifying_key` in `payload` is the same as in `signer`?
         Self {
             signature: signer.sign(&standard_serialize(&payload)),
             payload: payload.clone(),

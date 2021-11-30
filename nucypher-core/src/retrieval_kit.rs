@@ -11,9 +11,11 @@ use crate::message_kit::MessageKit;
 /// already received cfrags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RetrievalKit {
-    capsule: Capsule,
+    /// The ciphertext's capsule.
+    pub capsule: Capsule,
     // TODO: change to a set, find one that works in no-std
-    queried_addresses: Option<Box<[Address]>>,
+    /// The addresses that have already been queried for reencryption.
+    pub queried_addresses: Option<Box<[Address]>>,
 }
 
 impl RetrievalKit {

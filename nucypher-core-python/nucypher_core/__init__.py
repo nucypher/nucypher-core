@@ -1,5 +1,16 @@
 from ._nucypher_core import (
+    Address,
+    MessageKit,
+    HRAC,
+    EncryptedKeyFrag,
+    TreasureMap,
+    EncryptedTreasureMap,
     ReencryptionRequest,
     ReencryptionResponse,
-    umbral
+    RetrievalKit,
+    RevocationOrder,
+    NodeMetadata,
+    NodeMetadataPayload,
+    MetadataRequest,
+    MetadataResponse,
     )

@@ -27,7 +27,7 @@ impl MessageKit {
     }
 
     /// Decrypts the message using the original (Alice's) key.
-    pub fn decrypt_original(&self, sk: &SecretKey) -> Result<Box<[u8]>, DecryptionError> {
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<Box<[u8]>, DecryptionError> {
         decrypt_original(sk, &self.capsule, &self.ciphertext)
     }
 
