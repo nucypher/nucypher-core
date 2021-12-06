@@ -16,8 +16,8 @@ pkg: src
 	(cd pkg/pkg-node && rm package.json README.md .gitignore LICENSE)
 
 	# Types are duplicated, clean them up to avoid confusion
-	mv pkg/pkg-node/umbral_pre_wasm.d.ts pkg/
-	rm pkg/pkg-bundler/umbral_pre_wasm.d.ts
+	mv pkg/pkg-node/nucypher_core_wasm.d.ts pkg/
+	rm pkg/pkg-bundler/nucypher_core_wasm.d.ts
 
 	# Copy template
 	cp package.template.json pkg/package.json
