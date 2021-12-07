@@ -9,7 +9,7 @@ setup(
     author_email="bogdan@opanchuk.net",
     url="https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python",
     rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3)],
-    packages=["nucypher_core"],
+    packages=["nucypher_core", "nucypher_core.umbral"],
     #package_data = {
     #    'nucypher_core': ['py.typed', '__init__.pyi'],
     #},
