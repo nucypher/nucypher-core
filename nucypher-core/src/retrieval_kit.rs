@@ -1,4 +1,3 @@
-use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use core::iter::FromIterator;
 

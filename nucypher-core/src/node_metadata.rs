@@ -37,6 +37,7 @@ impl NodeMetadataPayload {}
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
     signature: Signature,
+    /// Authorized metadata payload.
     pub payload: NodeMetadataPayload,
 }
 
@@ -71,20 +72,18 @@ impl NodeMetadata {
 /// A request for metadata exchange.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataRequest {
+    /// The checksum of the requester's fleet state.
     pub fleet_state_checksum: FleetStateChecksum,
-    pub announce_nodes: Option<Box<[NodeMetadata]>>,
+    /// A list of node metadata to announce.
+    pub announce_nodes: Box<[NodeMetadata]>,
 }
 
 impl MetadataRequest {
     /// Creates a new request.
-    pub fn new(
-        fleet_state_checksum: &FleetStateChecksum,
-        announce_nodes: Option<&[NodeMetadata]>,
-    ) -> Self {
-        let maybe_nodes = announce_nodes.map(|nodes| nodes.to_vec());
+    pub fn new(fleet_state_checksum: &FleetStateChecksum, announce_nodes: &[NodeMetadata]) -> Self {
         Self {
-            fleet_state_checksum: fleet_state_checksum.clone(),
-            announce_nodes: maybe_nodes.map(|nodes| nodes.into_boxed_slice()),
+            fleet_state_checksum: *fleet_state_checksum,
+            announce_nodes: announce_nodes.to_vec().into_boxed_slice(),
         }
     }
 }
@@ -92,22 +91,19 @@ impl MetadataRequest {
 /// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct VerifiedMetadataResponse {
+    /// The timestamp of the most recent fleet state
+    /// (the one consisting of the nodes that are being sent).
     pub timestamp_epoch: u32,
-    pub this_node: Option<NodeMetadata>,
-    pub other_nodes: Option<Box<[NodeMetadata]>>,
+    /// A list of node metadata to announce.
+    pub announce_nodes: Box<[NodeMetadata]>,
 }
 
 impl VerifiedMetadataResponse {
     /// Creates the new metadata response payload.
-    pub fn new(
-        timestamp_epoch: u32,
-        this_node: Option<&NodeMetadata>,
-        other_nodes: Option<&[NodeMetadata]>,
-    ) -> Self {
+    pub fn new(timestamp_epoch: u32, announce_nodes: &[NodeMetadata]) -> Self {
         Self {
             timestamp_epoch,
-            this_node: this_node.cloned(),
-            other_nodes: other_nodes.map(|nodes| nodes.to_vec().into_boxed_slice()),
+            announce_nodes: announce_nodes.to_vec().into_boxed_slice(),
         }
     }
 }

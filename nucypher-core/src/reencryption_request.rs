@@ -11,11 +11,16 @@ use crate::treasure_map::TreasureMap;
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ReencryptionRequest {
-    hrac: HRAC,
-    publisher_verifying_key: PublicKey,
-    bob_verifying_key: PublicKey,
-    encrypted_kfrag: EncryptedKeyFrag,
-    capsules: Box<[Capsule]>,
+    /// Policy HRAC.
+    pub hrac: HRAC,
+    /// Publisher's verifying key.
+    pub publisher_verifying_key: PublicKey,
+    /// Recipient's (Bob's) verifying key.
+    pub bob_verifying_key: PublicKey,
+    /// Key frag encrypted for the Ursula.
+    pub encrypted_kfrag: EncryptedKeyFrag,
+    /// Capsules to re-encrypt.
+    pub capsules: Box<[Capsule]>,
 }
 
 impl ReencryptionRequest {

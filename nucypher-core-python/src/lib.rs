@@ -6,7 +6,7 @@ use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
-use pyo3::types::PyBytes;
+use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
@@ -42,7 +42,7 @@ where
 {
     U::from_bytes(data)
         .map(T::from_backend)
-        .map_err(|err| PyValueError::new_err(format!("{}", err)))
+        .map_err(|err| PyValueError::new_err(format!("Failed to deserialize: {}", err)))
 }
 
 fn richcmp<T>(obj: &T, other: PyRef<'_, T>, op: CompareOp) -> PyResult<bool>
@@ -54,6 +54,22 @@ where
         CompareOp::Ne => Ok(obj != &*other),
         _ => Err(PyTypeError::new_err("Objects are not ordered")),
     }
+}
+
+fn hash<T, U>(type_name: &str, obj: &T) -> PyResult<isize>
+where
+    T: AsBackend<U>,
+    U: SerializableToBytes,
+{
+    let serialized = obj.as_backend().to_bytes();
+
+    // call `hash((class_name, bytes(obj)))`
+    Python::with_gil(|py| {
+        let builtins = PyModule::import(py, "builtins")?;
+        let arg1 = PyUnicode::new(py, type_name);
+        let arg2: PyObject = PyBytes::new(py, &serialized).into();
+        builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
+    })
 }
 
 //
@@ -154,12 +170,26 @@ impl HRAC {
             ),
         })
     }
+
+    fn __bytes__(&self) -> PyResult<PyObject> {
+        to_bytes(self)
+    }
+}
+
+impl AsBackend<nucypher_core::HRAC> for HRAC {
+    fn as_backend(&self) -> &nucypher_core::HRAC {
+        &self.backend
+    }
 }
 
 #[pyproto]
 impl PyObjectProtocol for HRAC {
     fn __richcmp__(&self, other: PyRef<HRAC>, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        hash("HRAC", self)
     }
 }
 
@@ -459,6 +489,43 @@ impl ReencryptionRequest {
                 &bob_verifying_key.backend,
             ),
         }
+    }
+
+    #[getter]
+    fn hrac(&self) -> HRAC {
+        HRAC {
+            backend: self.backend.hrac,
+        }
+    }
+
+    #[getter]
+    fn publisher_verifying_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.publisher_verifying_key,
+        }
+    }
+
+    #[getter]
+    fn bob_verifying_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.bob_verifying_key,
+        }
+    }
+
+    #[getter]
+    fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
+        EncryptedKeyFrag {
+            backend: self.backend.encrypted_kfrag.clone(),
+        }
+    }
+
+    #[getter]
+    fn capsules(&self) -> Vec<Capsule> {
+        self.backend
+            .capsules
+            .iter()
+            .map(|capsule| Capsule { backend: *capsule })
+            .collect::<Vec<_>>()
     }
 
     #[staticmethod]
@@ -835,6 +902,12 @@ pub struct FleetStateChecksum {
     backend: nucypher_core::FleetStateChecksum,
 }
 
+impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
+    fn as_backend(&self) -> &nucypher_core::FleetStateChecksum {
+        &self.backend
+    }
+}
+
 #[pymethods]
 impl FleetStateChecksum {
     #[new]
@@ -849,6 +922,10 @@ impl FleetStateChecksum {
                 &other_nodes_backend,
             ),
         }
+    }
+
+    fn __bytes__(&self) -> PyResult<PyObject> {
+        to_bytes(self)
     }
 }
 
@@ -878,18 +955,16 @@ impl MetadataRequest {
     #[new]
     pub fn new(
         fleet_state_checksum: &FleetStateChecksum,
-        announce_nodes: Option<Vec<NodeMetadata>>,
+        announce_nodes: Vec<NodeMetadata>,
     ) -> Self {
-        let nodes_backend = announce_nodes.map(|nodes| {
-            nodes
-                .iter()
-                .map(|node| node.backend.clone())
-                .collect::<Vec<_>>()
-        });
+        let nodes_backend = announce_nodes
+            .iter()
+            .map(|node| node.backend.clone())
+            .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::MetadataRequest::new(
                 &fleet_state_checksum.backend,
-                nodes_backend.as_deref(),
+                &nodes_backend,
             ),
         }
     }
@@ -902,15 +977,14 @@ impl MetadataRequest {
     }
 
     #[getter]
-    fn announce_nodes(&self) -> Option<Vec<NodeMetadata>> {
-        self.backend.announce_nodes.as_ref().map(|nodes| {
-            nodes
-                .iter()
-                .map(|node| NodeMetadata {
-                    backend: node.clone(),
-                })
-                .collect::<Vec<_>>()
-        })
+    fn announce_nodes(&self) -> Vec<NodeMetadata> {
+        self.backend
+            .announce_nodes
+            .iter()
+            .map(|node| NodeMetadata {
+                backend: node.clone(),
+            })
+            .collect::<Vec<_>>()
     }
 
     #[staticmethod]
@@ -935,23 +1009,13 @@ pub struct VerifiedMetadataResponse {
 #[pymethods]
 impl VerifiedMetadataResponse {
     #[new]
-    fn new(
-        timestamp_epoch: u32,
-        this_node: Option<&NodeMetadata>,
-        other_nodes: Option<Vec<NodeMetadata>>,
-    ) -> Self {
-        let nodes_backend = other_nodes.map(|nodes| {
-            nodes
-                .iter()
-                .map(|node| node.backend.clone())
-                .collect::<Vec<_>>()
-        });
+    fn new(timestamp_epoch: u32, announce_nodes: Vec<NodeMetadata>) -> Self {
+        let nodes_backend = announce_nodes
+            .iter()
+            .map(|node| node.backend.clone())
+            .collect::<Vec<_>>();
         VerifiedMetadataResponse {
-            backend: nucypher_core::VerifiedMetadataResponse::new(
-                timestamp_epoch,
-                this_node.map(|node| &node.backend),
-                nodes_backend.as_deref(),
-            ),
+            backend: nucypher_core::VerifiedMetadataResponse::new(timestamp_epoch, &nodes_backend),
         }
     }
 
@@ -961,25 +1025,14 @@ impl VerifiedMetadataResponse {
     }
 
     #[getter]
-    fn this_node(&self) -> Option<NodeMetadata> {
+    fn announce_nodes(&self) -> Vec<NodeMetadata> {
         self.backend
-            .this_node
-            .as_ref()
-            .map(|this_node| NodeMetadata {
-                backend: this_node.clone(),
+            .announce_nodes
+            .iter()
+            .map(|node| NodeMetadata {
+                backend: node.clone(),
             })
-    }
-
-    #[getter]
-    fn other_nodes(&self) -> Option<Vec<NodeMetadata>> {
-        self.backend.other_nodes.as_ref().map(|nodes| {
-            nodes
-                .iter()
-                .map(|node| NodeMetadata {
-                    backend: node.clone(),
-                })
-                .collect::<Vec<_>>()
-        })
+            .collect::<Vec<_>>()
     }
 }
 
