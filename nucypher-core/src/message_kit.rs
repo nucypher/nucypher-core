@@ -9,7 +9,7 @@ use umbral_pre::{
 /// Encrypted message prepared for re-encryption.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct MessageKit {
-    pub(crate) capsule: Capsule,
+    pub capsule: Capsule,
     ciphertext: Box<[u8]>,
 }
 

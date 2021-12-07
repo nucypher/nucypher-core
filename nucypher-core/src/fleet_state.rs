@@ -5,7 +5,7 @@ use crate::node_metadata::NodeMetadata;
 use crate::serde::standard_serialize;
 
 /// An identifier of the fleet state.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct FleetStateChecksum([u8; 32]);
 
 impl FleetStateChecksum {
@@ -30,7 +30,8 @@ impl FleetStateChecksum {
         let checksum = nodes
             .iter()
             .fold(Sha3_256::new(), |digest, node| {
-                digest.chain(&standard_serialize(&node))
+                // Adding only the payload to the digest, since signatures are randomized.
+                digest.chain(&standard_serialize(&node.payload))
             })
             .finalize();
 

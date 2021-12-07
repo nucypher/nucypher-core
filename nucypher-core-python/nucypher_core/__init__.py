@@ -11,6 +11,8 @@ from ._nucypher_core import (
     RevocationOrder,
     NodeMetadata,
     NodeMetadataPayload,
+    FleetStateChecksum,
     MetadataRequest,
     MetadataResponse,
+    VerifiedMetadataResponse,
     )

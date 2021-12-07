@@ -37,7 +37,7 @@ impl NodeMetadataPayload {}
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
     signature: Signature,
-    pub(crate) payload: NodeMetadataPayload,
+    pub payload: NodeMetadataPayload,
 }
 
 impl NodeMetadata {
@@ -50,27 +50,29 @@ impl NodeMetadata {
         }
     }
 
-    /// Verifies signed node metadata and returns the contained payload.
-    pub fn verify(&self) -> Option<NodeMetadataPayload> {
-        // Note: in order for this to make sense, `verifying_key` must be checked independently.
+    /// Verifies the consistency of signed node metadata.
+    pub fn verify(&self) -> bool {
+        // This method returns bool and not NodeMetadataPayload,
+        // because NodeMetadata can be used before verification,
+        // so we need access to its fields right away.
+
+        // TODO: we could do this on deserialization, but it is a relatively expensive operation.
+
+        // TODO: in order for this to make sense, `verifying_key` must be checked independently.
         // Currently it is done in `validate_worker()` (using `decentralized_identity_evidence`)
-        // TODO: do this on deserialization?
-        if self.signature.verify(
+        // Can we validate the evidence here too?
+        self.signature.verify(
             &self.payload.verifying_key,
             &standard_serialize(&self.payload),
-        ) {
-            Some(self.payload.clone())
-        } else {
-            None
-        }
+        )
     }
 }
 
 /// A request for metadata exchange.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataRequest {
-    fleet_state_checksum: FleetStateChecksum,
-    announce_nodes: Option<Box<[NodeMetadata]>>,
+    pub fleet_state_checksum: FleetStateChecksum,
+    pub announce_nodes: Option<Box<[NodeMetadata]>>,
 }
 
 impl MetadataRequest {
@@ -90,14 +92,20 @@ impl MetadataRequest {
 /// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct VerifiedMetadataResponse {
-    this_node: Option<NodeMetadata>,
-    other_nodes: Option<Box<[NodeMetadata]>>,
+    pub timestamp_epoch: u32,
+    pub this_node: Option<NodeMetadata>,
+    pub other_nodes: Option<Box<[NodeMetadata]>>,
 }
 
 impl VerifiedMetadataResponse {
     /// Creates the new metadata response payload.
-    pub fn new(this_node: Option<&NodeMetadata>, other_nodes: Option<&[NodeMetadata]>) -> Self {
+    pub fn new(
+        timestamp_epoch: u32,
+        this_node: Option<&NodeMetadata>,
+        other_nodes: Option<&[NodeMetadata]>,
+    ) -> Self {
         Self {
+            timestamp_epoch,
             this_node: this_node.cloned(),
             other_nodes: other_nodes.map(|nodes| nodes.to_vec().into_boxed_slice()),
         }

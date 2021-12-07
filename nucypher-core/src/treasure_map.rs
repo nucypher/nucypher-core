@@ -26,8 +26,8 @@ pub struct TreasureMap {
     // There seems to be a BTreeMap available for no_std environments,
     // but let's just use vector for now.
     pub destinations: Vec<(Address, EncryptedKeyFrag)>,
-    policy_encrypting_key: PublicKey,
-    pub(crate) publisher_verifying_key: PublicKey,
+    pub policy_encrypting_key: PublicKey,
+    pub publisher_verifying_key: PublicKey,
 }
 
 impl TreasureMap {

@@ -1,4 +1,6 @@
 use alloc::boxed::Box;
+use alloc::collections::BTreeSet;
+use core::iter::FromIterator;
 
 use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
@@ -15,7 +17,7 @@ pub struct RetrievalKit {
     pub capsule: Capsule,
     // TODO: change to a set, find one that works in no-std
     /// The addresses that have already been queried for reencryption.
-    pub queried_addresses: Option<Box<[Address]>>,
+    pub queried_addresses: Option<BTreeSet<Address>>,
 }
 
 impl RetrievalKit {
@@ -28,11 +30,14 @@ impl RetrievalKit {
     }
 
     /// Creates a new retrieval kit recording the addresses already queried for reencryption.
-    pub fn new(capsule: &Capsule, queried_addresses: &[Address]) -> Self {
+    pub fn new<'a, I>(capsule: &Capsule, queried_addresses: I) -> Self
+    where
+        I: Iterator<Item = &'a Address>,
+    {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
-            queried_addresses: Some(queried_addresses.into()),
+            queried_addresses: Some(BTreeSet::from_iter(queried_addresses.cloned())),
         }
     }
 }

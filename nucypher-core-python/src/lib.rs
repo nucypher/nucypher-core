@@ -1,10 +1,12 @@
-use std::collections::BTreeMap;
+extern crate alloc;
+
+use alloc::collections::{BTreeMap, BTreeSet};
 
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
 use pyo3::pyclass::PyClass;
+use pyo3::types::PyBytes;
 use pyo3::PyObjectProtocol;
 
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
@@ -45,14 +47,12 @@ where
 
 fn richcmp<T>(obj: &T, other: PyRef<'_, T>, op: CompareOp) -> PyResult<bool>
 where
-    T: PyClass + PartialEq
+    T: PyClass + PartialEq,
 {
     match op {
         CompareOp::Eq => Ok(obj == &*other),
         CompareOp::Ne => Ok(obj != &*other),
-        _ => Err(PyTypeError::new_err(
-            "Objects are not ordered",
-        )),
+        _ => Err(PyTypeError::new_err("Objects are not ordered")),
     }
 }
 
@@ -118,6 +118,13 @@ impl MessageKit {
             .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, &backend_cfrags)
             .unwrap();
         Ok(PyBytes::new(py, &plaintext).into())
+    }
+
+    #[getter]
+    fn capsule(&self) -> Capsule {
+        Capsule {
+            backend: self.backend.capsule,
+        }
     }
 }
 
@@ -317,19 +324,39 @@ impl TreasureMap {
             //    PyBytes::new(py, address.as_ref())).into();
             let address_bytes = address.as_ref();
             result.insert(
-                address_bytes, EncryptedKeyFrag { backend: ekfrag.clone() });
+                address_bytes,
+                EncryptedKeyFrag {
+                    backend: ekfrag.clone(),
+                },
+            );
         }
         result
     }
 
     #[getter]
     fn hrac(&self) -> HRAC {
-        HRAC { backend: self.backend.hrac }
+        HRAC {
+            backend: self.backend.hrac,
+        }
     }
 
     #[getter]
     fn threshold(&self) -> usize {
         self.backend.threshold
+    }
+
+    #[getter]
+    fn policy_encrypting_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.policy_encrypting_key,
+        }
+    }
+
+    #[getter]
+    fn publisher_verifying_key(&self) -> PublicKey {
+        PublicKey {
+            backend: self.backend.publisher_verifying_key,
+        }
     }
 
     #[staticmethod]
@@ -557,14 +584,14 @@ impl RetrievalKit {
     }
 
     #[new]
-    pub fn new(capsule: &Capsule, queried_addresses: Vec<&[u8]>) -> Self {
+    pub fn new(capsule: &Capsule, queried_addresses: BTreeSet<&[u8]>) -> Self {
         let addresses_backend = queried_addresses
             .iter()
             // TODO: check slice length first
             .map(|address| ethereum_types::Address::from_slice(address))
             .collect::<Vec<_>>();
         Self {
-            backend: nucypher_core::RetrievalKit::new(&capsule.backend, &addresses_backend),
+            backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend.iter()),
         }
     }
 
@@ -626,11 +653,7 @@ impl FromBackend<nucypher_core::RevocationOrder> for RevocationOrder {
 #[pymethods]
 impl RevocationOrder {
     #[new]
-    pub fn new(
-        signer: &Signer,
-        ursula_address: &[u8],
-        encrypted_kfrag: &EncryptedKeyFrag,
-    ) -> Self {
+    pub fn new(signer: &Signer, ursula_address: &[u8], encrypted_kfrag: &EncryptedKeyFrag) -> Self {
         // TODO: check length
         let address = ethereum_types::Address::from_slice(ursula_address);
         Self {
@@ -699,10 +722,8 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn canonical_address(&self) -> PyObject {
-        Python::with_gil(|py| -> PyObject {
-            PyBytes::new(py, self.backend.canonical_address.as_ref()).into()
-        })
+    fn canonical_address(&self) -> &[u8] {
+        self.backend.canonical_address.as_ref()
     }
 
     #[getter]
@@ -720,13 +741,36 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn decentralized_identity_evidence(&self) -> Option<PyObject> {
+    fn decentralized_identity_evidence(&self) -> Option<&[u8]> {
         self.backend
             .decentralized_identity_evidence
             .as_ref()
-            .map(|evidence| {
-                Python::with_gil(|py| -> PyObject { PyBytes::new(py, evidence).into() })
-            })
+            .map(|boxed_evidence| boxed_evidence.as_ref())
+    }
+
+    #[getter]
+    fn domain(&self) -> &str {
+        &self.backend.domain
+    }
+
+    #[getter]
+    fn host(&self) -> &str {
+        &self.backend.host
+    }
+
+    #[getter]
+    fn port(&self) -> u16 {
+        self.backend.port
+    }
+
+    #[getter]
+    fn timestamp_epoch(&self) -> u32 {
+        self.backend.timestamp_epoch
+    }
+
+    #[getter]
+    fn certificate_bytes(&self) -> &[u8] {
+        self.backend.certificate_bytes.as_ref()
     }
 }
 
@@ -755,25 +799,26 @@ impl FromBackend<nucypher_core::NodeMetadata> for NodeMetadata {
 #[pymethods]
 impl NodeMetadata {
     #[new]
-    pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> PyResult<Self> {
-        Ok(Self {
+    pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
+        Self {
             backend: nucypher_core::NodeMetadata::new(&signer.backend, &payload.backend),
-        })
+        }
     }
 
-    pub fn verify(&self) -> PyResult<NodeMetadataPayload> {
-        Ok(self
-            .backend
-            .verify()
-            .map(|payload| NodeMetadataPayload { backend: payload })
-            .unwrap())
+    pub fn verify(&self) -> bool {
+        self.backend.verify()
+    }
+
+    #[getter]
+    pub fn payload(&self) -> NodeMetadataPayload {
+        NodeMetadataPayload {
+            backend: self.backend.payload.clone(),
+        }
     }
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        let result: PyResult<Self> = from_bytes(data);
-        //result.as_ref().map(|metadata| metadata.backend.verify().unwrap());
-        result
+        from_bytes(data)
     }
 
     fn __bytes__(&self) -> PyResult<PyObject> {
@@ -849,6 +894,25 @@ impl MetadataRequest {
         }
     }
 
+    #[getter]
+    fn fleet_state_checksum(&self) -> FleetStateChecksum {
+        FleetStateChecksum {
+            backend: self.backend.fleet_state_checksum,
+        }
+    }
+
+    #[getter]
+    fn announce_nodes(&self) -> Option<Vec<NodeMetadata>> {
+        self.backend.announce_nodes.as_ref().map(|nodes| {
+            nodes
+                .iter()
+                .map(|node| NodeMetadata {
+                    backend: node.clone(),
+                })
+                .collect::<Vec<_>>()
+        })
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes(data)
@@ -871,7 +935,11 @@ pub struct VerifiedMetadataResponse {
 #[pymethods]
 impl VerifiedMetadataResponse {
     #[new]
-    fn new(this_node: Option<&NodeMetadata>, other_nodes: Option<Vec<NodeMetadata>>) -> Self {
+    fn new(
+        timestamp_epoch: u32,
+        this_node: Option<&NodeMetadata>,
+        other_nodes: Option<Vec<NodeMetadata>>,
+    ) -> Self {
         let nodes_backend = other_nodes.map(|nodes| {
             nodes
                 .iter()
@@ -880,10 +948,38 @@ impl VerifiedMetadataResponse {
         });
         VerifiedMetadataResponse {
             backend: nucypher_core::VerifiedMetadataResponse::new(
+                timestamp_epoch,
                 this_node.map(|node| &node.backend),
                 nodes_backend.as_deref(),
             ),
         }
+    }
+
+    #[getter]
+    fn timestamp_epoch(&self) -> u32 {
+        self.backend.timestamp_epoch
+    }
+
+    #[getter]
+    fn this_node(&self) -> Option<NodeMetadata> {
+        self.backend
+            .this_node
+            .as_ref()
+            .map(|this_node| NodeMetadata {
+                backend: this_node.clone(),
+            })
+    }
+
+    #[getter]
+    fn other_nodes(&self) -> Option<Vec<NodeMetadata>> {
+        self.backend.other_nodes.as_ref().map(|nodes| {
+            nodes
+                .iter()
+                .map(|node| NodeMetadata {
+                    backend: node.clone(),
+                })
+                .collect::<Vec<_>>()
+        })
     }
 }
 
@@ -949,7 +1045,9 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<RevocationOrder>()?;
     m.add_class::<NodeMetadata>()?;
     m.add_class::<NodeMetadataPayload>()?;
+    m.add_class::<FleetStateChecksum>()?;
     m.add_class::<MetadataRequest>()?;
+    m.add_class::<VerifiedMetadataResponse>()?;
     m.add_class::<MetadataResponse>()?;
 
     let umbral_module = PyModule::new(py, "umbral")?;
