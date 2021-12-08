@@ -16,7 +16,7 @@ serde = { version = "1", default-features = false, features = ["derive"] }
 
 generic-array = "*"
 typenum = "*"
-sha3 = "*"
+sha3 = "0.9"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 base64 = { version = "0.13", default-features = false, features = ["alloc"] }
 rmp-serde = "0.15"
