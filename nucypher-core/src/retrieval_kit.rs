@@ -16,7 +16,7 @@ pub struct RetrievalKit {
     pub capsule: Capsule,
     // TODO: change to a set, find one that works in no-std
     /// The addresses that have already been queried for reencryption.
-    pub queried_addresses: Option<BTreeSet<Address>>,
+    pub queried_addresses: BTreeSet<Address>,
 }
 
 impl RetrievalKit {
@@ -24,7 +24,7 @@ impl RetrievalKit {
     pub fn from_message_kit(message_kit: &MessageKit) -> Self {
         Self {
             capsule: message_kit.capsule,
-            queried_addresses: None,
+            queried_addresses: BTreeSet::<Address>::new(),
         }
     }
 
@@ -36,7 +36,7 @@ impl RetrievalKit {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
-            queried_addresses: Some(BTreeSet::from_iter(queried_addresses.cloned())),
+            queried_addresses: BTreeSet::from_iter(queried_addresses.cloned()),
         }
     }
 }

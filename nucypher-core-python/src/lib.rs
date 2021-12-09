@@ -26,6 +26,14 @@ trait FromBackend<T> {
     fn from_backend(backend: T) -> Self;
 }
 
+fn to_bytes_direct<T, U>(obj: &T) -> PyResult<PyObject>
+where
+    T: AsBackend<U>,
+    U: AsRef<[u8]>,
+{
+    Python::with_gil(|py| -> PyResult<PyObject> { Ok(PyBytes::new(py, obj.as_backend().as_ref()).into()) })
+}
+
 fn to_bytes<T, U>(obj: &T) -> PyResult<PyObject>
 where
     T: AsBackend<U>,
@@ -172,7 +180,7 @@ impl HRAC {
     }
 
     fn __bytes__(&self) -> PyResult<PyObject> {
-        to_bytes(self)
+        to_bytes_direct(self)
     }
 }
 
@@ -670,20 +678,12 @@ impl RetrievalKit {
     }
 
     #[getter]
-    fn queried_addresses(&self) -> Option<Vec<PyObject>> {
+    fn queried_addresses(&self) -> BTreeSet<&[u8]> {
         self.backend
             .queried_addresses
-            .as_ref()
-            .map(|queried_addresses| {
-                queried_addresses
-                    .iter()
-                    .map(|address| {
-                        Python::with_gil(|py| -> PyObject {
-                            PyBytes::new(py, address.as_ref()).into()
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            })
+            .iter()
+            .map(|address| address.as_ref())
+            .collect::<BTreeSet<_>>()
     }
 
     #[staticmethod]
@@ -898,6 +898,7 @@ impl NodeMetadata {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(PartialEq)]
 pub struct FleetStateChecksum {
     backend: nucypher_core::FleetStateChecksum,
 }
@@ -926,6 +927,17 @@ impl FleetStateChecksum {
 
     fn __bytes__(&self) -> PyResult<PyObject> {
         to_bytes(self)
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for FleetStateChecksum {
+    fn __richcmp__(&self, other: PyRef<FleetStateChecksum>, op: CompareOp) -> PyResult<bool> {
+        richcmp(self, other, op)
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        hash("FleetStateChecksum", self)
     }
 }
 
