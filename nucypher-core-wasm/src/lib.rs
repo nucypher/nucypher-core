@@ -18,7 +18,7 @@ use alloc::{
 use core::fmt;
 use js_sys::Error;
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
-use umbral_pre_bindings_wasm::{
+use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
@@ -633,12 +633,14 @@ impl FromBackend<nucypher_core::RetrievalKit> for RetrievalKit {
 
 #[wasm_bindgen]
 impl RetrievalKit {
-    #[wasm_bindgen]
+    #[wasm_bindgen(js_name = fromMessageKit)]
     pub fn from_message_kit(message_kit: &MessageKit) -> Self {
         Self {
             backend: nucypher_core::RetrievalKit::from_message_kit(&message_kit.backend),
         }
     }
+
+    // TODO: wasm-bindgen-cli throws here
 
     #[wasm_bindgen(constructor)]
     pub fn new(capsule: &Capsule, queried_addresses: JsValue) -> Result<RetrievalKit, JsValue> {
@@ -655,7 +657,7 @@ impl RetrievalKit {
         })
     }
 
-    #[wasm_bindgen(constructor)]
+    #[wasm_bindgen(method, getter)]
     pub fn capsule(&self) -> Capsule {
         Capsule::new(self.backend.capsule)
     }
@@ -896,9 +898,9 @@ impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
 impl FleetStateChecksum {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        // this_node: Option<&NodeMetadata>,
         // TODO: Fix lack of reference leading to accidental freeing of memory
         //       https://github.com/rustwasm/wasm-bindgen/issues/2370
+        // this_node: Option<&NodeMetadata>,
         this_node: Option<NodeMetadata>,
         other_nodes: JsValue,
     ) -> Result<FleetStateChecksum, JsValue> {

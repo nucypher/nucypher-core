@@ -16,9 +16,8 @@ categories = ["cryptography", "no-std"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-umbral-pre = { path = "../../rust-umbral/umbral-pre" }
+umbral-pre = { path = "../../rust-umbral/umbral-pre", features = ["bindings-wasm"] }
 nucypher-core = { path = "../nucypher-core" }
-umbral-pre-bindings-wasm = { path = "../../rust-umbral/umbral-pre-bindings-wasm" }
 wasm-bindgen = { version = "0.2.74", features = ["serde-serialize"] }
 js-sys = "0.3.51"
 wee_alloc = "0.4"
