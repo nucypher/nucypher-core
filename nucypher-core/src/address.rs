@@ -26,3 +26,18 @@ impl AsRef<[u8]> for Address {
         self.0.as_ref()
     }
 }
+mod tests {
+    use super::Address;
+    use ethereum_types::Address as ETAddress;
+
+    #[test]
+    fn test_checksum() {
+        let checksum_address = "0xe0FC04FA2d34a66B779fd5CEe748268032a146c0";
+        let address_reference = Address(ETAddress::from(
+            b"\xe0\xfc\x04\xfa-4\xa6kw\x9f\xd5\xce\xe7H&\x802\xa1F\xc0",
+        ));
+
+        let address = to_canonical_address(checksum_address).unwrap();
+        assert_eq!(address, address_reference);
+    }
+}
