@@ -1,9 +1,9 @@
-use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
-use umbral_pre::{PublicKey, Signature, Signer};
+use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
 
+use crate::address::Address;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::serde::standard_serialize;
+use crate::serde::{ProtocolObject, SerializableToBytes};
 
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -25,8 +25,8 @@ impl RevocationOrder {
             encrypted_kfrag: encrypted_kfrag.clone(),
             signature: signer.sign(
                 &[
-                    ursula_address.as_ref(),
-                    &standard_serialize(&encrypted_kfrag),
+                    ursula_address.to_array().as_slice(),
+                    &encrypted_kfrag.to_bytes(),
                 ]
                 .concat(),
             ),
@@ -37,10 +37,12 @@ impl RevocationOrder {
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         // TODO: return an Option of something instead of returning `bool`?
         let message = [
-            self.ursula_address.as_ref(),
-            &standard_serialize(&self.encrypted_kfrag),
+            self.ursula_address.to_array().as_slice(),
+            &self.encrypted_kfrag.to_bytes(),
         ]
         .concat();
         self.signature.verify(alice_verifying_key, &message)
     }
 }
+
+impl ProtocolObject for RevocationOrder {}

@@ -12,7 +12,9 @@ use pyo3::PyObjectProtocol;
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+    VerificationError,
 };
+use umbral_pre::DeserializableFromArray;
 
 //
 // Helper traits to generalize implementing various Python protocol functions for our types.
@@ -24,14 +26,6 @@ trait AsBackend<T> {
 
 trait FromBackend<T> {
     fn from_backend(backend: T) -> Self;
-}
-
-fn to_bytes_direct<T, U>(obj: &T) -> PyResult<PyObject>
-where
-    T: AsBackend<U>,
-    U: AsRef<[u8]>,
-{
-    Python::with_gil(|py| -> PyResult<PyObject> { Ok(PyBytes::new(py, obj.as_backend().as_ref()).into()) })
 }
 
 fn to_bytes<T, U>(obj: &T) -> PyResult<PyObject>
@@ -180,7 +174,7 @@ impl HRAC {
     }
 
     fn __bytes__(&self) -> PyResult<PyObject> {
-        to_bytes_direct(self)
+        to_bytes(self)
     }
 }
 
@@ -267,26 +261,6 @@ impl EncryptedKeyFrag {
 }
 
 //
-// Address
-//
-
-#[pyclass(module = "nucypher_core")]
-#[derive(Clone)]
-pub struct Address {
-    backend: ethereum_types::Address,
-}
-
-#[pymethods]
-impl Address {
-    #[new]
-    fn from_checksum_address(checksum_address: &str) -> Self {
-        Address {
-            backend: nucypher_core::to_canonical_address(checksum_address).unwrap(),
-        }
-    }
-}
-
-//
 // TreasureMap
 //
 
@@ -323,7 +297,7 @@ impl TreasureMap {
             // TODO: check `address` size
             .map(|(address, (key, vkfrag))| {
                 (
-                    ethereum_types::Address::from_slice(address),
+                    nucypher_core::Address::from_bytes(address).unwrap(),
                     key.backend,
                     vkfrag.backend.clone(),
                 )
@@ -484,7 +458,7 @@ impl ReencryptionRequest {
         bob_verifying_key: &PublicKey,
     ) -> Self {
         // TODO: check length
-        let address = ethereum_types::Address::from_slice(ursula_address);
+        let address = nucypher_core::Address::from_bytes(ursula_address).unwrap();
         let capsules_backend = capsules
             .iter()
             .map(|capsule| capsule.backend)
@@ -663,7 +637,7 @@ impl RetrievalKit {
         let addresses_backend = queried_addresses
             .iter()
             // TODO: check slice length first
-            .map(|address| ethereum_types::Address::from_slice(address))
+            .map(|address| nucypher_core::Address::from_bytes(address).unwrap())
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend.iter()),
@@ -722,7 +696,7 @@ impl RevocationOrder {
     #[new]
     pub fn new(signer: &Signer, ursula_address: &[u8], encrypted_kfrag: &EncryptedKeyFrag) -> Self {
         // TODO: check length
-        let address = ethereum_types::Address::from_slice(ursula_address);
+        let address = nucypher_core::Address::from_bytes(ursula_address).unwrap();
         Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
@@ -771,7 +745,7 @@ impl NodeMetadataPayload {
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Self {
         // TODO: check slice length first
-        let address = ethereum_types::Address::from_slice(canonical_address);
+        let address = nucypher_core::Address::from_bytes(canonical_address).unwrap();
         Self {
             backend: nucypher_core::NodeMetadataPayload {
                 canonical_address: address,
@@ -1079,10 +1053,11 @@ impl MetadataResponse {
     }
 
     pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<VerifiedMetadataResponse> {
-        let backend_response = self.backend.verify(&verifying_pk.backend).unwrap();
-        Ok(VerifiedMetadataResponse {
+        self.backend.verify(&verifying_pk.backend)
+            .map(|backend_response| VerifiedMetadataResponse {
             backend: backend_response,
-        })
+            })
+            .ok_or(VerificationError::new_err(format!("MetadataResponse verification failed")))
     }
 
     #[staticmethod]
@@ -1098,7 +1073,6 @@ impl MetadataResponse {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<Address>()?;
     m.add_class::<MessageKit>()?;
     m.add_class::<HRAC>()?;
     m.add_class::<EncryptedKeyFrag>()?;

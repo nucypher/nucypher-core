@@ -1,11 +1,12 @@
 use alloc::collections::BTreeSet;
 use core::iter::FromIterator;
 
-use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
 
+use crate::address::Address;
 use crate::message_kit::MessageKit;
+use crate::serde::ProtocolObject;
 
 /// An object encapsulating the information necessary for retrieval of cfrags from Ursulas.
 /// Contains the capsule and the checksum addresses of Ursulas from which the requester
@@ -40,3 +41,5 @@ impl RetrievalKit {
         }
     }
 }
+
+impl ProtocolObject for RetrievalKit {}

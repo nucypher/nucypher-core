@@ -1,17 +1,17 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 
-use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{PublicKey, Signature, Signer};
 
+use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
-use crate::serde::standard_serialize;
+use crate::serde::{standard_serialize, ProtocolObject};
 
 /// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
-    /// The worker's Ethereum address.
+    /// The staker's Ethereum address.
     pub canonical_address: Address,
     /// The network identifier.
     pub domain: String,
@@ -27,11 +27,9 @@ pub struct NodeMetadataPayload {
     pub host: String,
     /// The port of the node's REST service.
     pub port: u16,
-    /// The node's verifying key signed by the private key corresponding to `public_address`.
+    /// The node's verifying key signed by the private key corresponding to the worker address.
     pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
 }
-
-impl NodeMetadataPayload {}
 
 /// Signed node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -40,6 +38,8 @@ pub struct NodeMetadata {
     /// Authorized metadata payload.
     pub payload: NodeMetadataPayload,
 }
+
+impl ProtocolObject for NodeMetadata {}
 
 impl NodeMetadata {
     /// Creates and signs a new metadata object.
@@ -88,6 +88,8 @@ impl MetadataRequest {
     }
 }
 
+impl ProtocolObject for MetadataRequest {}
+
 /// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct VerifiedMetadataResponse {
@@ -119,7 +121,7 @@ impl MetadataResponse {
     /// Creates and signs a new metadata response.
     pub fn new(signer: &Signer, response: &VerifiedMetadataResponse) -> Self {
         Self {
-            signature: signer.sign(&standard_serialize(response)),
+            signature: signer.sign(&standard_serialize(&response)),
             response: response.clone(),
         }
     }
@@ -136,3 +138,5 @@ impl MetadataResponse {
         }
     }
 }
+
+impl ProtocolObject for MetadataResponse {}

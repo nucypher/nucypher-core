@@ -6,6 +6,8 @@ use umbral_pre::{
     PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
+use crate::serde::ProtocolObject;
+
 /// Encrypted message prepared for re-encryption.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct MessageKit {
@@ -48,3 +50,5 @@ impl MessageKit {
         )
     }
 }
+
+impl ProtocolObject for MessageKit {}

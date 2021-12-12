@@ -1,16 +1,16 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
-use ethereum_types::Address;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
     decrypt_original, encrypt, Capsule, PublicKey, SecretKey, SerializableToArray, Signature,
     Signer, VerifiedKeyFrag,
 };
 
+use crate::address::Address;
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::serde::{standard_deserialize, standard_serialize};
+use crate::serde::{DeserializableFromBytes, ProtocolObject, SerializableToBytes};
 
 pub enum TreasureMapError {
     IncorrectThresholdSize,
@@ -79,6 +79,8 @@ impl TreasureMap {
     }
 }
 
+impl ProtocolObject for TreasureMap {}
+
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 struct AuthorizedTreasureMap {
     signature: Signature,
@@ -88,7 +90,7 @@ struct AuthorizedTreasureMap {
 impl AuthorizedTreasureMap {
     fn new(signer: &Signer, recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Self {
         let mut message = recipient_key.to_array().to_vec();
-        message.extend(standard_serialize(&treasure_map).iter());
+        message.extend(treasure_map.to_bytes().iter());
 
         let signature = signer.sign(&message);
 
@@ -104,7 +106,7 @@ impl AuthorizedTreasureMap {
         publisher_verifying_key: &PublicKey,
     ) -> Option<TreasureMap> {
         let mut message = recipient_key.to_array().to_vec();
-        message.extend(standard_serialize(&self.treasure_map).iter());
+        message.extend(self.treasure_map.to_bytes().iter());
 
         if !self.signature.verify(publisher_verifying_key, &message) {
             return None;
@@ -112,6 +114,8 @@ impl AuthorizedTreasureMap {
         Some(self.treasure_map.clone())
     }
 }
+
+impl ProtocolObject for AuthorizedTreasureMap {}
 
 /// A treasure map encrypted for Bob.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -130,8 +134,7 @@ impl EncryptedTreasureMap {
         // Do we ever cross-check them? Do we want to enforce them to be the same?
 
         let authorized_tmap = AuthorizedTreasureMap::new(signer, recipient_key, treasure_map);
-        let (capsule, ciphertext) =
-            encrypt(recipient_key, &standard_serialize(&authorized_tmap)).unwrap();
+        let (capsule, ciphertext) = encrypt(recipient_key, &authorized_tmap.to_bytes()).unwrap();
 
         Self {
             capsule,
@@ -146,7 +149,9 @@ impl EncryptedTreasureMap {
         publisher_verifying_key: &PublicKey,
     ) -> Option<TreasureMap> {
         let plaintext = decrypt_original(sk, &self.capsule, &self.ciphertext).unwrap();
-        let auth_tmap = standard_deserialize::<AuthorizedTreasureMap>(&plaintext);
+        let auth_tmap = AuthorizedTreasureMap::from_bytes(&plaintext).unwrap();
         auth_tmap.verify(&sk.public_key(), publisher_verifying_key)
     }
 }
+
+impl ProtocolObject for EncryptedTreasureMap {}

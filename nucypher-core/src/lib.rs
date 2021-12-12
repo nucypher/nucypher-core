@@ -20,8 +20,8 @@ mod revocation_order;
 mod serde;
 mod treasure_map;
 
-pub use crate::serde::{DeserializableFromBytes, SerializableToBytes};
-pub use address::to_canonical_address;
+pub use crate::serde::{DeserializableFromBytes, ProtocolObject, SerializableToBytes};
+pub use address::Address;
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;

@@ -7,6 +7,8 @@ use umbral_pre::{
     Signer, VerifiedCapsuleFrag,
 };
 
+use crate::serde::ProtocolObject;
+
 /// A response from Ursula with reencrypted capsule frags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ReencryptionResponse {
@@ -84,3 +86,5 @@ impl ReencryptionResponse {
         vcfrags.ok().map(|vcfrags| vcfrags.into_boxed_slice())
     }
 }
+
+impl ProtocolObject for ReencryptionResponse {}

@@ -8,32 +8,39 @@ pub trait SerializableToBytes {
     fn to_bytes(&self) -> Box<[u8]>;
 }
 
-impl<T: Serialize> SerializableToBytes for T {
-    fn to_bytes(&self) -> Box<[u8]> {
-        rmp_serde::to_vec(self).unwrap().into_boxed_slice()
-    }
-}
-
 /// The object can be deserialized from a byte array.
 pub trait DeserializableFromBytes<'a>: Sized {
     /// Deserializes the object.
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error>;
 }
 
-impl<'a, T: Deserialize<'a>> DeserializableFromBytes<'a> for T {
-    fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error> {
-        rmp_serde::from_read_ref(bytes)
-    }
-}
-
-pub trait Versioned<'a>: SerializableToBytes + DeserializableFromBytes<'a> {}
-
-// We need to pick some serialization method of the multitude Serde provides.
-// Using MessagePack for now.
-pub(crate) fn standard_serialize<T: Serialize>(obj: &T) -> Box<[u8]> {
+pub(crate) fn standard_serialize<T>(obj: &T) -> Box<[u8]>
+where
+    T: Serialize,
+{
     rmp_serde::to_vec(obj).unwrap().into_boxed_slice()
 }
 
-pub(crate) fn standard_deserialize<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> T {
-    rmp_serde::from_read_ref(bytes).unwrap()
+fn standard_deserialize<'a, T>(bytes: &'a [u8]) -> Result<T, rmp_serde::decode::Error>
+where
+    T: Deserialize<'a>,
+{
+    rmp_serde::from_read_ref(bytes)
+}
+
+/// This is a versioned protocol object.
+pub trait ProtocolObject {
+    // fn version() -> (u16, u16) {}
+}
+
+impl<T: ProtocolObject + Serialize> SerializableToBytes for T {
+    fn to_bytes(&self) -> Box<[u8]> {
+        standard_serialize(self)
+    }
+}
+
+impl<'a, T: ProtocolObject + Deserialize<'a>> DeserializableFromBytes<'a> for T {
+    fn from_bytes(bytes: &'a [u8]) -> Result<Self, rmp_serde::decode::Error> {
+        standard_deserialize(bytes)
+    }
 }

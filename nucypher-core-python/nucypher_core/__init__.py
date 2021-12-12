@@ -1,5 +1,4 @@
 from ._nucypher_core import (
-    Address,
     MessageKit,
     HRAC,
     EncryptedKeyFrag,

@@ -1,11 +1,20 @@
-use serde::{Deserialize, Serialize};
+use alloc::boxed::Box;
+
+use generic_array::GenericArray;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sha3::{Digest, Sha3_256};
+use typenum::U32;
+use umbral_pre::serde::{serde_deserialize, serde_serialize, Representation};
+use umbral_pre::{
+    ConstructionError, DeserializableFromArray, HasTypeName, RepresentableAsArray,
+    SerializableToArray,
+};
 
 use crate::node_metadata::NodeMetadata;
-use crate::serde::standard_serialize;
+use crate::serde::{standard_serialize, SerializableToBytes};
 
 /// An identifier of the fleet state.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub struct FleetStateChecksum([u8; 32]);
 
 impl FleetStateChecksum {
@@ -39,8 +48,48 @@ impl FleetStateChecksum {
     }
 }
 
-impl AsRef<[u8]> for FleetStateChecksum {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
+impl HasTypeName for FleetStateChecksum {
+    fn type_name() -> &'static str {
+        "FleetStateChecksum"
+    }
+}
+
+impl RepresentableAsArray for FleetStateChecksum {
+    type Size = U32;
+}
+
+impl SerializableToArray for FleetStateChecksum {
+    fn to_array(&self) -> GenericArray<u8, Self::Size> {
+        self.0.into()
+    }
+}
+
+impl DeserializableFromArray for FleetStateChecksum {
+    fn from_array(arr: &GenericArray<u8, Self::Size>) -> Result<Self, ConstructionError> {
+        Ok(FleetStateChecksum(*arr.as_ref()))
+    }
+}
+
+impl Serialize for FleetStateChecksum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serde_serialize(self, serializer, Representation::Hex)
+    }
+}
+
+impl<'de> Deserialize<'de> for FleetStateChecksum {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        serde_deserialize(deserializer, Representation::Hex)
+    }
+}
+
+impl SerializableToBytes for FleetStateChecksum {
+    fn to_bytes(&self) -> Box<[u8]> {
+        Box::<[u8]>::from(self.0.as_slice())
     }
 }
