@@ -23,8 +23,7 @@ impl AuthorizedKeyFrag {
         // TODO (rust-umbral#73): add VerifiedKeyFrag::unverify()?
         let kfrag = KeyFrag::from_array(&verified_kfrag.to_array()).unwrap();
 
-        let signature =
-            signer.sign(&[hrac.to_array().as_ref(), kfrag.to_array().as_ref()].concat());
+        let signature = signer.sign(&[hrac.as_ref(), kfrag.to_array().as_ref()].concat());
 
         Self { signature, kfrag }
     }
@@ -36,7 +35,7 @@ impl AuthorizedKeyFrag {
     ) -> Option<VerifiedKeyFrag> {
         if !self.signature.verify(
             publisher_verifying_key,
-            &[hrac.to_array().as_ref(), self.kfrag.to_array().as_ref()].concat(),
+            &[hrac.as_ref(), self.kfrag.to_array().as_ref()].concat(),
         ) {
             return None;
         }

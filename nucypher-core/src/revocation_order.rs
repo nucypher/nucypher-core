@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
+use umbral_pre::{PublicKey, Signature, Signer};
 
 use crate::address::Address;
 use crate::key_frag::EncryptedKeyFrag;
@@ -23,13 +23,8 @@ impl RevocationOrder {
         Self {
             ursula_address: *ursula_address,
             encrypted_kfrag: encrypted_kfrag.clone(),
-            signature: signer.sign(
-                &[
-                    ursula_address.to_array().as_slice(),
-                    &encrypted_kfrag.to_bytes(),
-                ]
-                .concat(),
-            ),
+            signature: signer
+                .sign(&[ursula_address.as_ref(), &encrypted_kfrag.to_bytes()].concat()),
         }
     }
 
@@ -37,7 +32,7 @@ impl RevocationOrder {
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         // TODO: return an Option of something instead of returning `bool`?
         let message = [
-            self.ursula_address.to_array().as_slice(),
+            self.ursula_address.as_ref(),
             &self.encrypted_kfrag.to_bytes(),
         ]
         .concat();

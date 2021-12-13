@@ -11,10 +11,8 @@ use pyo3::PyObjectProtocol;
 
 use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
 use umbral_pre::bindings_python::{
-    Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
-    VerificationError,
+    Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
-use umbral_pre::DeserializableFromArray;
 
 //
 // Helper traits to generalize implementing various Python protocol functions for our types.
@@ -61,9 +59,9 @@ where
 fn hash<T, U>(type_name: &str, obj: &T) -> PyResult<isize>
 where
     T: AsBackend<U>,
-    U: SerializableToBytes,
+    U: AsRef<[u8]>,
 {
-    let serialized = obj.as_backend().to_bytes();
+    let serialized = obj.as_backend().as_ref();
 
     // call `hash((class_name, bytes(obj)))`
     Python::with_gil(|py| {
@@ -173,8 +171,8 @@ impl HRAC {
         })
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
-        to_bytes(self)
+    fn __bytes__(&self) -> &[u8] {
+        self.backend.as_ref()
     }
 }
 
@@ -297,7 +295,7 @@ impl TreasureMap {
             // TODO: check `address` size
             .map(|(address, (key, vkfrag))| {
                 (
-                    nucypher_core::Address::from_bytes(address).unwrap(),
+                    nucypher_core::Address::from_slice(address).unwrap(),
                     key.backend,
                     vkfrag.backend.clone(),
                 )
@@ -458,7 +456,7 @@ impl ReencryptionRequest {
         bob_verifying_key: &PublicKey,
     ) -> Self {
         // TODO: check length
-        let address = nucypher_core::Address::from_bytes(ursula_address).unwrap();
+        let address = nucypher_core::Address::from_slice(ursula_address).unwrap();
         let capsules_backend = capsules
             .iter()
             .map(|capsule| capsule.backend)
@@ -637,7 +635,7 @@ impl RetrievalKit {
         let addresses_backend = queried_addresses
             .iter()
             // TODO: check slice length first
-            .map(|address| nucypher_core::Address::from_bytes(address).unwrap())
+            .map(|address| nucypher_core::Address::from_slice(address).unwrap())
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend.iter()),
@@ -696,7 +694,7 @@ impl RevocationOrder {
     #[new]
     pub fn new(signer: &Signer, ursula_address: &[u8], encrypted_kfrag: &EncryptedKeyFrag) -> Self {
         // TODO: check length
-        let address = nucypher_core::Address::from_bytes(ursula_address).unwrap();
+        let address = nucypher_core::Address::from_slice(ursula_address).unwrap();
         Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
@@ -745,7 +743,7 @@ impl NodeMetadataPayload {
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Self {
         // TODO: check slice length first
-        let address = nucypher_core::Address::from_bytes(canonical_address).unwrap();
+        let address = nucypher_core::Address::from_slice(canonical_address).unwrap();
         Self {
             backend: nucypher_core::NodeMetadataPayload {
                 canonical_address: address,
@@ -899,8 +897,8 @@ impl FleetStateChecksum {
         }
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
-        to_bytes(self)
+    fn __bytes__(&self) -> &[u8] {
+        self.backend.as_ref()
     }
 }
 
@@ -1053,11 +1051,14 @@ impl MetadataResponse {
     }
 
     pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<VerifiedMetadataResponse> {
-        self.backend.verify(&verifying_pk.backend)
+        self.backend
+            .verify(&verifying_pk.backend)
             .map(|backend_response| VerifiedMetadataResponse {
-            backend: backend_response,
+                backend: backend_response,
             })
-            .ok_or(VerificationError::new_err(format!("MetadataResponse verification failed")))
+            .ok_or(VerificationError::new_err(format!(
+                "MetadataResponse verification failed"
+            )))
     }
 
     #[staticmethod]

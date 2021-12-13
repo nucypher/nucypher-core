@@ -18,6 +18,10 @@ pub(crate) fn standard_serialize<T>(obj: &T) -> Box<[u8]>
 where
     T: Serialize,
 {
+    // Note: we are using a binary format here.
+    // This means that `u8` arrays will be serialized as bytestrings.
+    // If a text format is used at some point, one will have to write
+    // a custom serializer for those because `serde` serializes them as vectors of integers.
     rmp_serde::to_vec(obj).unwrap().into_boxed_slice()
 }
 
