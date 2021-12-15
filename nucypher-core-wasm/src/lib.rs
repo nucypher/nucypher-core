@@ -6,7 +6,7 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 extern crate alloc;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use alloc::{
     boxed::Box,
@@ -56,6 +56,7 @@ where
 //
 
 #[wasm_bindgen]
+#[derive(PartialEq, Debug)]
 pub struct MessageKit {
     backend: nucypher_core::MessageKit,
 }
@@ -94,13 +95,9 @@ impl MessageKit {
     ) -> Result<Box<[u8]>, JsValue> {
         let cfrags: Vec<VerifiedCapsuleFrag> = cfrags
             .into_serde()
-            .map_err(map_js_err)
             .unwrap_or_else(|_| panic!("cfrags must be an array of VerifiedCapsuleFrag"));
-        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> = cfrags
-            .iter()
-            .cloned()
-            .map(|vcfrag| vcfrag.inner().clone())
-            .collect();
+        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> =
+            cfrags.iter().map(|vcfrag| vcfrag.inner().clone()).collect();
 
         self.backend
             .decrypt_reencrypted(sk.inner(), policy_encrypting_key.inner(), &backend_cfrags)
@@ -139,6 +136,12 @@ impl AsBackend<nucypher_core::HRAC> for HRAC {
     }
 }
 
+impl FromBackend<nucypher_core::HRAC> for HRAC {
+    fn from_backend(backend: nucypher_core::HRAC) -> Self {
+        Self { backend }
+    }
+}
+
 #[wasm_bindgen]
 impl HRAC {
     #[wasm_bindgen(constructor)]
@@ -154,6 +157,11 @@ impl HRAC {
                 label,
             ),
         }
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<HRAC, JsValue> {
+        from_bytes(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -173,6 +181,7 @@ impl HRAC {
 //
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct EncryptedKeyFrag {
     backend: nucypher_core::EncryptedKeyFrag,
 }
@@ -192,7 +201,7 @@ impl FromBackend<nucypher_core::EncryptedKeyFrag> for EncryptedKeyFrag {
 #[wasm_bindgen]
 impl EncryptedKeyFrag {
     #[wasm_bindgen(constructor)]
-    pub fn constructor(
+    pub fn new(
         signer: &Signer,
         recipient_key: &PublicKey,
         hrac: &HRAC,
@@ -205,7 +214,7 @@ impl EncryptedKeyFrag {
             verified_kfrag.inner(),
         )
         .map_err(map_js_err)
-        .map(Self::new)
+        .map(|ekfrag| EncryptedKeyFrag { backend: ekfrag })
     }
 
     pub fn decrypt(
@@ -217,8 +226,8 @@ impl EncryptedKeyFrag {
         self.backend
             .decrypt(sk.inner(), &hrac.inner(), publisher_verifying_key.inner())
             .ok_or("Decryption failed")
-            .map(VerifiedKeyFrag::new)
             .map_err(map_js_err)
+            .map(VerifiedKeyFrag::new)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -233,10 +242,6 @@ impl EncryptedKeyFrag {
 }
 
 impl EncryptedKeyFrag {
-    pub fn new(ekfrag: nucypher_core::EncryptedKeyFrag) -> EncryptedKeyFrag {
-        EncryptedKeyFrag { backend: ekfrag }
-    }
-
     pub fn inner(&self) -> nucypher_core::EncryptedKeyFrag {
         self.backend.clone()
     }
@@ -252,10 +257,16 @@ pub struct Address(ethereum_types::Address);
 
 #[wasm_bindgen]
 impl Address {
-    #[wasm_bindgen( js_name = fromChecksumAddress)]
+    #[wasm_bindgen(js_name = fromChecksumAddress)]
     pub fn from_checksum_address(checksum_address: &str) -> Self {
         // TODO: Check length of checksum_address
         Address(nucypher_core::to_canonical_address(checksum_address).unwrap())
+    }
+}
+
+impl Address {
+    pub fn as_string(&self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -264,7 +275,7 @@ impl Address {
 //
 
 #[wasm_bindgen]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct TreasureMap {
     backend: nucypher_core::TreasureMap,
 }
@@ -301,7 +312,7 @@ impl TreasureMap {
             .map(|(address, (key, vkfrag))| {
                 (
                     ethereum_types::Address::from_slice(address.as_bytes()),
-                    *key.inner(),
+                    key.inner().clone(),
                     vkfrag.inner().clone(),
                 )
             })
@@ -325,20 +336,22 @@ impl TreasureMap {
         }
     }
 
-    // #[wasm_bindgen(method, getter)]
-    // pub fn destinations(&self) -> Vec<(Address, EncryptedKeyFrag)> {
-    //     let mut result = Vec::new();
-    //     for (address, ekfrag) in &self.backend.destinations {
-    //         let address_bytes = address.as_ref();
-    //         result.push((
-    //             address_bytes,
-    //             EncryptedKeyFrag {
-    //                 backend: ekfrag.clone(),
-    //             },
-    //         ));
-    //     }
-    //     result
-    // }
+    #[wasm_bindgen(method, getter)]
+    pub fn destinations(&self) -> Result<JsValue, JsValue> {
+        let mut result = Vec::new();
+        for (address, ekfrag) in &self.backend.destinations {
+            // Using String here to avoid issue where Deserialize is not implemented
+            // for every possible lifetime.
+            let address = String::from(from_canonical(address));
+            result.push((
+                address,
+                EncryptedKeyFrag {
+                    backend: ekfrag.clone(),
+                },
+            ));
+        }
+        Ok(serde_wasm_bindgen::to_value(&result)?)
+    }
 
     #[wasm_bindgen(method, getter)]
     pub fn hrac(&self) -> HRAC {
@@ -374,6 +387,7 @@ impl TreasureMap {
 }
 
 #[wasm_bindgen]
+#[derive(PartialEq, Debug)]
 pub struct EncryptedTreasureMap {
     backend: nucypher_core::EncryptedTreasureMap,
 }
@@ -422,6 +436,7 @@ impl EncryptedTreasureMap {
 //
 
 #[wasm_bindgen]
+#[derive(PartialEq, Debug)]
 pub struct ReencryptionRequest {
     backend: nucypher_core::ReencryptionRequest,
 }
@@ -484,7 +499,9 @@ impl ReencryptionRequest {
 
     #[wasm_bindgen(method, getter)]
     pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
-        EncryptedKeyFrag::new(self.backend.encrypted_kfrag.clone())
+        EncryptedKeyFrag {
+            backend: self.backend.encrypted_kfrag.clone(),
+        }
     }
 
     #[wasm_bindgen(method, getter)]
@@ -540,13 +557,13 @@ impl ReencryptionResponse {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
-        capsules: JsValue,
-        vcfrags: JsValue,
+        capsules: &JsValue,
+        verified_capsule_frags: &JsValue,
     ) -> Result<ReencryptionResponse, JsValue> {
         let capsules: Vec<Capsule> =
-            serde_wasm_bindgen::from_value(capsules).map_err(map_js_err)?;
+            serde_wasm_bindgen::from_value(capsules.clone()).map_err(map_js_err)?;
         let vcfrags: Vec<VerifiedCapsuleFrag> =
-            serde_wasm_bindgen::from_value(vcfrags).map_err(map_js_err)?;
+            serde_wasm_bindgen::from_value(verified_capsule_frags.clone()).map_err(map_js_err)?;
 
         let capsules_backend = capsules
             .iter()
@@ -565,17 +582,16 @@ impl ReencryptionResponse {
         })
     }
 
-    #[wasm_bindgen]
     pub fn verify(
         &self,
-        capsules: JsValue,
+        capsules: &JsValue,
         alice_verifying_key: &PublicKey,
         ursula_verifying_key: &PublicKey,
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
     ) -> Result<JsValue, JsValue> {
         let capsules: Vec<Capsule> =
-            serde_wasm_bindgen::from_value(capsules).map_err(map_js_err)?;
+            serde_wasm_bindgen::from_value(capsules.clone()).map_err(map_js_err)?;
         let capsules_backend = capsules
             .iter()
             .map(|capsule| *capsule.inner())
@@ -640,8 +656,6 @@ impl RetrievalKit {
         }
     }
 
-    // TODO: wasm-bindgen-cli throws here
-
     #[wasm_bindgen(constructor)]
     pub fn new(capsule: &Capsule, queried_addresses: JsValue) -> Result<RetrievalKit, JsValue> {
         // Using String here to avoid issue where Deserialize is not implemented
@@ -663,13 +677,12 @@ impl RetrievalKit {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn queried_addresses(&self) -> Option<Vec<JsValue>> {
-        self.backend.queried_addresses.as_ref().map(|addresses| {
-            addresses
-                .iter()
-                .map(|address| JsValue::from_serde(&address).unwrap())
-                .collect::<Vec<_>>()
-        })
+    pub fn queried_addresses(&self) -> Vec<JsValue> {
+        self.backend
+            .queried_addresses
+            .iter()
+            .map(|address| JsValue::from_serde(&address).unwrap())
+            .collect::<Vec<_>>()
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -739,6 +752,11 @@ impl RevocationOrder {
 // NodeMetadataPayload
 //
 
+// TODO: Find a way to avoid this conversion?
+pub fn from_canonical(data: &ethereum_types::H160) -> &str {
+    core::str::from_utf8(&data[..]).unwrap()
+}
+
 #[wasm_bindgen]
 pub struct NodeMetadataPayload {
     backend: nucypher_core::NodeMetadataPayload,
@@ -779,10 +797,7 @@ impl NodeMetadataPayload {
 
     #[wasm_bindgen(method, getter)]
     pub fn canonical_address(&self) -> Address {
-        Address::from_checksum_address(
-            // TODO: Find a way to avoid this conversion?
-            core::str::from_utf8(&self.backend.canonical_address[..]).unwrap(),
-        )
+        Address::from_checksum_address(from_canonical(&self.backend.canonical_address))
     }
 
     #[wasm_bindgen(method, getter)]
@@ -831,7 +846,7 @@ impl NodeMetadataPayload {
 //
 
 #[wasm_bindgen(method, getter)]
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
 pub struct NodeMetadata {
     backend: nucypher_core::NodeMetadata,
 }
@@ -894,6 +909,12 @@ impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
     }
 }
 
+impl FromBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
+    fn from_backend(backend: nucypher_core::FleetStateChecksum) -> Self {
+        Self { backend }
+    }
+}
+
 #[wasm_bindgen]
 impl FleetStateChecksum {
     #[wasm_bindgen(constructor)]
@@ -915,6 +936,11 @@ impl FleetStateChecksum {
                 &other_nodes_backend,
             ),
         })
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<FleetStateChecksum, JsValue> {
+        from_bytes(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
