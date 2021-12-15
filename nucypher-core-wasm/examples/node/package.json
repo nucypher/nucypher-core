@@ -1,0 +1,50 @@
+{
+  "name": "nucypher-core-wasm",
+  "version": "0.1.0",
+  "description": "A usage example for nucypher-core-wasm",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "cli": "ts-node src/cli.ts",
+    "test": "jest",
+    "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist build",
+    "ts-node": "ts-node"
+  },
+  "collaborators": [
+    "Bogdan Opanchuk <bogdan@opanchuk.net>",
+    "Piotr Rosłaniec <p.roslaniec@gmail.com>"
+  ],
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "nucypher-core": "file:../../pkg"
+  },
+  "devDependencies": {
+    "@babel/preset-typescript": "^7.16.5",
+    "@types/jest": "^27.0.3",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^16.11.13",
+    "@typescript-eslint/eslint-plugin": "^5.7.0",
+    "@typescript-eslint/parser": "^5.7.0",
+    "eslint": "^8.4.1",
+    "jest": "^27.4.5",
+    "ts-jest": "^27.1.1",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.4"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "transform": {
+      "node_modules/variables/.+\\.(j|t)sx?$": "ts-jest"
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!variables/.*)"
+    ]
+  }
+}
