@@ -48,7 +48,10 @@ fn message_kit_decrypts() {
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
-    assert_eq!(decrypted, plaintext);
+    assert_eq!(
+        decrypted, plaintext,
+        "Decrypted message does not match plaintext"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -84,9 +87,15 @@ fn message_kit_decrypt_reencrypted() {
     let cfrags = serde_wasm_bindgen::to_value(&cfrags).unwrap();
 
     // Decrypt on the Rust side
-    message_kit
+    let decrypted = message_kit
         .decrypt_reencrypted(&receiving_sk, &delegating_pk, &cfrags)
         .unwrap();
+
+    assert_eq!(
+        &decrypted[..],
+        plaintext,
+        "Decrypted message does not match plaintext"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -99,7 +108,8 @@ fn message_kit_to_bytes_from_bytes() {
 
     assert_eq!(
         message_kit,
-        MessageKit::from_bytes(&message_kit.to_bytes()).unwrap()
+        MessageKit::from_bytes(&message_kit.to_bytes()).unwrap(),
+        "MessageKit does not roundtrip"
     );
 }
 
@@ -121,7 +131,8 @@ fn hrac_to_bytes_from_bytes() {
 
     assert_eq!(
         hrac.to_bytes(),
-        HRAC::from_bytes(&hrac.to_bytes()).unwrap().to_bytes()
+        HRAC::from_bytes(&hrac.to_bytes()).unwrap().to_bytes(),
+        "HRAC does not roundtrip"
     );
 }
 
@@ -157,7 +168,11 @@ fn encrypted_kfrag_decrypt() {
     let decrypted = encrypted_kfrag
         .decrypt(&receiving_sk, &hrac, &delegating_pk)
         .unwrap();
-    assert_eq!(decrypted.to_bytes(), verified_kfrags[0].to_bytes());
+    assert_eq!(
+        decrypted.to_bytes(),
+        verified_kfrags[0].to_bytes(),
+        "Decrypted KFrag does not match"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -174,7 +189,8 @@ fn encrypted_to_bytes_from_bytes() {
 
     assert_eq!(
         encrypted_kfrag,
-        EncryptedKeyFrag::from_bytes(&encrypted_kfrag.to_bytes()).unwrap()
+        EncryptedKeyFrag::from_bytes(&encrypted_kfrag.to_bytes()).unwrap(),
+        "EncryptedKeyFrag does not roundtrip"
     );
 }
 
@@ -185,7 +201,7 @@ fn encrypted_to_bytes_from_bytes() {
 #[wasm_bindgen_test]
 fn address_from_checksum_address() {
     let address = Address::from_checksum_address("0x0000000000000000000000000000000000000001");
-    assert_eq!(address.as_string(), "0x0000…0001");
+    assert_eq!(address.as_string(), "0x0000…0001", "Address does not match");
 }
 
 //
@@ -241,7 +257,10 @@ fn treasure_map_encrypt_decrypt() {
 
     let decrypted = encrypted.decrypt(&receiving_sk, &publisher_pk).unwrap();
 
-    assert_eq!(decrypted, treasure_map)
+    assert_eq!(
+        decrypted, treasure_map,
+        "Decrypted TreasureMap does not match"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -254,10 +273,22 @@ fn treasure_map_destinations() {
     let destinations: Vec<(String, EncryptedKeyFrag)> =
         serde_wasm_bindgen::from_value(destinations).unwrap();
 
-    assert!(destinations.len() == 3);
-    assert_eq!(destinations[0].0, "00000000000000000001".to_string());
-    assert_eq!(destinations[1].0, "00000000000000000002".to_string());
-    assert_eq!(destinations[2].0, "00000000000000000003".to_string());
+    assert!(destinations.len() == 3, "Destinations does not match");
+    assert_eq!(
+        destinations[0].0,
+        "00000000000000000001".to_string(),
+        "Destination does not match"
+    );
+    assert_eq!(
+        destinations[1].0,
+        "00000000000000000002".to_string(),
+        "Destination does not match"
+    );
+    assert_eq!(
+        destinations[2].0,
+        "00000000000000000003".to_string(),
+        "Destination does not match"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -270,7 +301,8 @@ fn encrypted_treasure_map_from_bytes_to_bytes() {
 
     assert_eq!(
         encrypted,
-        EncryptedTreasureMap::from_bytes(&encrypted.to_bytes()).unwrap()
+        EncryptedTreasureMap::from_bytes(&encrypted.to_bytes()).unwrap(),
+        "EncryptedTreasureMap does not roundtrip"
     );
 }
 
@@ -302,7 +334,8 @@ fn reencruption_request_from_bytes_to_bytes() {
 
     assert_eq!(
         reencryption_request,
-        ReencryptionRequest::from_bytes(&reencryption_request.to_bytes()).unwrap()
+        ReencryptionRequest::from_bytes(&reencryption_request.to_bytes()).unwrap(),
+        "ReencryptionRequest does not roundtrip"
     )
 }
 
@@ -325,7 +358,11 @@ fn reencryption_response_verify() {
     let bob_sk = SecretKey::random();
     let kfrags = make_kfrags(&alice_sk, &bob_sk);
 
-    assert_eq!(capsules.len(), kfrags.len());
+    assert_eq!(
+        capsules.len(),
+        kfrags.len(),
+        "Number of Capsules and KFrags does not match"
+    );
 
     // Simulate the reencryption
     let cfrags: Vec<VerifiedCapsuleFrag> = kfrags
@@ -350,14 +387,15 @@ fn reencryption_response_verify() {
         .unwrap();
     let verified: Vec<VerifiedCapsuleFrag> = serde_wasm_bindgen::from_value(verified_js).unwrap();
 
-    assert_eq!(cfrags, verified);
+    assert_eq!(cfrags, verified, "VerifiedCapsuleFrag does not match");
 
     let as_bytes = reencryption_response.to_bytes();
     assert_eq!(
         as_bytes,
         ReencryptionResponse::from_bytes(&as_bytes)
             .unwrap()
-            .to_bytes()
+            .to_bytes(),
+        "ReencryptionResponse does not roundtrip"
     );
 }
 
@@ -375,12 +413,17 @@ fn retrieval_kit() {
     let retrieval_kit = RetrievalKit::from_message_kit(&message_kit);
 
     let queried_addresses = retrieval_kit.queried_addresses();
-    assert_eq!(queried_addresses.len(), 0);
+    assert_eq!(
+        queried_addresses.len(),
+        0,
+        "Queried addresses length does not match"
+    );
 
     let as_bytes = retrieval_kit.to_bytes();
     assert_eq!(
         as_bytes,
-        RetrievalKit::from_bytes(&as_bytes).unwrap().to_bytes()
+        RetrievalKit::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "RetrievalKit does not roundtrip"
     );
 }
 
@@ -408,7 +451,8 @@ fn revocation_order() {
     let as_bytes = revocation_order.to_bytes();
     assert_eq!(
         as_bytes,
-        RevocationOrder::from_bytes(&as_bytes).unwrap().to_bytes()
+        RevocationOrder::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "RevocationOrder does not roundtrip"
     );
 }
 
@@ -456,7 +500,8 @@ fn node_metadata() {
     let as_bytes = node_metadata.to_bytes();
     assert_eq!(
         as_bytes,
-        NodeMetadata::from_bytes(&as_bytes).unwrap().to_bytes()
+        NodeMetadata::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "NodeMetadata does not roundtrip"
     );
 }
 
@@ -480,7 +525,8 @@ fn fleet_state_checksum() {
         as_bytes,
         FleetStateChecksum::from_bytes(&as_bytes)
             .unwrap()
-            .to_bytes()
+            .to_bytes(),
+        "FleetStateChecksum does not roundtrip"
     );
 }
 
@@ -507,7 +553,8 @@ fn metadata_request() {
     let as_bytes = metadata_request.to_bytes();
     assert_eq!(
         as_bytes,
-        MetadataRequest::from_bytes(&as_bytes).unwrap().to_bytes()
+        MetadataRequest::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "MetadataRequest does not roundtrip"
     );
 }
 
@@ -531,7 +578,7 @@ fn verified_metadata_response() {
         .cloned()
         .map(|js_node| node_metadata_of_jsval(js_node).unwrap())
         .collect::<Vec<_>>();
-    assert_eq!(nodes, announce_nodes);
+    assert_eq!(nodes, announce_nodes, "Announce nodes does not match");
 }
 
 //
@@ -553,6 +600,7 @@ fn metadata_response() {
     let as_bytes = metadata_response.to_bytes();
     assert_eq!(
         as_bytes,
-        MetadataResponse::from_bytes(&as_bytes).unwrap().to_bytes()
+        MetadataResponse::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "MetadataResponse does not roundtrip"
     );
 }
