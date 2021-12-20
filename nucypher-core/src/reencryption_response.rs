@@ -3,8 +3,7 @@ use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    Capsule, CapsuleFrag, DeserializableFromArray, PublicKey, SerializableToArray, Signature,
-    Signer, VerifiedCapsuleFrag,
+    Capsule, CapsuleFrag, PublicKey, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,
 };
 
 use crate::serde::ProtocolObject;
@@ -36,7 +35,7 @@ impl ReencryptionResponse {
         // un-verify
         let cfrags: Vec<_> = vcfrags
             .iter()
-            .map(|vcfrag| CapsuleFrag::from_array(&vcfrag.to_array()).unwrap())
+            .map(|vcfrag| vcfrag.to_unverified())
             .collect();
 
         let signature = signer.sign(&signed_message(capsules, &cfrags));

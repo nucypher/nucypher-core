@@ -2,8 +2,8 @@ use alloc::boxed::Box;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    decrypt_original, encrypt, Capsule, DeserializableFromArray, EncryptionError, KeyFrag,
-    PublicKey, SecretKey, SerializableToArray, Signature, Signer, VerifiedKeyFrag,
+    decrypt_original, encrypt, Capsule, EncryptionError, KeyFrag, PublicKey, SecretKey,
+    SerializableToArray, Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::hrac::HRAC;
@@ -21,7 +21,7 @@ impl AuthorizedKeyFrag {
         // this particular KFrag is authorized for use in the policy identified by this HRAC.
 
         // TODO (rust-umbral#73): add VerifiedKeyFrag::unverify()?
-        let kfrag = KeyFrag::from_array(&verified_kfrag.to_array()).unwrap();
+        let kfrag = verified_kfrag.to_unverified();
 
         let signature = signer.sign(&[hrac.as_ref(), kfrag.to_array().as_ref()].concat());
 
@@ -42,9 +42,7 @@ impl AuthorizedKeyFrag {
 
         // Ursula has no side channel to get the KeyFrag author's key,
         // so verifying the keyfrag is useless.
-        // TODO (rust-umbral#73): assuming here that VerifiedKeyFrag and KeyFrag have the same byte representation;
-        // would it be more clear if `kfrag` had some method like `force_verify()`?
-        VerifiedKeyFrag::from_verified_bytes(&self.kfrag.to_array()).ok()
+        Some(self.kfrag.clone().skip_verification())
     }
 }
 
