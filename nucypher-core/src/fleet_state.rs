@@ -3,10 +3,17 @@ use sha3::{Digest, Sha3_256};
 
 use crate::node_metadata::NodeMetadata;
 use crate::serde::standard_serialize;
+use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
 
 /// An identifier of the fleet state.
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct FleetStateChecksum([u8; 32]);
+pub struct FleetStateChecksum(
+    #[serde(
+        serialize_with = "serde_serialize_as_bytes",
+        deserialize_with = "serde_deserialize_as_bytes"
+    )]
+    [u8; 32],
+);
 
 impl FleetStateChecksum {
     /// Creates a checksum from the given list of node metadata, and, possibly,
