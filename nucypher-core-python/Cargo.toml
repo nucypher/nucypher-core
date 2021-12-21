@@ -8,11 +8,10 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.15", features = ["extension-module"] }
+pyo3 = "0.15"
 nucypher-core = { path = "../nucypher-core" }
 #generic-array = "0.14"
-umbral-pre = { git = "https://github.com/fjarri/rust-umbral", branch = "bindings-as-features", features = ["bindings-python"] }
-ethereum-types = "*"
+umbral-pre = { git = "https://github.com/fjarri/rust-umbral", branch = "bindings-as-features", features = ["bindings-python", "serde-support"] }
 
 [build-dependencies]
 pyo3-build-config = "*"
