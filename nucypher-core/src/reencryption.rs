@@ -2,11 +2,47 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::{
-    Capsule, CapsuleFrag, PublicKey, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,
-};
+use umbral_pre::{Capsule, PublicKey, CapsuleFrag, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,};
 
+use crate::hrac::HRAC;
+use crate::key_frag::EncryptedKeyFrag;
 use crate::serde::ProtocolObject;
+
+/// A request for an Ursula to reencrypt for several capsules.
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct ReencryptionRequest {
+    /// Capsules to re-encrypt.
+    pub capsules: Box<[Capsule]>,
+    /// Policy HRAC.
+    pub hrac: HRAC,
+    /// Key frag encrypted for the Ursula.
+    pub encrypted_kfrag: EncryptedKeyFrag,
+    /// Publisher's verifying key.
+    pub publisher_verifying_key: PublicKey,
+    /// Recipient's (Bob's) verifying key.
+    pub bob_verifying_key: PublicKey,
+}
+
+impl ReencryptionRequest {
+    /// Creates a new reencryption request.
+    pub fn new(
+        capsules: &[Capsule],
+        hrac: &HRAC,
+        encrypted_kfrag: &EncryptedKeyFrag,
+        publisher_verifying_key: &PublicKey,
+        bob_verifying_key: &PublicKey,
+    ) -> Self {
+        Self {
+            capsules: capsules.into(),
+            hrac: *hrac,
+            encrypted_kfrag: encrypted_kfrag.clone(),
+            publisher_verifying_key: *publisher_verifying_key,
+            bob_verifying_key: *bob_verifying_key,
+        }
+    }
+}
+
+impl ProtocolObject for ReencryptionRequest {}
 
 /// A response from Ursula with reencrypted capsule frags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]

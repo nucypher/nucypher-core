@@ -450,22 +450,22 @@ impl FromBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
 impl ReencryptionRequest {
     #[new]
     pub fn new(
-        ursula_address: &[u8],
         capsules: Vec<Capsule>,
-        treasure_map: &TreasureMap,
+        hrac: &HRAC,
+        encrypted_kfrag: &EncryptedKeyFrag,
+        publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
     ) -> Self {
-        // TODO: check length
-        let address = nucypher_core::Address::from_slice(ursula_address).unwrap();
         let capsules_backend = capsules
             .iter()
             .map(|capsule| capsule.backend)
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::ReencryptionRequest::new(
-                &address,
                 &capsules_backend,
-                &treasure_map.backend,
+                &hrac.backend,
+                &encrypted_kfrag.backend,
+                &publisher_verifying_key.backend,
                 &bob_verifying_key.backend,
             ),
         }

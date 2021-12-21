@@ -13,8 +13,7 @@ mod hrac;
 mod key_frag;
 mod message_kit;
 mod node_metadata;
-mod reencryption_request;
-mod reencryption_response;
+mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod serde;
@@ -29,8 +28,7 @@ pub use message_kit::MessageKit;
 pub use node_metadata::{
     MetadataRequest, MetadataResponse, NodeMetadata, NodeMetadataPayload, VerifiedMetadataResponse,
 };
-pub use reencryption_request::ReencryptionRequest;
-pub use reencryption_response::ReencryptionResponse;
+pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
