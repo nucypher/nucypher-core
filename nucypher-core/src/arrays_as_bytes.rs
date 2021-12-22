@@ -1,18 +1,15 @@
-use core::convert::TryInto;
-use core::fmt;
-
-use serde::{de, Deserializer, Serializer};
-
 // Helper functions to serialize/deserialize byte arrays (`[u8; N]`) as bytestrings.
 // By default, `serde` serializes them as lists of integers, which in case of MessagePack
 // leads to every value >127 being prepended with a `\xcc`.
 // `serde_bytes` crate could help with that, but at the moment
 // it only works with `&[u8]` and `Vec<u8>`.
 
-pub(crate) fn serde_serialize_as_bytes<S, const N: usize>(
-    obj: &[u8; N],
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+use core::convert::TryInto;
+use core::fmt;
+
+use serde::{de, Deserializer, Serializer};
+
+pub(crate) fn serialize<S, const N: usize>(obj: &[u8; N], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -36,9 +33,7 @@ impl<'de, const N: usize> de::Visitor<'de> for BytesVisitor<N> {
     }
 }
 
-pub(crate) fn serde_deserialize_as_bytes<'de, D, const N: usize>(
-    deserializer: D,
-) -> Result<[u8; N], D::Error>
+pub(crate) fn deserialize<'de, D, const N: usize>(deserializer: D) -> Result<[u8; N], D::Error>
 where
     D: Deserializer<'de>,
 {

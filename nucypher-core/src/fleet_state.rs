@@ -1,19 +1,13 @@
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 
+use crate::arrays_as_bytes;
 use crate::node_metadata::NodeMetadata;
-use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
 use crate::versioning::ProtocolObject;
 
 /// An identifier of the fleet state.
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct FleetStateChecksum(
-    #[serde(
-        serialize_with = "serde_serialize_as_bytes",
-        deserialize_with = "serde_deserialize_as_bytes"
-    )]
-    [u8; 32],
-);
+pub struct FleetStateChecksum(#[serde(with = "arrays_as_bytes")] [u8; 32]);
 
 impl FleetStateChecksum {
     /// Creates a checksum from the given list of node metadata, and, possibly,

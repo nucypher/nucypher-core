@@ -5,7 +5,7 @@ use sha3::{Digest, Sha3_256};
 use typenum::U16;
 use umbral_pre::{PublicKey, SerializableToArray};
 
-use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
+use crate::arrays_as_bytes;
 
 /// "hashed resource access code".
 ///
@@ -17,13 +17,7 @@ use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
 /// Publisher and Bob have all the information they need to construct this.
 /// Ursula does not, so we share it with her.
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct HRAC(
-    #[serde(
-        serialize_with = "serde_serialize_as_bytes",
-        deserialize_with = "serde_deserialize_as_bytes"
-    )]
-    [u8; 16],
-);
+pub struct HRAC(#[serde(with = "arrays_as_bytes")] [u8; 16]);
 
 impl HRAC {
     /// Creates a new HRAC.

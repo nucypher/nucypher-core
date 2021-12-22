@@ -8,6 +8,7 @@
 extern crate alloc;
 
 mod address;
+mod arrays_as_bytes;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -16,7 +17,6 @@ mod node_metadata;
 mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
-mod serde;
 mod treasure_map;
 mod versioning;
 
