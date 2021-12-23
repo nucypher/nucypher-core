@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
@@ -68,6 +69,7 @@ impl ProtocolObjectHeader {
 #[derive(Debug)]
 pub enum DeserializationError {
     TooShort {
+        expected: usize,
         received: usize,
     },
     IncorrectHeader {
@@ -85,6 +87,36 @@ pub enum DeserializationError {
     BadPayload {
         error_msg: String,
     },
+}
+
+impl fmt::Display for DeserializationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TooShort { expected, received } => write!(
+                f,
+                "bytestring too short: expected {} bytes, got {}",
+                expected, received
+            ),
+            Self::IncorrectHeader { expected, received } => write!(
+                f,
+                "incorrect header: expected {:?}, got {:?}",
+                expected, received
+            ),
+            Self::MajorVersionMismatch { expected, received } => write!(
+                f,
+                "differing major version: expected {}, got {}",
+                expected, received
+            ),
+            Self::UnsupportedMinorVersion { expected, received } => write!(
+                f,
+                "unsupported minor version: expected <={}, got {}",
+                expected, received
+            ),
+            Self::BadPayload { error_msg } => {
+                write!(f, "payload deserialization failed: {}", error_msg)
+            }
+        }
+    }
 }
 
 // The "private" part of `ProtocolObject` allowing one to modify implementation
@@ -132,6 +164,7 @@ pub trait ProtocolObject<'a>: ProtocolObjectInner<'a> {
     fn from_bytes(bytes: &'a [u8]) -> Result<Self, DeserializationError> {
         if bytes.len() < 8 {
             return Err(DeserializationError::TooShort {
+                expected: 8,
                 received: bytes.len(),
             });
         }

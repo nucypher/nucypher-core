@@ -1,10 +1,11 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    decrypt_original, encrypt, Capsule, DecryptionError, EncryptionError, KeyFrag, PublicKey,
-    SecretKey, SerializableToArray, Signature, Signer, VerifiedKeyFrag,
+    decrypt_original, encrypt, Capsule, DecryptionError as UmbralDecryptionError, EncryptionError,
+    KeyFrag, PublicKey, SecretKey, SerializableToArray, Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::hrac::HRAC;
@@ -75,10 +76,21 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedKeyFrag {
 impl<'a> ProtocolObject<'a> for AuthorizedKeyFrag {}
 
 #[allow(clippy::enum_variant_names)]
-pub enum KeyFragDecryptionError {
-    DecryptionFailed(DecryptionError),
+#[derive(Debug)]
+pub enum DecryptionError {
+    DecryptionFailed(UmbralDecryptionError),
     DeserializationFailed(DeserializationError),
     VerificationFailed,
+}
+
+impl fmt::Display for DecryptionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DecryptionFailed(err) => write!(f, "decryption failed: {}", err),
+            Self::DeserializationFailed(err) => write!(f, "deserialization failed: {}", err),
+            Self::VerificationFailed => write!(f, "verification failed"),
+        }
+    }
 }
 
 /// Encrypted and signed key frag.
@@ -95,15 +107,22 @@ impl EncryptedKeyFrag {
         recipient_key: &PublicKey,
         hrac: &HRAC,
         verified_kfrag: &VerifiedKeyFrag,
-    ) -> Result<Self, EncryptionError> {
+    ) -> Self {
         let auth_kfrag = AuthorizedKeyFrag::new(signer, hrac, verified_kfrag);
         // Using Umbral for asymmetric encryption here for simplicity,
         // even though we do not plan to re-encrypt the capsule.
-        let (capsule, ciphertext) = encrypt(recipient_key, &auth_kfrag.to_bytes())?;
-        Ok(Self {
+        let (capsule, ciphertext) = match encrypt(recipient_key, &auth_kfrag.to_bytes()) {
+            Ok(result) => result,
+            Err(err) => match err {
+                // For now this is the only error that can happen during encryption,
+                // and there's really no point in propagating it.
+                EncryptionError::PlaintextTooLarge => panic!("encryption failed - out of memory?"),
+            },
+        };
+        Self {
             capsule,
             ciphertext,
-        })
+        }
     }
 
     /// Decrypts and verifies a key frag.
@@ -112,14 +131,14 @@ impl EncryptedKeyFrag {
         sk: &SecretKey,
         hrac: &HRAC,
         publisher_verifying_key: &PublicKey,
-    ) -> Result<VerifiedKeyFrag, KeyFragDecryptionError> {
+    ) -> Result<VerifiedKeyFrag, DecryptionError> {
         let auth_kfrag_bytes = decrypt_original(sk, &self.capsule, &self.ciphertext)
-            .map_err(KeyFragDecryptionError::DecryptionFailed)?;
+            .map_err(DecryptionError::DecryptionFailed)?;
         let auth_kfrag = AuthorizedKeyFrag::from_bytes(&auth_kfrag_bytes)
-            .map_err(KeyFragDecryptionError::DeserializationFailed)?;
+            .map_err(DecryptionError::DeserializationFailed)?;
         auth_kfrag
             .verify(hrac, publisher_verifying_key)
-            .ok_or(KeyFragDecryptionError::VerificationFailed)
+            .ok_or(DecryptionError::VerificationFailed)
     }
 }
 

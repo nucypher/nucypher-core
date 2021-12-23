@@ -10,7 +10,7 @@ use umbral_pre::{
 
 use crate::address::Address;
 use crate::hrac::HRAC;
-use crate::key_frag::EncryptedKeyFrag;
+use crate::key_frag::{DecryptionError, EncryptedKeyFrag};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
@@ -60,7 +60,7 @@ impl TreasureMap {
             assigned_kfrags.iter()
         {
             let encrypted_kfrag =
-                EncryptedKeyFrag::new(signer, ursula_encrypting_key, hrac, verified_kfrag).unwrap();
+                EncryptedKeyFrag::new(signer, ursula_encrypting_key, hrac, verified_kfrag);
             destinations.push((*ursula_checksum_address, encrypted_kfrag));
         }
 
@@ -74,11 +74,7 @@ impl TreasureMap {
     }
 
     /// Encrypts the treasure map for Bob.
-    pub fn encrypt(
-        &self,
-        signer: &Signer,
-        recipient_key: &PublicKey,
-    ) -> Result<EncryptedTreasureMap, EncryptionError> {
+    pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
         EncryptedTreasureMap::new(signer, recipient_key, self)
     }
 }
@@ -173,11 +169,7 @@ pub struct EncryptedTreasureMap {
 }
 
 impl EncryptedTreasureMap {
-    fn new(
-        signer: &Signer,
-        recipient_key: &PublicKey,
-        treasure_map: &TreasureMap,
-    ) -> Result<Self, EncryptionError> {
+    fn new(signer: &Signer, recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Self {
         // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         // Most probably it is an overkill, unless it can be used somehow
         // for Ursula-to-Ursula "baton passing".
@@ -186,12 +178,18 @@ impl EncryptedTreasureMap {
         // Do we ever cross-check them? Do we want to enforce them to be the same?
 
         let authorized_tmap = AuthorizedTreasureMap::new(signer, recipient_key, treasure_map);
-        let (capsule, ciphertext) = encrypt(recipient_key, &authorized_tmap.to_bytes())?;
-
-        Ok(Self {
+        let (capsule, ciphertext) = match encrypt(recipient_key, &authorized_tmap.to_bytes()) {
+            Ok(result) => result,
+            Err(err) => match err {
+                // For now this is the only error that can happen during encryption,
+                // and there's really no point in propagating it.
+                EncryptionError::PlaintextTooLarge => panic!("encryption failed - out of memory?"),
+            },
+        };
+        Self {
             capsule,
             ciphertext,
-        })
+        }
     }
 
     /// Decrypts and verifies the treasure map.
@@ -199,10 +197,14 @@ impl EncryptedTreasureMap {
         &self,
         sk: &SecretKey,
         publisher_verifying_key: &PublicKey,
-    ) -> Option<TreasureMap> {
-        let plaintext = decrypt_original(sk, &self.capsule, &self.ciphertext).unwrap();
-        let auth_tmap = AuthorizedTreasureMap::from_bytes(&plaintext).unwrap();
-        auth_tmap.verify(&sk.public_key(), publisher_verifying_key)
+    ) -> Result<TreasureMap, DecryptionError> {
+        let auth_tmap_bytes = decrypt_original(sk, &self.capsule, &self.ciphertext)
+            .map_err(DecryptionError::DecryptionFailed)?;
+        let auth_tmap = AuthorizedTreasureMap::from_bytes(&auth_tmap_bytes)
+            .map_err(DecryptionError::DeserializationFailed)?;
+        auth_tmap
+            .verify(&sk.public_key(), publisher_verifying_key)
+            .ok_or(DecryptionError::VerificationFailed)
     }
 }
 

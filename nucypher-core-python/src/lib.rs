@@ -9,7 +9,7 @@ use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
-use nucypher_core::{DeserializableFromBytes, SerializableToBytes};
+use nucypher_core::ProtocolObject;
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
@@ -26,10 +26,10 @@ trait FromBackend<T> {
     fn from_backend(backend: T) -> Self;
 }
 
-fn to_bytes<T, U>(obj: &T) -> PyResult<PyObject>
+fn to_bytes<'a, T, U>(obj: &T) -> PyResult<PyObject>
 where
     T: AsBackend<U>,
-    U: SerializableToBytes,
+    U: ProtocolObject<'a>,
 {
     let serialized = obj.as_backend().to_bytes();
     Python::with_gil(|py| -> PyResult<PyObject> { Ok(PyBytes::new(py, &serialized).into()) })
@@ -38,7 +38,7 @@ where
 fn from_bytes<'a, T, U>(data: &'a [u8]) -> PyResult<T>
 where
     T: FromBackend<U>,
-    U: DeserializableFromBytes<'a>,
+    U: ProtocolObject<'a>,
 {
     U::from_bytes(data)
         .map(T::from_backend)
@@ -67,8 +67,17 @@ where
     Python::with_gil(|py| {
         let builtins = PyModule::import(py, "builtins")?;
         let arg1 = PyUnicode::new(py, type_name);
-        let arg2: PyObject = PyBytes::new(py, &serialized).into();
+        let arg2: PyObject = PyBytes::new(py, serialized).into();
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
+    })
+}
+
+fn try_make_address(address_bytes: &[u8]) -> PyResult<nucypher_core::Address> {
+    nucypher_core::Address::from_slice(address_bytes).ok_or_else(|| {
+        PyValueError::new_err(format!(
+            "Incorrect length of Ethereum address: expected 20 bytes, got {}",
+            address_bytes.len()
+        ))
     })
 }
 
@@ -105,15 +114,17 @@ impl MessageKit {
     }
 
     #[new]
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> PyResult<Self> {
-        Ok(Self {
-            backend: nucypher_core::MessageKit::new(&policy_encrypting_key.backend, plaintext)
-                .unwrap(),
-        })
+    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::MessageKit::new(&policy_encrypting_key.backend, plaintext),
+        }
     }
 
     pub fn decrypt(&self, py: Python, sk: &SecretKey) -> PyResult<PyObject> {
-        let plaintext = self.backend.decrypt(&sk.backend).unwrap();
+        let plaintext = self
+            .backend
+            .decrypt(&sk.backend)
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
@@ -132,7 +143,7 @@ impl MessageKit {
         let plaintext = self
             .backend
             .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, &backend_cfrags)
-            .unwrap();
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
@@ -161,14 +172,14 @@ impl HRAC {
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
         label: &[u8],
-    ) -> PyResult<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             backend: nucypher_core::HRAC::new(
                 &publisher_verifying_key.backend,
                 &bob_verifying_key.backend,
                 label,
             ),
-        })
+        }
     }
 
     fn __bytes__(&self) -> &[u8] {
@@ -222,16 +233,15 @@ impl EncryptedKeyFrag {
         recipient_key: &PublicKey,
         hrac: &HRAC,
         verified_kfrag: &VerifiedKeyFrag,
-    ) -> PyResult<Self> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             backend: nucypher_core::EncryptedKeyFrag::new(
                 &signer.backend,
                 &recipient_key.backend,
                 &hrac.backend,
                 &verified_kfrag.backend,
-            )
-            .unwrap(),
-        })
+            ),
+        }
     }
 
     pub fn decrypt(
@@ -240,12 +250,10 @@ impl EncryptedKeyFrag {
         hrac: &HRAC,
         publisher_verifying_key: &PublicKey,
     ) -> PyResult<VerifiedKeyFrag> {
-        Ok(VerifiedKeyFrag {
-            backend: self
-                .backend
-                .decrypt(&sk.backend, &hrac.backend, &publisher_verifying_key.backend)
-                .unwrap(),
-        })
+        self.backend
+            .decrypt(&sk.backend, &hrac.backend, &publisher_verifying_key.backend)
+            .map(|backend| VerifiedKeyFrag { backend })
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
     #[staticmethod]
@@ -288,19 +296,15 @@ impl TreasureMap {
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
         assigned_kfrags: BTreeMap<&[u8], (PublicKey, VerifiedKeyFrag)>,
-        threshold: usize,
+        threshold: u8,
     ) -> PyResult<Self> {
         let assigned_kfrags_backend = assigned_kfrags
             .iter()
-            // TODO: check `address` size
-            .map(|(address, (key, vkfrag))| {
-                (
-                    nucypher_core::Address::from_slice(address).unwrap(),
-                    key.backend,
-                    vkfrag.backend.clone(),
-                )
+            .map(|(address_bytes, (key, vkfrag))| {
+                try_make_address(address_bytes)
+                    .map(|address| (address, key.backend, vkfrag.backend.clone()))
             })
-            .collect::<Vec<_>>();
+            .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {
             backend: nucypher_core::TreasureMap::new(
                 &signer.backend,
@@ -308,33 +312,24 @@ impl TreasureMap {
                 &policy_encrypting_key.backend,
                 &assigned_kfrags_backend,
                 threshold,
-            )
-            .ok()
-            .unwrap(),
+            ),
         })
     }
 
-    pub fn encrypt(
-        &self,
-        signer: &Signer,
-        recipient_key: &PublicKey,
-    ) -> PyResult<EncryptedTreasureMap> {
-        Ok(EncryptedTreasureMap {
+    pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
+        EncryptedTreasureMap {
             backend: self
                 .backend
                 .encrypt(&signer.backend, &recipient_key.backend),
-        })
+        }
     }
 
     #[getter]
     fn destinations(&self) -> BTreeMap<&[u8], EncryptedKeyFrag> {
         let mut result = BTreeMap::new();
         for (address, ekfrag) in &self.backend.destinations {
-            //let address_bytes = Python::with_gil(|py|
-            //    PyBytes::new(py, address.as_ref())).into();
-            let address_bytes = address.as_ref();
             result.insert(
-                address_bytes,
+                address.as_ref(),
                 EncryptedKeyFrag {
                     backend: ekfrag.clone(),
                 },
@@ -351,7 +346,7 @@ impl TreasureMap {
     }
 
     #[getter]
-    fn threshold(&self) -> usize {
+    fn threshold(&self) -> u8 {
         self.backend.threshold
     }
 
@@ -407,12 +402,10 @@ impl EncryptedTreasureMap {
         sk: &SecretKey,
         publisher_verifying_key: &PublicKey,
     ) -> PyResult<TreasureMap> {
-        Ok(TreasureMap {
-            backend: self
-                .backend
-                .decrypt(&sk.backend, &publisher_verifying_key.backend)
-                .unwrap(),
-        })
+        self.backend
+            .decrypt(&sk.backend, &publisher_verifying_key.backend)
+            .map(TreasureMap::from_backend)
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
     #[staticmethod]
@@ -581,7 +574,7 @@ impl ReencryptionResponse {
                 &policy_encrypting_key.backend,
                 &bob_encrypting_key.backend,
             )
-            .unwrap();
+            .ok_or_else(|| PyValueError::new_err("ReencryptionResponse verification failed"))?;
         Ok(vcfrags_backend
             .iter()
             .map(|vcfrag| VerifiedCapsuleFrag {
@@ -631,15 +624,14 @@ impl RetrievalKit {
     }
 
     #[new]
-    pub fn new(capsule: &Capsule, queried_addresses: BTreeSet<&[u8]>) -> Self {
+    pub fn new(capsule: &Capsule, queried_addresses: BTreeSet<&[u8]>) -> PyResult<Self> {
         let addresses_backend = queried_addresses
             .iter()
-            // TODO: check slice length first
-            .map(|address| nucypher_core::Address::from_slice(address).unwrap())
-            .collect::<Vec<_>>();
-        Self {
+            .map(|address_bytes| try_make_address(address_bytes))
+            .collect::<PyResult<Vec<_>>>()?;
+        Ok(Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend.iter()),
-        }
+        })
     }
 
     #[getter]
@@ -692,16 +684,19 @@ impl FromBackend<nucypher_core::RevocationOrder> for RevocationOrder {
 #[pymethods]
 impl RevocationOrder {
     #[new]
-    pub fn new(signer: &Signer, ursula_address: &[u8], encrypted_kfrag: &EncryptedKeyFrag) -> Self {
-        // TODO: check length
-        let address = nucypher_core::Address::from_slice(ursula_address).unwrap();
-        Self {
+    pub fn new(
+        signer: &Signer,
+        ursula_address: &[u8],
+        encrypted_kfrag: &EncryptedKeyFrag,
+    ) -> PyResult<Self> {
+        let address = try_make_address(ursula_address)?;
+        Ok(Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
                 &address,
                 &encrypted_kfrag.backend,
             ),
-        }
+        })
     }
 
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
@@ -741,10 +736,9 @@ impl NodeMetadataPayload {
         host: &str,
         port: u16,
         decentralized_identity_evidence: Option<Vec<u8>>,
-    ) -> Self {
-        // TODO: check slice length first
-        let address = nucypher_core::Address::from_slice(canonical_address).unwrap();
-        Self {
+    ) -> PyResult<Self> {
+        let address = try_make_address(canonical_address)?;
+        Ok(Self {
             backend: nucypher_core::NodeMetadataPayload {
                 canonical_address: address,
                 domain: domain.to_string(),
@@ -757,7 +751,7 @@ impl NodeMetadataPayload {
                 decentralized_identity_evidence: decentralized_identity_evidence
                     .map(|v| v.into_boxed_slice()),
             },
-        }
+        })
     }
 
     #[getter]
@@ -1056,9 +1050,7 @@ impl MetadataResponse {
             .map(|backend_response| VerifiedMetadataResponse {
                 backend: backend_response,
             })
-            .ok_or(VerificationError::new_err(format!(
-                "MetadataResponse verification failed"
-            )))
+            .ok_or_else(|| VerificationError::new_err("MetadataResponse verification failed"))
     }
 
     #[staticmethod]

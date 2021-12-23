@@ -21,15 +21,19 @@ pub struct MessageKit {
 
 impl MessageKit {
     /// Creates a new encrypted message for the given policy key.
-    pub fn new(
-        policy_encrypting_key: &PublicKey,
-        plaintext: &[u8],
-    ) -> Result<Self, EncryptionError> {
-        let (capsule, ciphertext) = encrypt(policy_encrypting_key, plaintext)?;
-        Ok(Self {
+    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
+        let (capsule, ciphertext) = match encrypt(policy_encrypting_key, plaintext) {
+            Ok(result) => result,
+            Err(err) => match err {
+                // For now this is the only error that can happen during encryption,
+                // and there's really no point in propagating it.
+                EncryptionError::PlaintextTooLarge => panic!("encryption failed - out of memory?"),
+            },
+        };
+        Self {
             capsule,
             ciphertext,
-        })
+        }
     }
 
     /// Decrypts the message using the original (Alice's) key.
