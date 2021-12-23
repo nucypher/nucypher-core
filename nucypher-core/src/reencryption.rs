@@ -1,12 +1,17 @@
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::{Capsule, PublicKey, CapsuleFrag, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,};
+use umbral_pre::{
+    Capsule, CapsuleFrag, PublicKey, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,
+};
 
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::serde::ProtocolObject;
+use crate::versioning::{
+    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+};
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -42,7 +47,29 @@ impl ReencryptionRequest {
     }
 }
 
-impl ProtocolObject for ReencryptionRequest {}
+impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
+    fn brand() -> [u8; 4] {
+        *b"ReRq"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for ReencryptionRequest {}
 
 /// A response from Ursula with reencrypted capsule frags.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -122,4 +149,26 @@ impl ReencryptionResponse {
     }
 }
 
-impl ProtocolObject for ReencryptionResponse {}
+impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
+    fn brand() -> [u8; 4] {
+        *b"ReRs"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for ReencryptionResponse {}

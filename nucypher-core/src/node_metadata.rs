@@ -6,7 +6,9 @@ use umbral_pre::{PublicKey, Signature, Signer};
 
 use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
-use crate::serde::{standard_serialize, ProtocolObject};
+use crate::versioning::{
+    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+};
 
 /// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -31,6 +33,13 @@ pub struct NodeMetadataPayload {
     pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
 }
 
+impl NodeMetadataPayload {
+    // Standard payload serialization for signing purposes.
+    fn to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(self)
+    }
+}
+
 /// Signed node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
@@ -39,14 +48,12 @@ pub struct NodeMetadata {
     pub payload: NodeMetadataPayload,
 }
 
-impl ProtocolObject for NodeMetadata {}
-
 impl NodeMetadata {
     /// Creates and signs a new metadata object.
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
         // TODO: how can we ensure that `verifying_key` in `payload` is the same as in `signer`?
         Self {
-            signature: signer.sign(&standard_serialize(&payload)),
+            signature: signer.sign(&payload.to_bytes()),
             payload: payload.clone(),
         }
     }
@@ -62,12 +69,38 @@ impl NodeMetadata {
         // TODO: in order for this to make sense, `verifying_key` must be checked independently.
         // Currently it is done in `validate_worker()` (using `decentralized_identity_evidence`)
         // Can we validate the evidence here too?
-        self.signature.verify(
-            &self.payload.verifying_key,
-            &standard_serialize(&self.payload),
-        )
+        self.signature
+            .verify(&self.payload.verifying_key, &self.payload.to_bytes())
     }
 }
+
+impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
+    fn brand() -> [u8; 4] {
+        *b"NdMd"
+    }
+
+    fn version() -> (u16, u16) {
+        // Note: if `NodeMetadataPayload` has a field added, it will have be a major version change,
+        // since the whole payload is signed (so we can't just substitute the default).
+        // Alternatively, one can add new fields to `NodeMetadata` itself
+        // (but then they won't be signed).
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for NodeMetadata {}
 
 /// A request for metadata exchange.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -88,7 +121,29 @@ impl MetadataRequest {
     }
 }
 
-impl ProtocolObject for MetadataRequest {}
+impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
+    fn brand() -> [u8; 4] {
+        *b"MdRq"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for MetadataRequest {}
 
 /// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -108,6 +163,11 @@ impl VerifiedMetadataResponse {
             announce_nodes: announce_nodes.to_vec().into_boxed_slice(),
         }
     }
+
+    // Standard payload serialization for signing purposes.
+    fn to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(self)
+    }
 }
 
 /// A response returned by an Ursula containing known node metadata.
@@ -121,7 +181,7 @@ impl MetadataResponse {
     /// Creates and signs a new metadata response.
     pub fn new(signer: &Signer, response: &VerifiedMetadataResponse) -> Self {
         Self {
-            signature: signer.sign(&standard_serialize(&response)),
+            signature: signer.sign(&response.to_bytes()),
             response: response.clone(),
         }
     }
@@ -130,7 +190,7 @@ impl MetadataResponse {
     pub fn verify(&self, verifying_pk: &PublicKey) -> Option<VerifiedMetadataResponse> {
         if self
             .signature
-            .verify(verifying_pk, &standard_serialize(&self.response))
+            .verify(verifying_pk, &self.response.to_bytes())
         {
             Some(self.response.clone())
         } else {
@@ -139,4 +199,31 @@ impl MetadataResponse {
     }
 }
 
-impl ProtocolObject for MetadataResponse {}
+impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
+    fn brand() -> [u8; 4] {
+        *b"MdRs"
+    }
+
+    fn version() -> (u16, u16) {
+        // Note: if `VerifiedMetadataResponse` has a field added,
+        // it will have be a major version change,
+        // since the whole payload is signed (so we can't just substitute the default).
+        // Alternatively, one can add new fields to `NodeMetadata` itself
+        // (but then they won't be signed).
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for MetadataResponse {}

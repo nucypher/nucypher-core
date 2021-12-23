@@ -16,8 +16,6 @@ use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
 ///
 /// Publisher and Bob have all the information they need to construct this.
 /// Ursula does not, so we share it with her.
-///
-/// This way, Bob can generate it and use it to find the TreasureMap.
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct HRAC(
     #[serde(

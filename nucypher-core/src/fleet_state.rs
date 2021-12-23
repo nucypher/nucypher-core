@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 
 use crate::node_metadata::NodeMetadata;
-use crate::serde::standard_serialize;
 use crate::serde::{serde_deserialize_as_bytes, serde_serialize_as_bytes};
+use crate::versioning::ProtocolObject;
 
 /// An identifier of the fleet state.
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -37,8 +37,11 @@ impl FleetStateChecksum {
         let checksum = nodes
             .iter()
             .fold(Sha3_256::new(), |digest, node| {
-                // Adding only the payload to the digest, since signatures are randomized.
-                digest.chain(&standard_serialize(&node.payload))
+                // NodeMetadata has a payload signature, which is randomized,
+                // so this may lead to unnecessary fleet state update.
+                // But, unlike ProtocolObject::to_bytes(), payload serialization
+                // is not standardized, so it is better not to rely on it.
+                digest.chain(&node.to_bytes())
             })
             .finalize();
 

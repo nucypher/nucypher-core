@@ -1,9 +1,14 @@
+use alloc::boxed::Box;
+use alloc::string::String;
+
 use serde::{Deserialize, Serialize};
 use umbral_pre::{PublicKey, Signature, Signer};
 
 use crate::address::Address;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::serde::{ProtocolObject, SerializableToBytes};
+use crate::versioning::{
+    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+};
 
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -40,4 +45,26 @@ impl RevocationOrder {
     }
 }
 
-impl ProtocolObject for RevocationOrder {}
+impl<'a> ProtocolObjectInner<'a> for RevocationOrder {
+    fn brand() -> [u8; 4] {
+        *b"Revo"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for RevocationOrder {}

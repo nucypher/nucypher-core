@@ -1,27 +1,25 @@
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    decrypt_original, encrypt, Capsule, PublicKey, SecretKey, SerializableToArray, Signature,
-    Signer, VerifiedKeyFrag,
+    decrypt_original, encrypt, Capsule, EncryptionError, PublicKey, SecretKey, SerializableToArray,
+    Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::address::Address;
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::serde::{DeserializableFromBytes, ProtocolObject, SerializableToBytes};
-
-pub enum TreasureMapError {
-    IncorrectThresholdSize,
-    TooFewDestinations,
-}
+use crate::versioning::{
+    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+};
 
 /// A structure containing `KeyFrag` objects encrypted for Ursulas chosen for this policy.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct TreasureMap {
     /// Threshold for successful re-encryption.
-    pub threshold: usize,
+    pub threshold: u8,
     /// Policy HRAC.
     pub hrac: HRAC,
     // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
@@ -37,6 +35,9 @@ pub struct TreasureMap {
 
 impl TreasureMap {
     /// Create a new treasure map for a collection of ursulas and kfrags.
+    ///
+    /// Panics if `threshold` is set to 0,
+    /// or the number of assigned keyfrags is less than `threshold`.
     pub fn new(
         signer: &Signer,
         hrac: &HRAC,
@@ -44,15 +45,14 @@ impl TreasureMap {
         // TODO: would be nice to enforce that checksum addresses are not repeated,
         // but there is no "map-like" trait in Rust, and a specific map class seems too restrictive...
         assigned_kfrags: &[(Address, PublicKey, VerifiedKeyFrag)],
-        threshold: usize,
-    ) -> Result<Self, TreasureMapError> {
-        if !(1..=255).contains(&threshold) {
-            return Err(TreasureMapError::IncorrectThresholdSize);
-        }
-
-        if assigned_kfrags.len() < threshold {
-            return Err(TreasureMapError::TooFewDestinations);
-        }
+        threshold: u8,
+    ) -> Self {
+        // Panic here since violation of these conditions indicates a bug on the caller's side.
+        assert!(threshold != 0, "threshold must be non-zero");
+        assert!(
+            assigned_kfrags.len() >= threshold as usize,
+            "threshold cannot be larger than the total number of shares"
+        );
 
         // Encrypt each kfrag for an Ursula.
         let mut destinations = Vec::new();
@@ -64,22 +64,48 @@ impl TreasureMap {
             destinations.push((*ursula_checksum_address, encrypted_kfrag));
         }
 
-        Ok(Self {
+        Self {
             threshold,
             hrac: *hrac,
             destinations,
             policy_encrypting_key: *policy_encrypting_key,
             publisher_verifying_key: signer.verifying_key(),
-        })
+        }
     }
 
     /// Encrypts the treasure map for Bob.
-    pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
+    pub fn encrypt(
+        &self,
+        signer: &Signer,
+        recipient_key: &PublicKey,
+    ) -> Result<EncryptedTreasureMap, EncryptionError> {
         EncryptedTreasureMap::new(signer, recipient_key, self)
     }
 }
 
-impl ProtocolObject for TreasureMap {}
+impl<'a> ProtocolObjectInner<'a> for TreasureMap {
+    fn brand() -> [u8; 4] {
+        *b"TMap"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for TreasureMap {}
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 struct AuthorizedTreasureMap {
@@ -115,7 +141,29 @@ impl AuthorizedTreasureMap {
     }
 }
 
-impl ProtocolObject for AuthorizedTreasureMap {}
+impl<'a> ProtocolObjectInner<'a> for AuthorizedTreasureMap {
+    fn brand() -> [u8; 4] {
+        *b"AMap"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for AuthorizedTreasureMap {}
 
 /// A treasure map encrypted for Bob.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -125,7 +173,11 @@ pub struct EncryptedTreasureMap {
 }
 
 impl EncryptedTreasureMap {
-    fn new(signer: &Signer, recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Self {
+    fn new(
+        signer: &Signer,
+        recipient_key: &PublicKey,
+        treasure_map: &TreasureMap,
+    ) -> Result<Self, EncryptionError> {
         // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         // Most probably it is an overkill, unless it can be used somehow
         // for Ursula-to-Ursula "baton passing".
@@ -134,12 +186,12 @@ impl EncryptedTreasureMap {
         // Do we ever cross-check them? Do we want to enforce them to be the same?
 
         let authorized_tmap = AuthorizedTreasureMap::new(signer, recipient_key, treasure_map);
-        let (capsule, ciphertext) = encrypt(recipient_key, &authorized_tmap.to_bytes()).unwrap();
+        let (capsule, ciphertext) = encrypt(recipient_key, &authorized_tmap.to_bytes())?;
 
-        Self {
+        Ok(Self {
             capsule,
             ciphertext,
-        }
+        })
     }
 
     /// Decrypts and verifies the treasure map.
@@ -154,4 +206,26 @@ impl EncryptedTreasureMap {
     }
 }
 
-impl ProtocolObject for EncryptedTreasureMap {}
+impl<'a> ProtocolObjectInner<'a> for EncryptedTreasureMap {
+    fn brand() -> [u8; 4] {
+        *b"EMap"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for EncryptedTreasureMap {}

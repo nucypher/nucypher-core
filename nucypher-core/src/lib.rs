@@ -18,8 +18,8 @@ mod retrieval_kit;
 mod revocation_order;
 mod serde;
 mod treasure_map;
+mod versioning;
 
-pub use crate::serde::{DeserializableFromBytes, ProtocolObject, SerializableToBytes};
 pub use address::Address;
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
@@ -32,3 +32,7 @@ pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
+pub use versioning::ProtocolObject;
+
+// Re-export umbral_pre so that the users don't have to version-match.
+pub use umbral_pre;

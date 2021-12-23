@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use alloc::string::String;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
@@ -6,7 +7,9 @@ use umbral_pre::{
     PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
-use crate::serde::ProtocolObject;
+use crate::versioning::{
+    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+};
 
 /// Encrypted message prepared for re-encryption.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -51,4 +54,26 @@ impl MessageKit {
     }
 }
 
-impl ProtocolObject for MessageKit {}
+impl<'a> ProtocolObjectInner<'a> for MessageKit {
+    fn brand() -> [u8; 4] {
+        *b"MKit"
+    }
+
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for MessageKit {}
