@@ -302,7 +302,7 @@ impl TreasureMap {
             .iter()
             .map(|(address_bytes, (key, vkfrag))| {
                 try_make_address(address_bytes)
-                    .map(|address| (address, key.backend, vkfrag.backend.clone()))
+                    .map(|address| (address, (&key.backend, &vkfrag.backend)))
             })
             .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {
@@ -310,7 +310,7 @@ impl TreasureMap {
                 &signer.backend,
                 &hrac.backend,
                 &policy_encrypting_key.backend,
-                &assigned_kfrags_backend,
+                assigned_kfrags_backend,
                 threshold,
             ),
         })
@@ -630,7 +630,7 @@ impl RetrievalKit {
             .map(|address_bytes| try_make_address(address_bytes))
             .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {
-            backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend.iter()),
+            backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend),
         })
     }
 

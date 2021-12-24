@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::format;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
@@ -22,11 +23,8 @@ pub struct TreasureMap {
     pub threshold: u8,
     /// Policy HRAC.
     pub hrac: HRAC,
-    // TODO: HashMap requires `std`. Do we actually want `no_std` for this crate?
-    // There seems to be a BTreeMap available for no_std environments,
-    // but let's just use vector for now.
     /// Encrypted key frags assigned to target Ursulas.
-    pub destinations: Vec<(Address, EncryptedKeyFrag)>,
+    pub destinations: BTreeMap<Address, EncryptedKeyFrag>,
     /// A key to create encrypted messages under this policy.
     pub policy_encrypting_key: PublicKey,
     /// Publisher's verifying key.
@@ -37,32 +35,45 @@ impl TreasureMap {
     /// Create a new treasure map for a collection of ursulas and kfrags.
     ///
     /// Panics if `threshold` is set to 0,
-    /// or the number of assigned keyfrags is less than `threshold`.
-    pub fn new(
+    /// the number of assigned keyfrags is less than `threshold`,
+    /// or if the addresses in `assigned_kfrags` repeat.
+    pub fn new<'a, I>(
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        // TODO: would be nice to enforce that checksum addresses are not repeated,
-        // but there is no "map-like" trait in Rust, and a specific map class seems too restrictive...
-        assigned_kfrags: &[(Address, PublicKey, VerifiedKeyFrag)],
+        assigned_kfrags: I,
         threshold: u8,
-    ) -> Self {
-        // Panic here since violation of these conditions indicates a bug on the caller's side.
+    ) -> Self
+    where
+        I: IntoIterator<Item = (Address, (&'a PublicKey, &'a VerifiedKeyFrag))>,
+    {
+        // Panic here since violation of theis condition indicates a bug on the caller's side.
         assert!(threshold != 0, "threshold must be non-zero");
-        assert!(
-            assigned_kfrags.len() >= threshold as usize,
-            "threshold cannot be larger than the total number of shares"
-        );
 
         // Encrypt each kfrag for an Ursula.
-        let mut destinations = Vec::new();
-        for (ursula_checksum_address, ursula_encrypting_key, verified_kfrag) in
-            assigned_kfrags.iter()
+        let mut destinations = BTreeMap::new();
+        for (ursula_address, (ursula_encrypting_key, verified_kfrag)) in assigned_kfrags.into_iter()
         {
             let encrypted_kfrag =
                 EncryptedKeyFrag::new(signer, ursula_encrypting_key, hrac, verified_kfrag);
-            destinations.push((*ursula_checksum_address, encrypted_kfrag));
+            if destinations
+                .insert(ursula_address, encrypted_kfrag)
+                .is_some()
+            {
+                // This means there are repeating addresses in the mapping.
+                // Panic here since violation of theis condition indicates a bug on the caller's side.
+                panic!(
+                    "{}",
+                    format!("Repeating address in assigned_kfrags: {:?}", ursula_address)
+                )
+            };
         }
+
+        // Panic here since violation of theis condition indicates a bug on the caller's side.
+        assert!(
+            destinations.len() >= threshold as usize,
+            "threshold cannot be larger than the total number of shares"
+        );
 
         Self {
             threshold,

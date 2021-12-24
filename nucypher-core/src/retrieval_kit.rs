@@ -33,14 +33,14 @@ impl RetrievalKit {
     }
 
     /// Creates a new retrieval kit recording the addresses already queried for reencryption.
-    pub fn new<'a, I>(capsule: &Capsule, queried_addresses: I) -> Self
+    pub fn new<I>(capsule: &Capsule, queried_addresses: I) -> Self
     where
-        I: Iterator<Item = &'a Address>,
+        I: IntoIterator<Item = Address>,
     {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
-            queried_addresses: BTreeSet::from_iter(queried_addresses.cloned()),
+            queried_addresses: BTreeSet::from_iter(queried_addresses.into_iter()),
         }
     }
 }
