@@ -13,6 +13,7 @@ categories = ["cryptography", "no-std"]
 umbral-pre = { git = "https://github.com/fjarri/rust-umbral", branch = "bindings-as-features", features = ["serde-support"] }
 #umbral-pre = "0.3"
 serde = { version = "1", default-features = false, features = ["derive"] }
+serde_bytes = "0.11"
 
 generic-array = "*"
 typenum = "*"

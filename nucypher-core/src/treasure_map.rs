@@ -165,6 +165,7 @@ impl<'a> ProtocolObject<'a> for AuthorizedTreasureMap {}
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedTreasureMap {
     capsule: Capsule,
+    #[serde(with = "serde_bytes")]
     ciphertext: Box<[u8]>,
 }
 

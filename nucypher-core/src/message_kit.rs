@@ -16,6 +16,7 @@ use crate::versioning::{
 pub struct MessageKit {
     /// Encapsulated symmetric key for this message.
     pub capsule: Capsule,
+    #[serde(with = "serde_bytes")]
     ciphertext: Box<[u8]>,
 }
 

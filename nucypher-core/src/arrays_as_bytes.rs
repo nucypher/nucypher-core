@@ -1,8 +1,7 @@
 // Helper functions to serialize/deserialize byte arrays (`[u8; N]`) as bytestrings.
 // By default, `serde` serializes them as lists of integers, which in case of MessagePack
 // leads to every value >127 being prepended with a `\xcc`.
-// `serde_bytes` crate could help with that, but at the moment
-// it only works with `&[u8]` and `Vec<u8>`.
+// `serde_bytes` crate could help with that, but at the moment it only works with slices.
 
 use core::convert::TryInto;
 use core::fmt;

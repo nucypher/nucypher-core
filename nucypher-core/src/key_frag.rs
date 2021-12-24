@@ -97,6 +97,7 @@ impl fmt::Display for DecryptionError {
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedKeyFrag {
     capsule: Capsule,
+    #[serde(with = "serde_bytes")]
     ciphertext: Box<[u8]>,
 }
 

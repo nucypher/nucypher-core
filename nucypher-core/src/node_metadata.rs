@@ -24,12 +24,14 @@ pub struct NodeMetadataPayload {
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
     /// The node's SSL certificate (serialized in PEM format).
+    #[serde(with = "serde_bytes")]
     pub certificate_bytes: Box<[u8]>,
     /// The hostname of the node's REST service.
     pub host: String,
     /// The port of the node's REST service.
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the worker address.
+    #[serde(with = "serde_bytes")]
     pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
 }
 
