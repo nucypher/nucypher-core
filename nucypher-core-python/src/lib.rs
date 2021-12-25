@@ -1084,26 +1084,22 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
 
     let umbral_module = PyModule::new(py, "umbral")?;
 
-    umbral_module.add_class::<umbral_pre::bindings_python::SecretKey>()?; //
-    umbral_module.add_class::<umbral_pre::bindings_python::SecretKeyFactory>()?; //
-    umbral_module.add_class::<umbral_pre::bindings_python::PublicKey>()?; //
-    umbral_module.add_class::<umbral_pre::bindings_python::Capsule>()?; //
-    umbral_module.add_class::<umbral_pre::bindings_python::VerifiedKeyFrag>()?; //
-    umbral_module.add_class::<umbral_pre::bindings_python::VerifiedCapsuleFrag>()?; //
-    umbral_pre::bindings_python::register_reencrypt(umbral_module)?; //
+    umbral_module.add_class::<umbral_pre::bindings_python::SecretKey>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::SecretKeyFactory>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::PublicKey>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::Capsule>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::VerifiedKeyFrag>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::VerifiedCapsuleFrag>()?;
+    umbral_pre::bindings_python::register_reencrypt(umbral_module)?;
+    umbral_pre::bindings_python::register_generate_kfrags(umbral_module)?;
 
     umbral_module.add_class::<umbral_pre::bindings_python::Signer>()?; // Don't need it if we accept secret keys instead
     umbral_module.add_class::<umbral_pre::bindings_python::Signature>()?; // probably not?
-    umbral_module.add_class::<umbral_pre::bindings_python::KeyFrag>()?;
     umbral_module.add_class::<umbral_pre::bindings_python::CapsuleFrag>()?; // probably not? Porter needs it
     umbral_module.add(
         "VerificationError",
         py.get_type::<umbral_pre::bindings_python::VerificationError>(),
     )?; // depends on what `reencryption_response.verify()` returns
-    umbral_pre::bindings_python::register_encrypt(umbral_module)?;
-    umbral_pre::bindings_python::register_decrypt_original(umbral_module)?;
-    umbral_pre::bindings_python::register_generate_kfrags(umbral_module)?; // can potentially be hidden in TreasureMap constructor
-    umbral_pre::bindings_python::register_decrypt_reencrypted(umbral_module)?;
     m.add_submodule(umbral_module)?;
 
     Ok(())
