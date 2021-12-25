@@ -16,6 +16,7 @@ use crate::arrays_as_bytes;
 ///
 /// Publisher and Bob have all the information they need to construct this.
 /// Ursula does not, so we share it with her.
+#[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct HRAC(#[serde(with = "arrays_as_bytes")] [u8; 16]);
 
