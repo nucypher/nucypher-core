@@ -10,8 +10,7 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-umbral-pre = { git = "https://github.com/fjarri/rust-umbral", branch = "bindings-as-features", features = ["serde-support"] }
-#umbral-pre = "0.3"
+umbral-pre = { version = "0.4", features = ["serde-support"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
 serde_bytes = "0.11"
 
