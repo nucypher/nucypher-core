@@ -9,4 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Nothing here yet.
 
 
-[Unreleased]: https://github.com/nucypher/nucypher-core/compare/7247bb...HEAD
+## [0.0.1] - 2021-12-25
+
+Initial release.
+
+
+[Unreleased]: https://github.com/nucypher/rust-umbral/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/nucypher/rust-umbral/releases/tag/v0.0.1
