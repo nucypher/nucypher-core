@@ -3,12 +3,12 @@ from setuptools_rust import Binding, RustExtension
 
 setup(
     name="nucypher_core",
-    description="Implementation of Umbral proxy reencryption algorithm",
+    description="Protocol structures of Nucypher network",
     version="0.0.1",
     author="Bogdan Opanchuk",
     author_email="bogdan@opanchuk.net",
     url="https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python",
-    rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3)],
+    rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3, debug=False)],
     packages=["nucypher_core", "nucypher_core.umbral"],
     #package_data = {
     #    'nucypher_core': ['py.typed', '__init__.pyi'],
@@ -17,7 +17,7 @@ setup(
     zip_safe=False,
     classifiers=[
         "Development Status :: 3 - Alpha",
-        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
         "Programming Language :: Rust",
