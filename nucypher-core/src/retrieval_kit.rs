@@ -1,7 +1,6 @@
 use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 use alloc::string::String;
-use core::iter::FromIterator;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
@@ -40,7 +39,7 @@ impl RetrievalKit {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
-            queried_addresses: BTreeSet::from_iter(queried_addresses.into_iter()),
+            queried_addresses: queried_addresses.into_iter().collect(),
         }
     }
 }

@@ -159,6 +159,7 @@ impl MessageKit {
 // HRAC
 //
 
+#[allow(clippy::upper_case_acronyms)]
 #[pyclass(module = "nucypher_core")]
 #[derive(PartialEq)]
 pub struct HRAC {
