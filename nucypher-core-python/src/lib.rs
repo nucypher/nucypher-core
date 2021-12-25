@@ -977,24 +977,24 @@ impl MetadataRequest {
 }
 
 //
-// VerifiedMetadataResponse
+// MetadataResponsePayload
 //
 
 #[pyclass(module = "nucypher_core")]
-pub struct VerifiedMetadataResponse {
-    backend: nucypher_core::VerifiedMetadataResponse,
+pub struct MetadataResponsePayload {
+    backend: nucypher_core::MetadataResponsePayload,
 }
 
 #[pymethods]
-impl VerifiedMetadataResponse {
+impl MetadataResponsePayload {
     #[new]
     fn new(timestamp_epoch: u32, announce_nodes: Vec<NodeMetadata>) -> Self {
         let nodes_backend = announce_nodes
             .iter()
             .map(|node| node.backend.clone())
             .collect::<Vec<_>>();
-        VerifiedMetadataResponse {
-            backend: nucypher_core::VerifiedMetadataResponse::new(timestamp_epoch, &nodes_backend),
+        MetadataResponsePayload {
+            backend: nucypher_core::MetadataResponsePayload::new(timestamp_epoch, &nodes_backend),
         }
     }
 
@@ -1039,17 +1039,17 @@ impl FromBackend<nucypher_core::MetadataResponse> for MetadataResponse {
 #[pymethods]
 impl MetadataResponse {
     #[new]
-    pub fn new(signer: &Signer, response: &VerifiedMetadataResponse) -> Self {
+    pub fn new(signer: &Signer, payload: &MetadataResponsePayload) -> Self {
         Self {
-            backend: nucypher_core::MetadataResponse::new(&signer.backend, &response.backend),
+            backend: nucypher_core::MetadataResponse::new(&signer.backend, &payload.backend),
         }
     }
 
-    pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<VerifiedMetadataResponse> {
+    pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<MetadataResponsePayload> {
         self.backend
             .verify(&verifying_pk.backend)
-            .map(|backend_response| VerifiedMetadataResponse {
-                backend: backend_response,
+            .map(|backend_payload| MetadataResponsePayload {
+                backend: backend_payload,
             })
             .ok_or_else(|| VerificationError::new_err("MetadataResponse verification failed"))
     }
@@ -1080,7 +1080,7 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<NodeMetadataPayload>()?;
     m.add_class::<FleetStateChecksum>()?;
     m.add_class::<MetadataRequest>()?;
-    m.add_class::<VerifiedMetadataResponse>()?;
+    m.add_class::<MetadataResponsePayload>()?;
     m.add_class::<MetadataResponse>()?;
 
     let umbral_module = PyModule::new(py, "umbral")?;

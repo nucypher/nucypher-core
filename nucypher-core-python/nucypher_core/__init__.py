@@ -13,5 +13,5 @@ from ._nucypher_core import (
     FleetStateChecksum,
     MetadataRequest,
     MetadataResponse,
-    VerifiedMetadataResponse,
+    MetadataResponsePayload,
     )

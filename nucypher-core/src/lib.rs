@@ -26,7 +26,7 @@ pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;
 pub use message_kit::MessageKit;
 pub use node_metadata::{
-    MetadataRequest, MetadataResponse, NodeMetadata, NodeMetadataPayload, VerifiedMetadataResponse,
+    MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
 };
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;

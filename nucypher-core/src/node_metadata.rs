@@ -149,7 +149,7 @@ impl<'a> ProtocolObject<'a> for MetadataRequest {}
 
 /// Payload of the metadata response.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
-pub struct VerifiedMetadataResponse {
+pub struct MetadataResponsePayload {
     /// The timestamp of the most recent fleet state
     /// (the one consisting of the nodes that are being sent).
     pub timestamp_epoch: u32,
@@ -157,7 +157,7 @@ pub struct VerifiedMetadataResponse {
     pub announce_nodes: Box<[NodeMetadata]>,
 }
 
-impl VerifiedMetadataResponse {
+impl MetadataResponsePayload {
     /// Creates the new metadata response payload.
     pub fn new(timestamp_epoch: u32, announce_nodes: &[NodeMetadata]) -> Self {
         Self {
@@ -176,25 +176,25 @@ impl VerifiedMetadataResponse {
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataResponse {
     signature: Signature,
-    response: VerifiedMetadataResponse,
+    payload: MetadataResponsePayload,
 }
 
 impl MetadataResponse {
     /// Creates and signs a new metadata response.
-    pub fn new(signer: &Signer, response: &VerifiedMetadataResponse) -> Self {
+    pub fn new(signer: &Signer, payload: &MetadataResponsePayload) -> Self {
         Self {
-            signature: signer.sign(&response.to_bytes()),
-            response: response.clone(),
+            signature: signer.sign(&payload.to_bytes()),
+            payload: payload.clone(),
         }
     }
 
     /// Verifies the metadata response and returns the contained payload.
-    pub fn verify(&self, verifying_pk: &PublicKey) -> Option<VerifiedMetadataResponse> {
+    pub fn verify(&self, verifying_pk: &PublicKey) -> Option<MetadataResponsePayload> {
         if self
             .signature
-            .verify(verifying_pk, &self.response.to_bytes())
+            .verify(verifying_pk, &self.payload.to_bytes())
         {
-            Some(self.response.clone())
+            Some(self.payload.clone())
         } else {
             None
         }
@@ -207,7 +207,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
     }
 
     fn version() -> (u16, u16) {
-        // Note: if `VerifiedMetadataResponse` has a field added,
+        // Note: if `MetadataResponsePayload` has a field added,
         // it will have be a major version change,
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
