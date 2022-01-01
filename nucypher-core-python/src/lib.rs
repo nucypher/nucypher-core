@@ -9,7 +9,7 @@ use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
-use nucypher_core::ProtocolObject;
+use nucypher_core::{RECOVERABLE_SIGNATURE_SIZE, ProtocolObject};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
@@ -733,7 +733,7 @@ impl NodeMetadataPayload {
         certificate_bytes: &[u8],
         host: &str,
         port: u16,
-        decentralized_identity_evidence: Option<Vec<u8>>,
+        decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
     ) -> PyResult<Self> {
         let address = try_make_address(canonical_address)?;
         Ok(Self {
@@ -746,8 +746,7 @@ impl NodeMetadataPayload {
                 certificate_bytes: certificate_bytes.into(),
                 host: host.to_string(),
                 port,
-                decentralized_identity_evidence: decentralized_identity_evidence
-                    .map(|v| v.into_boxed_slice()),
+                decentralized_identity_evidence,
             },
         })
     }

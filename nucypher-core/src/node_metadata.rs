@@ -1,14 +1,19 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 
+use k256::ecdsa::recoverable;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{PublicKey, Signature, Signer};
 
 use crate::address::Address;
+use crate::arrays_as_bytes;
 use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+
+/// The size of the Ethereum signature with the recovery byte
+pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
 
 /// Node metadata.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -31,8 +36,8 @@ pub struct NodeMetadataPayload {
     /// The port of the node's REST service.
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the worker address.
-    #[serde(with = "serde_bytes")]
-    pub decentralized_identity_evidence: Option<Box<[u8]>>, // TODO: make its own type?
+    #[serde(with = "arrays_as_bytes")]
+    pub decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
 }
 
 impl NodeMetadataPayload {
