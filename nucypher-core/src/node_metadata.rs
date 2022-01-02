@@ -1,9 +1,12 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::string::ToString;
 
 use k256::ecdsa::recoverable;
+use k256::ecdsa::signature::Signature as SignatureTrait;
 use serde::{Deserialize, Serialize};
-use umbral_pre::{PublicKey, Signature, Signer};
+use sha3::{Digest, Keccak256};
+use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
 
 use crate::address::Address;
 use crate::arrays_as_bytes;
@@ -55,6 +58,16 @@ pub struct NodeMetadata {
     pub payload: NodeMetadataPayload,
 }
 
+/// Mimics the format of `eth_account.messages.encode_defunct()` which NuCypher codebase uses.
+fn encode_defunct(message: &[u8]) -> Keccak256 {
+    Keccak256::new()
+        .chain(b"\x19")
+        .chain(b"E") // version
+        .chain(b"thereum Signed Message:\n") // header
+        .chain(message.len().to_string().as_bytes())
+        .chain(message)
+}
+
 impl NodeMetadata {
     /// Creates and signs a new metadata object.
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
@@ -66,18 +79,36 @@ impl NodeMetadata {
     }
 
     /// Verifies the consistency of signed node metadata.
-    pub fn verify(&self) -> bool {
+    pub fn verify(&self, worker_address: &Address) -> bool {
         // This method returns bool and not NodeMetadataPayload,
         // because NodeMetadata can be used before verification,
         // so we need access to its fields right away.
 
-        // TODO: we could do this on deserialization, but it is a relatively expensive operation.
-
-        // TODO: in order for this to make sense, `verifying_key` must be checked independently.
-        // Currently it is done in `validate_worker()` (using `decentralized_identity_evidence`)
-        // Can we validate the evidence here too?
-        self.signature
+        // We could do this on deserialization, but it is a relatively expensive operation.
+        if !self
+            .signature
             .verify(&self.payload.verifying_key, &self.payload.to_bytes())
+        {
+            return false;
+        }
+
+        let evidence = match self.payload.decentralized_identity_evidence {
+            Some(evidence) => evidence,
+            None => return true, // If there's no evidence present, there's nothing to check
+        };
+
+        let signature = match recoverable::Signature::from_bytes(&evidence) {
+            Ok(signature) => signature,
+            Err(_) => return false, // Incorrect evidence format
+        };
+
+        let message = encode_defunct(&self.payload.verifying_key.to_array());
+        let key = match signature.recover_verify_key_from_digest(message) {
+            Ok(key) => key,
+            Err(_) => return false,
+        };
+
+        &Address::from_k256_public_key(&key) == worker_address
     }
 }
 

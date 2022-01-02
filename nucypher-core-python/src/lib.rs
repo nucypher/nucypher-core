@@ -835,8 +835,9 @@ impl NodeMetadata {
         }
     }
 
-    pub fn verify(&self) -> bool {
-        self.backend.verify()
+    pub fn verify(&self, worker_address: &[u8]) -> bool {
+        let address = try_make_address(worker_address).unwrap();
+        self.backend.verify(&address)
     }
 
     #[getter]
