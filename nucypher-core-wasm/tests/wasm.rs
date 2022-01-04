@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
 
+use nucypher_core::Address;
 use nucypher_core_wasm::*;
 
-use umbral_pre::bindings_wasm::*;
+use umbral_pre::bindings_wasm::{
+    generate_kfrags, reencrypt, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+};
 use wasm_bindgen::convert::FromWasmAbi;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::*;
@@ -13,7 +16,10 @@ use wasm_bindgen_test::*;
 
 // Downcast a WASM type to a Rust type
 // Reference: https://github.com/rustwasm/wasm-bindgen/issues/2231
-fn generic_of_jsval<T: FromWasmAbi<Abi = u32>>(js: JsValue, classname: &str) -> Result<T, JsValue> {
+fn of_js_value_generic<T: FromWasmAbi<Abi = u32>>(
+    js: JsValue,
+    classname: &str,
+) -> Result<T, JsValue> {
     use js_sys::{Object, Reflect};
     let ctor_name = Object::get_prototype_of(&js).constructor().name();
     if ctor_name == classname {
@@ -27,13 +33,66 @@ fn generic_of_jsval<T: FromWasmAbi<Abi = u32>>(js: JsValue, classname: &str) -> 
 }
 
 #[wasm_bindgen]
-pub fn verified_key_frag_of_jsval(js: JsValue) -> Option<VerifiedKeyFrag> {
-    generic_of_jsval(js, "VerifiedKeyFrag").unwrap_or(None)
+pub fn verified_key_farg_of_js_value(js_value: JsValue) -> Option<VerifiedKeyFrag> {
+    of_js_value_generic(js_value, "VerifiedKeyFrag").unwrap_or(None)
 }
 
 #[wasm_bindgen]
-pub fn node_metadata_of_jsval(js: JsValue) -> Option<NodeMetadata> {
-    generic_of_jsval(js, "NodeMetadata").unwrap_or(None)
+pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
+    of_js_value_generic(js_value, "NodeMetadata").unwrap_or(None)
+}
+
+fn make_hrac() -> HRAC {
+    let publisher_verifying_key = SecretKey::random().public_key();
+    let bob_verifying_key = SecretKey::random().public_key();
+    let label = "Hello, world!".as_bytes();
+    HRAC::new(&publisher_verifying_key, &bob_verifying_key, label)
+}
+
+fn make_kfrags(delegating_sk: &SecretKey, receiving_sk: &SecretKey) -> Vec<VerifiedKeyFrag> {
+    let receiving_pk = receiving_sk.public_key();
+    let signer = Signer::new(&delegating_sk);
+    let verified_kfrags: Vec<VerifiedKeyFrag> =
+        generate_kfrags(&delegating_sk, &receiving_pk, &signer, 2, 3, false, false)
+            .iter()
+            .map(|kfrag| verified_key_farg_of_js_value(kfrag.clone()).unwrap())
+            .collect();
+    verified_kfrags
+}
+
+fn make_fleet_state_checksum() -> FleetStateChecksum {
+    let this_node = Some(make_node_metadata());
+    let other_nodes = vec![make_node_metadata(), make_node_metadata()];
+    let other_nodes = serde_wasm_bindgen::to_value(&other_nodes).unwrap();
+    FleetStateChecksum::new(this_node, other_nodes).unwrap()
+}
+
+fn make_node_metadata() -> NodeMetadata {
+    let canonical_address = "00000000000000000001".as_bytes();
+    let domain = "localhost";
+    let timestamp_epoch = 1546300800;
+    let verifying_key = SecretKey::random().public_key();
+    let encrypting_key = SecretKey::random().public_key();
+    let certificate_bytes = "certificate_bytes".as_bytes();
+    let host = "https://localhost.com";
+    let port = 443;
+    let decentralized_identity_evidence = Some(vec![1, 2, 3]);
+
+    let node_metadata_payload = NodeMetadataPayload::new(
+        canonical_address,
+        domain,
+        timestamp_epoch,
+        &verifying_key,
+        &encrypting_key,
+        certificate_bytes,
+        host,
+        port,
+        decentralized_identity_evidence,
+    )
+    .unwrap();
+
+    let signer = Signer::new(&SecretKey::random());
+    NodeMetadata::new(&signer, &node_metadata_payload)
 }
 
 //
@@ -45,7 +104,7 @@ fn message_kit_decrypts() {
     let sk = SecretKey::random();
     let policy_encrypting_key = sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
     assert_eq!(
@@ -60,7 +119,7 @@ fn message_kit_decrypt_reencrypted() {
     let delegating_sk = SecretKey::random();
     let delegating_pk = delegating_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
-    let message_kit = MessageKit::new(&delegating_pk, plaintext).unwrap();
+    let message_kit = MessageKit::new(&delegating_pk, plaintext);
 
     // Create key fragments for reencryption
     let receiving_sk = SecretKey::random();
@@ -76,19 +135,20 @@ fn message_kit_decrypt_reencrypted() {
     );
 
     // Simulate reencryption on the JS side
-    let cfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
+    let cfrags: Vec<JsValue> = verified_kfrags
         .iter()
         .map(|kfrag| {
-            let kfrag = verified_key_frag_of_jsval(kfrag.clone()).unwrap();
-            let cfrag = umbral_pre::reencrypt(&message_kit.capsule().inner(), &kfrag.inner());
-            VerifiedCapsuleFrag::new(cfrag)
+            let kfrag = verified_key_farg_of_js_value(kfrag.clone()).unwrap();
+            let cfrag = reencrypt(&message_kit.capsule(), &kfrag).to_bytes();
+            let cfrag = serde_wasm_bindgen::to_value(&cfrag).unwrap();
+            js_sys::Uint8Array::new(&cfrag).into()
         })
         .collect();
-    let cfrags = serde_wasm_bindgen::to_value(&cfrags).unwrap();
+    assert_eq!(cfrags.len(), verified_kfrags.len());
 
     // Decrypt on the Rust side
     let decrypted = message_kit
-        .decrypt_reencrypted(&receiving_sk, &delegating_pk, &cfrags)
+        .decrypt_reencrypted(&receiving_sk, &delegating_pk, cfrags.into())
         .unwrap();
 
     assert_eq!(
@@ -104,7 +164,7 @@ fn message_kit_to_bytes_from_bytes() {
     let policy_encrypting_key = sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
 
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
 
     assert_eq!(
         message_kit,
@@ -117,39 +177,20 @@ fn message_kit_to_bytes_from_bytes() {
 // HRAC
 //
 
-fn make_hrac() -> HRAC {
-    let publisher_verifying_key = SecretKey::random().public_key();
-    let bob_verifying_key = SecretKey::random().public_key();
-    let label = "Hello, world!".as_bytes();
-    let hrac = HRAC::new(&publisher_verifying_key, &bob_verifying_key, label);
-    hrac
-}
-
 #[wasm_bindgen_test]
-fn hrac_to_bytes_from_bytes() {
+fn hrac_to_bytes() {
     let hrac = make_hrac();
 
     assert_eq!(
-        hrac.to_bytes(),
-        HRAC::from_bytes(&hrac.to_bytes()).unwrap().to_bytes(),
-        "HRAC does not roundtrip"
+        hrac.to_bytes().len(),
+        16,
+        "HRAC does not serialize to bytes"
     );
 }
 
 //
 // EncryptedKeyFrag
 //
-
-fn make_kfrags(delegating_sk: &SecretKey, receiving_sk: &SecretKey) -> Vec<VerifiedKeyFrag> {
-    let receiving_pk = receiving_sk.public_key();
-    let signer = Signer::new(&delegating_sk);
-    let verified_kfrags: Vec<VerifiedKeyFrag> =
-        generate_kfrags(&delegating_sk, &receiving_pk, &signer, 2, 3, false, false)
-            .iter()
-            .map(|kfrag| verified_key_frag_of_jsval(kfrag.clone()).unwrap())
-            .collect();
-    verified_kfrags
-}
 
 #[wasm_bindgen_test]
 fn encrypted_kfrag_decrypt() {
@@ -162,8 +203,7 @@ fn encrypted_kfrag_decrypt() {
 
     let verified_kfrags = make_kfrags(&delegating_sk, &receiving_sk);
 
-    let encrypted_kfrag =
-        EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]).unwrap();
+    let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
     let decrypted = encrypted_kfrag
         .decrypt(&receiving_sk, &hrac, &delegating_pk)
@@ -184,8 +224,7 @@ fn encrypted_to_bytes_from_bytes() {
     let signer = Signer::new(&delegating_sk);
 
     let verified_kfrags = make_kfrags(&delegating_sk, &receiving_sk);
-    let encrypted_kfrag =
-        EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]).unwrap();
+    let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
     assert_eq!(
         encrypted_kfrag,
@@ -195,36 +234,22 @@ fn encrypted_to_bytes_from_bytes() {
 }
 
 //
-// Address
-//
-
-#[wasm_bindgen_test]
-fn address_from_checksum_address() {
-    let address = Address::from_checksum_address("0x0000000000000000000000000000000000000001");
-    assert_eq!(address.as_string(), "0x0000…0001", "Address does not match");
-}
-
-//
 // TreasureMap
 //
 
 fn make_assigned_kfrags(
     verified_kfrags: Vec<VerifiedKeyFrag>,
 ) -> BTreeMap<String, (PublicKey, VerifiedKeyFrag)> {
-    let mut assigned_kfrags: BTreeMap<String, (PublicKey, VerifiedKeyFrag)> = BTreeMap::new();
-    assigned_kfrags.insert(
-        "00000000000000000001".to_string(),
-        (SecretKey::random().public_key(), verified_kfrags[0].clone()),
-    );
-    assigned_kfrags.insert(
-        "00000000000000000002".to_string(),
-        (SecretKey::random().public_key(), verified_kfrags[1].clone()),
-    );
-    assigned_kfrags.insert(
-        "00000000000000000003".to_string(),
-        (SecretKey::random().public_key(), verified_kfrags[2].clone()),
-    );
-    assigned_kfrags
+    verified_kfrags
+        .iter()
+        .enumerate()
+        .map(|(i, vkfrag)| {
+            (
+                format!("0000000000000000000{}", i + 1).to_string(),
+                (SecretKey::random().public_key(), vkfrag.clone()),
+            )
+        })
+        .collect()
 }
 
 fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> TreasureMap {
@@ -237,7 +262,7 @@ fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> Trea
         &Signer::new(&publisher_sk),
         &hrac,
         &SecretKey::random().public_key(),
-        serde_wasm_bindgen::to_value(&assigned_kfrags).unwrap(),
+        &serde_wasm_bindgen::to_value(&assigned_kfrags).unwrap(),
         2,
     )
     .unwrap()
@@ -270,23 +295,23 @@ fn treasure_map_destinations() {
 
     let treasure_map = make_treasure_map(&publisher_sk, &receiving_sk);
     let destinations = treasure_map.destinations().unwrap();
-    let destinations: Vec<(String, EncryptedKeyFrag)> =
+    let destinations: Vec<(Address, EncryptedKeyFrag)> =
         serde_wasm_bindgen::from_value(destinations).unwrap();
 
     assert!(destinations.len() == 3, "Destinations does not match");
     assert_eq!(
-        destinations[0].0,
-        "00000000000000000001".to_string(),
+        destinations[0].0.as_ref(),
+        "00000000000000000001".as_bytes(),
         "Destination does not match"
     );
     assert_eq!(
-        destinations[1].0,
-        "00000000000000000002".to_string(),
+        destinations[1].0.as_ref(),
+        "00000000000000000002".as_bytes(),
         "Destination does not match"
     );
     assert_eq!(
-        destinations[2].0,
-        "00000000000000000003".to_string(),
+        destinations[2].0.as_ref(),
+        "00000000000000000003".as_bytes(),
         "Destination does not match"
     );
 }
@@ -311,24 +336,30 @@ fn encrypted_treasure_map_from_bytes_to_bytes() {
 //
 
 #[wasm_bindgen_test]
-fn reencruption_request_from_bytes_to_bytes() {
-    let ursula_address = "00000000000000000001".as_bytes();
-
+fn reencryption_request_from_bytes_to_bytes() {
     let publisher_sk = SecretKey::random();
-    let receiving_sk = SecretKey::random();
-    let treasure_map = make_treasure_map(&publisher_sk, &receiving_sk);
-
     let policy_encrypting_key = publisher_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
-    let capsule = message_kit.capsule();
-    let capsules = serde_wasm_bindgen::to_value(&vec![capsule]).unwrap();
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
+    let capsules = vec![message_kit.capsule()]
+        .iter()
+        .map(|capsule| JsValue::from_serde(capsule).unwrap())
+        .collect();
+
+    let hrac = make_hrac();
+
+    let receiving_sk = SecretKey::random();
+    let receiving_pk = receiving_sk.public_key();
+    let signer = Signer::new(&publisher_sk);
+    let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
+    let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
     let reencryption_request = ReencryptionRequest::new(
-        ursula_address,
         capsules,
-        &treasure_map,
-        &receiving_sk.public_key(),
+        &hrac,
+        &encrypted_kfrag,
+        &receiving_pk,
+        &receiving_pk,
     )
     .unwrap();
 
@@ -347,12 +378,15 @@ fn reencruption_request_from_bytes_to_bytes() {
 fn reencryption_response_verify() {
     // Make capsules
     let alice_sk = SecretKey::random();
-    let policy_encrypting_key = alice_sk.public_key();
+    let policy_encrypting_key = alice_sk.public_key(); // TODO: Use a different secret key
     let plaintext = "Hello, world!".as_bytes();
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsule = message_kit.capsule();
-    let capsules = &vec![capsule, capsule, capsule];
-    let capsules_js = serde_wasm_bindgen::to_value(capsules).unwrap();
+    let capsules = vec![capsule, capsule, capsule];
+    let capsules_js: Box<[JsValue]> = capsules
+        .iter()
+        .map(|capsule| JsValue::from_serde(capsule).unwrap())
+        .collect();
 
     // Make verified key fragments
     let bob_sk = SecretKey::random();
@@ -369,23 +403,30 @@ fn reencryption_response_verify() {
         .iter()
         .map(|kfrag| reencrypt(&capsule, kfrag))
         .collect();
-    let cfrags_js = serde_wasm_bindgen::to_value(&cfrags).unwrap();
+
+    let cfrags_js: Box<[JsValue]> = cfrags
+        .iter()
+        .map(|kfrag| JsValue::from_serde(kfrag).unwrap())
+        .collect();
 
     let ursula_sk = SecretKey::random();
     let signer = Signer::new(&ursula_sk);
     let reencryption_response =
-        ReencryptionResponse::new(&signer, &capsules_js, &cfrags_js).unwrap();
+        ReencryptionResponse::new(&signer, capsules_js.clone(), cfrags_js).unwrap();
 
     let verified_js = reencryption_response
         .verify(
-            &capsules_js,
+            capsules_js,
             &alice_sk.public_key(),
             &ursula_sk.public_key(),
             &policy_encrypting_key,
             &bob_sk.public_key(),
         )
         .unwrap();
-    let verified: Vec<VerifiedCapsuleFrag> = serde_wasm_bindgen::from_value(verified_js).unwrap();
+    let verified: Vec<VerifiedCapsuleFrag> = verified_js
+        .iter()
+        .map(|vkfrag| vkfrag.into_serde().unwrap())
+        .collect();
 
     assert_eq!(cfrags, verified, "VerifiedCapsuleFrag does not match");
 
@@ -408,7 +449,7 @@ fn retrieval_kit() {
     let alice_sk = SecretKey::random();
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext).unwrap();
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
 
     let retrieval_kit = RetrievalKit::from_message_kit(&message_kit);
 
@@ -440,18 +481,20 @@ fn revocation_order() {
     let hrac = make_hrac();
     let receiving_pk = receiving_sk.public_key();
     let signer = Signer::new(&delegating_sk);
-    let encrypted_kfrag =
-        EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]).unwrap();
+    let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
     let ursula_address = "00000000000000000001".as_bytes();
-    let revocation_order = RevocationOrder::new(&signer, ursula_address, &encrypted_kfrag);
+    let revocation_order = RevocationOrder::new(&signer, ursula_address, &encrypted_kfrag).unwrap();
 
     assert!(revocation_order.verify_signature(&delegating_sk.public_key()));
 
     let as_bytes = revocation_order.to_bytes();
     assert_eq!(
         as_bytes,
-        RevocationOrder::from_bytes(&as_bytes).unwrap().to_bytes(),
+        RevocationOrder::from_bytes(&as_bytes)
+            .unwrap()
+            .to_bytes()
+            .into(),
         "RevocationOrder does not roundtrip"
     );
 }
@@ -465,33 +508,6 @@ fn revocation_order() {
 //
 // NodeMetadata
 //
-
-fn make_node_metadata() -> NodeMetadata {
-    let canonical_address = "00000000000000000001".as_bytes();
-    let domain = "localhost";
-    let timestamp_epoch = 1546300800;
-    let verifying_key = SecretKey::random().public_key();
-    let encrypting_key = SecretKey::random().public_key();
-    let certificate_bytes = "certificate_bytes".as_bytes();
-    let host = "https://localhost.com";
-    let port = 443;
-    let decentralized_identity_evidence = Some(vec![1, 2, 3]);
-
-    let node_metadata_payload = NodeMetadataPayload::new(
-        canonical_address,
-        domain,
-        timestamp_epoch,
-        &verifying_key,
-        &encrypting_key,
-        certificate_bytes,
-        host,
-        port,
-        decentralized_identity_evidence,
-    );
-
-    let signer = Signer::new(&SecretKey::random());
-    NodeMetadata::new(&signer, &node_metadata_payload)
-}
 
 #[wasm_bindgen_test]
 fn node_metadata() {
@@ -509,24 +525,13 @@ fn node_metadata() {
 // FleetStateChecksum
 //
 
-fn make_fleet_state_checksum() -> FleetStateChecksum {
-    let this_node = Some(make_node_metadata());
-    let other_nodes = vec![make_node_metadata(), make_node_metadata()];
-    let other_nodes = serde_wasm_bindgen::to_value(&other_nodes).unwrap();
-    FleetStateChecksum::new(this_node, other_nodes).unwrap()
-}
-
 #[wasm_bindgen_test]
-fn fleet_state_checksum() {
+fn fleet_state_checksum_to_bytes() {
     let fleet_state_checksum = make_fleet_state_checksum();
 
-    let as_bytes = fleet_state_checksum.to_bytes();
-    assert_eq!(
-        as_bytes,
-        FleetStateChecksum::from_bytes(&as_bytes)
-            .unwrap()
-            .to_bytes(),
-        "FleetStateChecksum does not roundtrip"
+    assert!(
+        fleet_state_checksum.to_bytes().len() > 0,
+        "FleetStateChecksum does not serialize to bytes"
     );
 }
 
@@ -546,7 +551,7 @@ fn metadata_request() {
     let nodes: Vec<NodeMetadata> = nodes_js
         .iter()
         .cloned()
-        .map(|js_node| node_metadata_of_jsval(js_node).unwrap())
+        .map(|js_node| node_metadata_of_js_value(js_node).unwrap())
         .collect::<Vec<_>>();
     assert_eq!(nodes, announce_nodes);
 
@@ -563,20 +568,20 @@ fn metadata_request() {
 //
 
 #[wasm_bindgen_test]
-fn verified_metadata_response() {
+fn metadata_response_payload() {
     let announce_nodes = vec![make_node_metadata(), make_node_metadata()];
     let timestamp_epoch = 1546300800;
 
-    let verified_metadata_response = VerifiedMetadataResponse::new(
+    let metadata_response_payload = MetadataResponsePayload::new(
         timestamp_epoch,
         serde_wasm_bindgen::to_value(&announce_nodes).unwrap(),
     );
 
-    let nodes_js = verified_metadata_response.announce_nodes();
+    let nodes_js = metadata_response_payload.announce_nodes();
     let nodes: Vec<NodeMetadata> = nodes_js
         .iter()
         .cloned()
-        .map(|js_node| node_metadata_of_jsval(js_node).unwrap())
+        .map(|js_node| node_metadata_of_js_value(js_node).unwrap())
         .collect::<Vec<_>>();
     assert_eq!(nodes, announce_nodes, "Announce nodes does not match");
 }
@@ -589,13 +594,13 @@ fn verified_metadata_response() {
 fn metadata_response() {
     let announce_nodes = vec![make_node_metadata(), make_node_metadata()];
     let timestamp_epoch = 1546300800;
-    let verified_metadata_response = VerifiedMetadataResponse::new(
+    let metadata_response_payload = MetadataResponsePayload::new(
         timestamp_epoch,
         serde_wasm_bindgen::to_value(&announce_nodes).unwrap(),
     );
     let signer = Signer::new(&SecretKey::random());
 
-    let metadata_response = MetadataResponse::new(&signer, &verified_metadata_response);
+    let metadata_response = MetadataResponse::new(&signer, &metadata_response_payload);
 
     let as_bytes = metadata_response.to_bytes();
     assert_eq!(

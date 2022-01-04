@@ -11,6 +11,7 @@
   "scripts": {
     "cli": "ts-node src/cli.ts",
     "test": "jest",
+    "test:watch": "jest --watchAll",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist build",
@@ -28,7 +29,7 @@
     "@babel/preset-typescript": "^7.16.5",
     "@types/jest": "^27.0.3",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.11.13",
+    "@types/node": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^5.7.0",
     "@typescript-eslint/parser": "^5.7.0",
     "eslint": "^8.4.1",
