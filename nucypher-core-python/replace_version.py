@@ -1,6 +1,6 @@
 """
 This script is used to build a source distribution in CI.
-During development it is convenient to have a relative path to `umbral-pre` in `Cargo.toml`,
+During development it is convenient to have a relative path to `nucypher-core` in `Cargo.toml`,
 but since the source distribution will not include the main crate,
 we need to re-set it to the published version (and then change it back).
 
@@ -34,12 +34,12 @@ def relative_to_published():
         lines = f.readlines()
 
     for i, line in enumerate(lines):
-        if line.startswith('umbral-pre = { path = "../umbral-pre"'):
-            new_line = line.replace('path = "../umbral-pre"', f'version = "{version}"')
+        if line.startswith('nucypher-core = { path = "../nucypher-core"'):
+            new_line = line.replace('path = "../nucypher-core"', f'version = "{version}"')
             lines[i] = new_line
             break
     else:
-        raise RuntimeError("Cannot find the umbral-pre dependency")
+        raise RuntimeError("Cannot find the nucypher-core dependency")
 
     with open('Cargo.toml', 'w') as f:
         f.write(''.join(lines))
@@ -53,12 +53,12 @@ def published_to_relative():
         lines = f.readlines()
 
     for i, line in enumerate(lines):
-        if line.startswith(f'umbral-pre = {{ version = "{version}"'):
-            new_line = line.replace(f'version = "{version}"', 'path = "../umbral-pre"')
+        if line.startswith(f'nucypher-core = {{ version = "{version}"'):
+            new_line = line.replace(f'version = "{version}"', 'path = "../nucypher-core"')
             lines[i] = new_line
             break
     else:
-        raise RuntimeError("Cannot find the umbral-pre dependency")
+        raise RuntimeError("Cannot find the nucypher-core dependency")
 
     with open('Cargo.toml', 'w') as f:
         f.write(''.join(lines))
