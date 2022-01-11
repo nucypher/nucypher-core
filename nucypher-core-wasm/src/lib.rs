@@ -27,8 +27,6 @@ use wasm_bindgen::{
     JsCast,
 };
 
-mod utils;
-
 fn map_js_err<T: fmt::Display>(err: T) -> JsValue {
     Error::new(&format!("{}", err)).into()
 }
@@ -63,10 +61,6 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
     Ok(addr)
 }
 
-//
-// MessageKit
-//
-
 fn js_value_to_u8_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
     let vec_vec_u8 = array_of_uint8_arrays
         .iter()
@@ -78,11 +72,15 @@ fn js_value_to_u8_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>,
         .collect::<Vec<_>>();
 
     if vec_vec_u8.len() != array_of_uint8_arrays.len() {
-        Err("Invalid Array of Uint8Arrays.".to_string().into()).into()
+        Err("Invalid Array of Uint8Arrays.".to_string().into())
     } else {
         Ok(vec_vec_u8)
     }
 }
+
+//
+// MessageKit
+//
 
 #[wasm_bindgen]
 #[derive(PartialEq, Debug)]
@@ -122,17 +120,14 @@ impl MessageKit {
         policy_encrypting_key: &PublicKey,
         cfrags: Box<[JsValue]>,
     ) -> Result<Box<[u8]>, JsValue> {
-        utils::set_panic_hook();
-
-        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> = js_value_to_u8_vec(&cfrags)?
+        let backend_cfrags = js_value_to_u8_vec(&cfrags)?
             .iter()
-            .cloned()
             .map(|bytes| {
                 VerifiedCapsuleFrag::from_verified_bytes(&bytes)
-                    .expect("Failed to deserialize VerifiedCapsuleFrag")
-                    .inner()
+                    .and_then(|vcfrag| Ok(vcfrag.inner()))
             })
-            .collect();
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
 
         self.backend
             .decrypt_reencrypted(sk.inner(), policy_encrypting_key.inner(), &backend_cfrags)
@@ -308,7 +303,6 @@ impl TreasureMap {
         assigned_kfrags: &JsValue,
         threshold: u8,
     ) -> Result<TreasureMap, JsValue> {
-        utils::set_panic_hook();
         // Using String here to avoid issue where Deserialize is not implemented
         // for every possible lifetime.
         let assigned_kfrags: BTreeMap<String, (Vec<u8>, Vec<u8>)> =
@@ -316,6 +310,7 @@ impl TreasureMap {
         let assigned_kfrags_backend = assigned_kfrags
             .iter()
             .map(|(address, (key, vkfrag))| {
+                // TODO: How to avoid unwrapping here?
                 let address = try_make_address(address.as_bytes()).unwrap();
                 let key = umbral_pre::PublicKey::from_bytes(key).unwrap();
                 let vkfrag = umbral_pre::VerifiedKeyFrag::from_verified_bytes(vkfrag).unwrap();
@@ -466,20 +461,19 @@ impl ReencryptionRequest {
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
     ) -> Result<ReencryptionRequest, JsValue> {
-        utils::set_panic_hook();
-
         let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
             .iter()
-            .map(|capsule| *Capsule::from_bytes(capsule).unwrap().inner())
-            .collect();
+            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Self {
             backend: nucypher_core::ReencryptionRequest::new(
                 &capsules_backend,
                 &hrac.backend,
                 &encrypted_kfrag.backend,
-                &publisher_verifying_key.inner(),
-                &bob_verifying_key.inner(),
+                publisher_verifying_key.inner(),
+                bob_verifying_key.inner(),
             ),
         })
     }
@@ -560,18 +554,19 @@ impl ReencryptionResponse {
     ) -> Result<ReencryptionResponse, JsValue> {
         let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
             .iter()
-            .map(|capsule| *Capsule::from_bytes(&capsule).unwrap().inner())
-            .collect();
+            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
 
         let verified_capsule_frags: Vec<umbral_pre::VerifiedCapsuleFrag> =
             js_value_to_u8_vec(&verified_capsule_frags)?
                 .iter()
                 .map(|vcfrag| {
                     VerifiedCapsuleFrag::from_verified_bytes(vcfrag)
-                        .unwrap()
-                        .inner()
+                        .and_then(|vcfrag| Ok(vcfrag.inner()))
                 })
-                .collect();
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?;
 
         Ok(ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
@@ -592,8 +587,9 @@ impl ReencryptionResponse {
     ) -> Result<Box<[JsValue]>, JsValue> {
         let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
             .iter()
-            .map(|capsule| *Capsule::from_bytes(capsule).unwrap().inner())
-            .collect();
+            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
         let vcfrags_backend = self
             .backend
             .verify(
@@ -603,13 +599,16 @@ impl ReencryptionResponse {
                 policy_encrypting_key.inner(),
                 bob_encrypting_key.inner(),
             )
+            // TODO: Should we throw an error here or return an empty result, i.e. JS `null`?
             .ok_or_else(|| JsValue::from_str("ReencryptionResponse verification failed"))?;
 
         let vcfrags_backend_js = vcfrags_backend
             .iter()
             .map(|vcfrag| VerifiedCapsuleFrag::new(vcfrag.clone()))
-            .map(|vcfrag| JsValue::from_serde(&vcfrag).unwrap())
-            .collect();
+            .map(|vcfrag| JsValue::from_serde(&vcfrag))
+            .into_iter()
+            .collect::<Result<Box<_>, _>>()
+            .map_err(map_js_err)?;
         Ok(vcfrags_backend_js)
     }
 
@@ -661,8 +660,9 @@ impl RetrievalKit {
         let queried_addresses: Vec<String> = serde_wasm_bindgen::from_value(queried_addresses)?;
         let addresses_backend = queried_addresses
             .iter()
-            .map(|address| try_make_address(address.as_bytes()).unwrap())
-            .collect::<Vec<_>>();
+            .map(|address| try_make_address(address.as_bytes()))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             backend: nucypher_core::RetrievalKit::new(capsule.inner(), addresses_backend),
         })
@@ -674,12 +674,14 @@ impl RetrievalKit {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn queried_addresses(&self) -> Vec<JsValue> {
+    pub fn queried_addresses(&self) -> Result<Vec<JsValue>, JsValue> {
         self.backend
             .queried_addresses
             .iter()
-            .map(|address| JsValue::from_serde(&address).unwrap())
-            .collect::<Vec<_>>()
+            .map(|address| JsValue::from_serde(&address))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(map_js_err)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -1026,16 +1028,19 @@ pub struct MetadataResponsePayload {
 #[wasm_bindgen]
 impl MetadataResponsePayload {
     #[wasm_bindgen(constructor)]
-    pub fn new(timestamp_epoch: u32, announce_nodes: JsValue) -> Self {
+    pub fn new(
+        timestamp_epoch: u32,
+        announce_nodes: JsValue,
+    ) -> Result<MetadataResponsePayload, JsValue> {
         let announce_nodes: Vec<NodeMetadata> =
-            serde_wasm_bindgen::from_value(announce_nodes).unwrap();
+            serde_wasm_bindgen::from_value(announce_nodes).map_err(map_js_err)?;
         let nodes_backend = announce_nodes
             .iter()
             .map(|node| node.backend.clone())
             .collect::<Vec<_>>();
-        MetadataResponsePayload {
+        Ok(MetadataResponsePayload {
             backend: nucypher_core::MetadataResponsePayload::new(timestamp_epoch, &nodes_backend),
-        }
+        })
     }
 
     #[wasm_bindgen(method, getter)]
