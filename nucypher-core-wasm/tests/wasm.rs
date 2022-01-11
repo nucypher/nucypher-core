@@ -32,12 +32,10 @@ fn of_js_value_generic<T: FromWasmAbi<Abi = u32>>(
     }
 }
 
-#[wasm_bindgen]
 pub fn verified_key_farg_of_js_value(js_value: JsValue) -> Option<VerifiedKeyFrag> {
     of_js_value_generic(js_value, "VerifiedKeyFrag").unwrap_or(None)
 }
 
-#[wasm_bindgen]
 pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
     of_js_value_generic(js_value, "NodeMetadata").unwrap_or(None)
 }
@@ -299,21 +297,13 @@ fn treasure_map_destinations() {
         serde_wasm_bindgen::from_value(destinations).unwrap();
 
     assert!(destinations.len() == 3, "Destinations does not match");
-    assert_eq!(
-        destinations[0].0.as_ref(),
-        "00000000000000000001".as_bytes(),
-        "Destination does not match"
-    );
-    assert_eq!(
-        destinations[1].0.as_ref(),
-        "00000000000000000002".as_bytes(),
-        "Destination does not match"
-    );
-    assert_eq!(
-        destinations[2].0.as_ref(),
-        "00000000000000000003".as_bytes(),
-        "Destination does not match"
-    );
+    for i in 0..destinations.len() {
+        assert_eq!(
+            destinations[i].0.as_ref(),
+            format!("0000000000000000000{}", i).as_bytes(),
+            "Destination does not match"
+        );
+    }
 }
 
 #[wasm_bindgen_test]
@@ -337,6 +327,7 @@ fn encrypted_treasure_map_from_bytes_to_bytes() {
 
 #[wasm_bindgen_test]
 fn reencryption_request_from_bytes_to_bytes() {
+    // Make capsules
     let publisher_sk = SecretKey::random();
     let policy_encrypting_key = publisher_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
@@ -351,6 +342,7 @@ fn reencryption_request_from_bytes_to_bytes() {
 
     let hrac = make_hrac();
 
+    // Make encrypted key frag
     let receiving_sk = SecretKey::random();
     let receiving_pk = receiving_sk.public_key();
     let signer = Signer::new(&publisher_sk);
@@ -450,6 +442,7 @@ fn reencryption_response_verify() {
 
 #[wasm_bindgen_test]
 fn retrieval_kit() {
+    // Make a message kit
     let alice_sk = SecretKey::random();
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
@@ -457,7 +450,7 @@ fn retrieval_kit() {
 
     let retrieval_kit = RetrievalKit::from_message_kit(&message_kit);
 
-    let queried_addresses = retrieval_kit.queried_addresses();
+    let queried_addresses = retrieval_kit.queried_addresses().unwrap();
     assert_eq!(
         queried_addresses.len(),
         0,
@@ -579,7 +572,8 @@ fn metadata_response_payload() {
     let metadata_response_payload = MetadataResponsePayload::new(
         timestamp_epoch,
         serde_wasm_bindgen::to_value(&announce_nodes).unwrap(),
-    );
+    )
+    .unwrap();
 
     let nodes_js = metadata_response_payload.announce_nodes();
     let nodes: Vec<NodeMetadata> = nodes_js
@@ -601,7 +595,8 @@ fn metadata_response() {
     let metadata_response_payload = MetadataResponsePayload::new(
         timestamp_epoch,
         serde_wasm_bindgen::to_value(&announce_nodes).unwrap(),
-    );
+    )
+    .unwrap();
     let signer = Signer::new(&SecretKey::random());
 
     let metadata_response = MetadataResponse::new(&signer, &metadata_response_payload);
