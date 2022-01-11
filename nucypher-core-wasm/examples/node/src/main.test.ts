@@ -8,8 +8,10 @@ import {
   reencrypt,
   ReencryptionRequest,
   ReencryptionResponse,
+  RevocationOrder,
   SecretKey,
   Signer,
+  TreasureMap,
 } from "nucypher-core";
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
@@ -27,36 +29,45 @@ const makeCapsules = (delegatingPk: PublicKey) => {
   return [messageKit.capsule.toBytes()];
 };
 
-// const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
-//   const signer = new Signer(publisherSk);
-//   const recipientPk = recipientSk.publicKey();
-//   const hrac = makeHrac(publisherSk, recipientSk);
+const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
+  const signer = new Signer(publisherSk);
+  const recipientPk = recipientSk.publicKey();
+  const hrac = makeHrac(publisherSk, recipientSk);
 
-//   const threshold = 2;
-//   const vkfrags: VerifiedKeyFrag[] = generateKFrags(
-//     publisherSk,
-//     PublicKey.fromBytes(recipientPk.toBytes()),
-//     signer,
-//     threshold,
-//     3,
-//     false,
-//     false
-//   );
+  const threshold = 2;
+  const vkfrags = generateKFrags(
+    publisherSk,
+    recipientPk,
+    signer,
+    threshold,
+    3,
+    false,
+    false
+  );
 
-//   const assignedKeyFrags = [
-//     { "00000000000000000001": [SecretKey.random().publicKey(), vkfrags[0]] },
-//     { "00000000000000000002": [SecretKey.random().publicKey(), vkfrags[1]] },
-//     { "00000000000000000003": [SecretKey.random().publicKey(), vkfrags[2]] },
-//   ];
+  const assignedKeyFrags = {
+    "00000000000000000001": [
+      SecretKey.random().publicKey().toBytes(),
+      vkfrags[0].toBytes(),
+    ],
+    "00000000000000000002": [
+      SecretKey.random().publicKey().toBytes(),
+      vkfrags[1].toBytes(),
+    ],
+    "00000000000000000003": [
+      SecretKey.random().publicKey().toBytes(),
+      vkfrags[2].toBytes(),
+    ],
+  };
 
-//   return new TreasureMap(
-//     signer,
-//     hrac,
-//     recipientPk,
-//     assignedKeyFrags,
-//     threshold
-//   );
-// };
+  return new TreasureMap(
+    signer,
+    hrac,
+    recipientPk,
+    assignedKeyFrags,
+    threshold
+  );
+};
 
 const makeKFrags = (delegatingSk: SecretKey, recipientSk: SecretKey) =>
   generateKFrags(
@@ -151,41 +162,64 @@ describe("EncryptedKeyFrag", () => {
   });
 });
 
-// TODO: Assigned key frags are not serialized corretly yet
-// describe("TreasureMap", () => {
-//   it("serializes", () => {
-//     const publisherSk = SecretKey.random();
-//     const recipientSk = SecretKey.random();
-//     const treasureMap = makeTreasureMap(publisherSk, recipientSk);
+describe("TreasureMap", () => {
+  it("serializes", () => {
+    const publisherSk = SecretKey.random();
+    const recipientSk = SecretKey.random();
+    const treasureMap = makeTreasureMap(publisherSk, recipientSk);
 
-//     const asBytes = treasureMap.toBytes();
-//     expect(asBytes).toEqual(TreasureMap.fromBytes(asBytes).toBytes());
+    const asBytes = treasureMap.toBytes();
+    expect(asBytes).toEqual(TreasureMap.fromBytes(asBytes).toBytes());
+  });
 
-//   });
+  it("encrypts and decrypts", () => {
+    const publisherSk = SecretKey.random();
+    const signer = new Signer(publisherSk);
 
-//   it("encrypts and decrypts", () => {
-//     const publisherSk = SecretKey.random();
-//     const signer = new Signer(publisherSk);
+    const recipientSk = SecretKey.random();
+    const recipientPk = recipientSk.publicKey();
 
-//     const recipientSk = SecretKey.random();
-//     const recipientPk = recipientSk.publicKey();
+    const treasureMap = makeTreasureMap(publisherSk, recipientSk);
 
-//     const treasureMap = makeTreasureMap(publisherSk, recipientSk);
+    const encryptedTreasureMap = treasureMap.encrypt(signer, recipientPk);
 
-//     const encryptedTreasureMap = treasureMap.encrypt(signer, recipientPk);
+    const decrypted = encryptedTreasureMap.decrypt(
+      recipientSk,
+      publisherSk.publicKey()
+    );
 
-//     const decrypted = encryptedTreasureMap.decrypt(
-//       recipientSk,
-//       publisherSk.publicKey()
-//     );
-
-//     expect(decrypted.toBytes()).toEqual(treasureMap.toBytes());
-//   });
-// });
+    expect(decrypted.toBytes()).toEqual(treasureMap.toBytes());
+  });
+});
 
 describe("RevocationOrder", () => {
   it("serializes", () => {
-    console.error("TODO: implement RevocationOrder serializes");
+    const delegatingSk = SecretKey.random();
+    const signer = new Signer(delegatingSk);
+
+    const ursulaAddress = Buffer.from("00000000000000000000");
+
+    const recipientSk = SecretKey.random();
+    const recipientPk = recipientSk.publicKey();
+
+    const hrac = makeHrac(delegatingSk, recipientSk);
+
+    const vkfrags = makeKFrags(delegatingSk, recipientSk);
+
+    const encryptedKeyFrag = new EncryptedKeyFrag(
+      signer,
+      recipientPk,
+      hrac,
+      vkfrags[0]
+    );
+
+    const revocationOrder = new RevocationOrder(
+      signer,
+      ursulaAddress,
+      encryptedKeyFrag
+    );
+    const asBytes = revocationOrder.toBytes();
+    expect(RevocationOrder.fromBytes(asBytes).toBytes()).toEqual(asBytes);
   });
 });
 
@@ -237,46 +271,50 @@ describe("ReencryptionRequest", () => {
   });
 });
 
-// TODO:
 describe("ReencryptionResponse", () => {
-  it("serializes", () => {
-    // TODO: Rename to Alice and Bob?
-    const delegatingSk = SecretKey.random();
-    const delegatingPk = delegatingSk.publicKey();
+  it("serializes", () => {});
 
-    const recipientSk = SecretKey.random();
-
+  it("verifies", () => {
+    // Make capsules
+    const aliceSk = SecretKey.random();
+    const policyEncryptingKey = aliceSk.publicKey();
     const message = new Uint8Array(Buffer.from("Hello, world!"));
-    const messageKit = new MessageKit(delegatingPk, message);
-    const capsules = [messageKit.capsule.toBytes()];
+    const messageKit = new MessageKit(policyEncryptingKey, message);
+    const capsules = [
+      messageKit.capsule.toBytes(),
+      messageKit.capsule.toBytes(),
+      messageKit.capsule.toBytes(),
+    ];
 
-    const vkfrags = makeKFrags(delegatingSk, recipientSk);
+    // Make verified key fragments
+    const bobSk = SecretKey.random();
+    const vkfrags = makeKFrags(aliceSk, bobSk);
+    expect(capsules.length).toEqual(vkfrags.length);
 
-    // Reencrypt the capsule from message kit
+    // Perform the reencryption
     const capsule = Capsule.fromBytes(messageKit.capsule.toBytes());
     const verifiedCapsuleFrags = vkfrags.map((kfrag) =>
       reencrypt(capsule, kfrag).toBytes()
     );
 
+    // Make the reencryption response
     const ursulaSk = SecretKey.random();
-
     const reencryptionResponse = new ReencryptionResponse(
       new Signer(ursulaSk),
       capsules,
       verifiedCapsuleFrags
     );
 
-    expect(reencryptionResponse).toBeTruthy();
-    expect(reencryptionResponse.toBytes()).toBeTruthy();
-    
-    // TODO: Fails to deserialize on Rust side
-    // const isOk = reencryptionResponse.verify(
-    //   capsules,
-    //   delegatingPk,
-    //   ursulaSk.publicKey(),
-    //   delegatingPk,
-    //   recipientSk.publicKey()
-    // );
-    // expect(isOk).toBeTruthy();
+    const asBytes = reencryptionResponse.toBytes();
+    expect(ReencryptionResponse.fromBytes(asBytes).toBytes()).toEqual(asBytes);
+
+    const isOk = reencryptionResponse.verify(
+      capsules,
+      aliceSk.publicKey(),
+      ursulaSk.publicKey(),
+      policyEncryptingKey,
+      bobSk.publicKey()
+    );
+    expect(isOk).toBeTruthy();
   });
 });

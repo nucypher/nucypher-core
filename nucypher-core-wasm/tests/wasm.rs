@@ -139,9 +139,9 @@ fn message_kit_decrypt_reencrypted() {
         .iter()
         .map(|kfrag| {
             let kfrag = verified_key_farg_of_js_value(kfrag.clone()).unwrap();
-            let cfrag = reencrypt(&message_kit.capsule(), &kfrag).to_bytes();
-            let cfrag = serde_wasm_bindgen::to_value(&cfrag).unwrap();
-            js_sys::Uint8Array::new(&cfrag).into()
+            let cfrag_bytes = reencrypt(&message_kit.capsule(), &kfrag).to_bytes();
+            let cfrag_bytes = serde_wasm_bindgen::to_value(&cfrag_bytes).unwrap();
+            js_sys::Uint8Array::new(&cfrag_bytes).into()
         })
         .collect();
     assert_eq!(cfrags.len(), verified_kfrags.len());
@@ -343,7 +343,10 @@ fn reencryption_request_from_bytes_to_bytes() {
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsules = vec![message_kit.capsule()]
         .iter()
-        .map(|capsule| JsValue::from_serde(capsule).unwrap())
+        .map(|capsule| {
+            let capsule = serde_wasm_bindgen::to_value(&capsule.to_bytes()).unwrap();
+            js_sys::Uint8Array::new(&capsule).into()
+        })
         .collect();
 
     let hrac = make_hrac();
@@ -378,41 +381,42 @@ fn reencryption_request_from_bytes_to_bytes() {
 fn reencryption_response_verify() {
     // Make capsules
     let alice_sk = SecretKey::random();
-    let policy_encrypting_key = alice_sk.public_key(); // TODO: Use a different secret key
+    let policy_encrypting_key = alice_sk.public_key();
     let plaintext = "Hello, world!".as_bytes();
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsule = message_kit.capsule();
     let capsules = vec![capsule, capsule, capsule];
     let capsules_js: Box<[JsValue]> = capsules
         .iter()
-        .map(|capsule| JsValue::from_serde(capsule).unwrap())
+        .map(|capsule| {
+            let cfrag = serde_wasm_bindgen::to_value(&capsule.to_bytes()).unwrap();
+            js_sys::Uint8Array::new(&cfrag).into()
+        })
         .collect();
 
     // Make verified key fragments
     let bob_sk = SecretKey::random();
     let kfrags = make_kfrags(&alice_sk, &bob_sk);
-
-    assert_eq!(
-        capsules.len(),
-        kfrags.len(),
-        "Number of Capsules and KFrags does not match"
-    );
+    assert_eq!(capsules.len(), kfrags.len());
 
     // Simulate the reencryption
     let cfrags: Vec<VerifiedCapsuleFrag> = kfrags
         .iter()
         .map(|kfrag| reencrypt(&capsule, kfrag))
         .collect();
-
     let cfrags_js: Box<[JsValue]> = cfrags
         .iter()
-        .map(|kfrag| JsValue::from_serde(kfrag).unwrap())
+        .map(|kfrag| {
+            let kfrag = serde_wasm_bindgen::to_value(&kfrag.to_bytes()).unwrap();
+            js_sys::Uint8Array::new(&kfrag).into()
+        })
         .collect();
 
+    // Make the reencryption response
     let ursula_sk = SecretKey::random();
     let signer = Signer::new(&ursula_sk);
     let reencryption_response =
-        ReencryptionResponse::new(&signer, capsules_js.clone(), cfrags_js).unwrap();
+        ReencryptionResponse::new(&signer, capsules_js.clone(), cfrags_js.clone()).unwrap();
 
     let verified_js = reencryption_response
         .verify(
@@ -428,7 +432,7 @@ fn reencryption_response_verify() {
         .map(|vkfrag| vkfrag.into_serde().unwrap())
         .collect();
 
-    assert_eq!(cfrags, verified, "VerifiedCapsuleFrag does not match");
+    assert_eq!(cfrags, verified, "Capsule fragments do not match");
 
     let as_bytes = reencryption_response.to_bytes();
     assert_eq!(

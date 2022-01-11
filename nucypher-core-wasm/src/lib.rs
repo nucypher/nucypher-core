@@ -6,7 +6,7 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 extern crate alloc;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use alloc::{
     boxed::Box,
@@ -18,8 +18,9 @@ use alloc::{
 use core::fmt;
 use js_sys::{Error, Uint8Array};
 use nucypher_core::ProtocolObject;
-use umbral_pre::bindings_wasm::{
-    Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+use umbral_pre::{
+    bindings_wasm::{Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag},
+    DeserializableFromArray,
 };
 use wasm_bindgen::{
     prelude::{wasm_bindgen, JsValue},
@@ -307,17 +308,18 @@ impl TreasureMap {
         assigned_kfrags: &JsValue,
         threshold: u8,
     ) -> Result<TreasureMap, JsValue> {
+        utils::set_panic_hook();
         // Using String here to avoid issue where Deserialize is not implemented
         // for every possible lifetime.
-        let assigned_kfrags: BTreeMap<String, (PublicKey, VerifiedKeyFrag)> =
+        let assigned_kfrags: BTreeMap<String, (Vec<u8>, Vec<u8>)> =
             serde_wasm_bindgen::from_value(assigned_kfrags.clone())?;
         let assigned_kfrags_backend = assigned_kfrags
             .iter()
             .map(|(address, (key, vkfrag))| {
-                (
-                    try_make_address(address.as_bytes()).unwrap(),
-                    (key.inner(), vkfrag.inner()),
-                )
+                let address = try_make_address(address.as_bytes()).unwrap();
+                let key = umbral_pre::PublicKey::from_bytes(key).unwrap();
+                let vkfrag = umbral_pre::VerifiedKeyFrag::from_verified_bytes(vkfrag).unwrap();
+                (address, (key, vkfrag))
             })
             .collect::<Vec<_>>();
         Ok(Self {
@@ -558,10 +560,10 @@ impl ReencryptionResponse {
     ) -> Result<ReencryptionResponse, JsValue> {
         let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
             .iter()
-            .map(|capsule| *Capsule::from_bytes(capsule).unwrap().inner())
+            .map(|capsule| *Capsule::from_bytes(&capsule).unwrap().inner())
             .collect();
 
-        let vcfrags_backend: Vec<umbral_pre::VerifiedCapsuleFrag> =
+        let verified_capsule_frags: Vec<umbral_pre::VerifiedCapsuleFrag> =
             js_value_to_u8_vec(&verified_capsule_frags)?
                 .iter()
                 .map(|vcfrag| {
@@ -575,7 +577,7 @@ impl ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
                 signer.inner(),
                 &capsules_backend,
-                &vcfrags_backend,
+                &verified_capsule_frags,
             ),
         })
     }
@@ -588,14 +590,10 @@ impl ReencryptionResponse {
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
     ) -> Result<Box<[JsValue]>, JsValue> {
-        let capsules: Vec<Capsule> = capsules
+        let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
             .iter()
-            .map(|capsule| JsValue::into_serde(capsule).unwrap())
+            .map(|capsule| *Capsule::from_bytes(capsule).unwrap().inner())
             .collect();
-        let capsules_backend = capsules
-            .iter()
-            .map(|capsule| *capsule.inner())
-            .collect::<Vec<_>>();
         let vcfrags_backend = self
             .backend
             .verify(
@@ -605,7 +603,7 @@ impl ReencryptionResponse {
                 policy_encrypting_key.inner(),
                 bob_encrypting_key.inner(),
             )
-            .unwrap();
+            .ok_or_else(|| JsValue::from_str("ReencryptionResponse verification failed"))?;
 
         let vcfrags_backend_js = vcfrags_backend
             .iter()
