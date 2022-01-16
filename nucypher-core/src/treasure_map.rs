@@ -37,16 +37,13 @@ impl TreasureMap {
     /// Panics if `threshold` is set to 0,
     /// the number of assigned keyfrags is less than `threshold`,
     /// or if the addresses in `assigned_kfrags` repeat.
-    pub fn new<'a, I>(
+    pub fn new(
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: I,
+        assigned_kfrags: impl IntoIterator<Item = (Address, (PublicKey, VerifiedKeyFrag))>,
         threshold: u8,
-    ) -> Self
-    where
-        I: IntoIterator<Item = (Address, (&'a PublicKey, &'a VerifiedKeyFrag))>,
-    {
+    ) -> Self {
         // Panic here since violation of theis condition indicates a bug on the caller's side.
         assert!(threshold != 0, "threshold must be non-zero");
 
@@ -55,7 +52,7 @@ impl TreasureMap {
         for (ursula_address, (ursula_encrypting_key, verified_kfrag)) in assigned_kfrags.into_iter()
         {
             let encrypted_kfrag =
-                EncryptedKeyFrag::new(signer, ursula_encrypting_key, hrac, verified_kfrag);
+                EncryptedKeyFrag::new(signer, &ursula_encrypting_key, hrac, verified_kfrag);
             if destinations
                 .insert(ursula_address, encrypted_kfrag)
                 .is_some()

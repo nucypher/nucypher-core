@@ -47,7 +47,7 @@ impl MessageKit {
         &self,
         sk: &SecretKey,
         policy_encrypting_key: &PublicKey,
-        cfrags: &[VerifiedCapsuleFrag],
+        cfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
     ) -> Result<Box<[u8]>, ReencryptionError> {
         decrypt_reencrypted(
             sk,

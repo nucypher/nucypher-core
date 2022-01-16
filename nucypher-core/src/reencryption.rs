@@ -94,11 +94,15 @@ fn signed_message(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
 
 impl ReencryptionResponse {
     /// Creates and signs a new reencryption response.
-    pub fn new(signer: &Signer, capsules: &[Capsule], vcfrags: &[VerifiedCapsuleFrag]) -> Self {
+    pub fn new(
+        signer: &Signer,
+        capsules: &[Capsule],
+        vcfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
+    ) -> Self {
         // un-verify
         let cfrags: Vec<_> = vcfrags
-            .iter()
-            .map(|vcfrag| vcfrag.to_unverified())
+            .into_iter()
+            .map(|vcfrag| vcfrag.unverify())
             .collect();
 
         let signature = signer.sign(&signed_message(capsules, &cfrags));
@@ -134,6 +138,7 @@ impl ReencryptionResponse {
         let vcfrags = self
             .cfrags
             .iter()
+            .cloned()
             .zip(capsules.iter())
             .map(|(cfrag, capsule)| {
                 cfrag.verify(

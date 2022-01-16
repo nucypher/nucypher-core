@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.15"
 nucypher-core = { path = "../nucypher-core" }
-umbral-pre = { version = "0.4", features = ["bindings-python", "serde-support"] }
+umbral-pre = { version = "0.5", features = ["bindings-python", "serde-support"] }
 
 [build-dependencies]
 pyo3-build-config = "*"

@@ -21,12 +21,12 @@ struct AuthorizedKeyFrag {
 }
 
 impl AuthorizedKeyFrag {
-    fn new(signer: &Signer, hrac: &HRAC, verified_kfrag: &VerifiedKeyFrag) -> Self {
+    fn new(signer: &Signer, hrac: &HRAC, verified_kfrag: VerifiedKeyFrag) -> Self {
         // Alice makes plain to Ursula that, upon decrypting this message,
         // this particular KFrag is authorized for use in the policy identified by this HRAC.
 
         // TODO (rust-umbral#73): add VerifiedKeyFrag::unverify()?
-        let kfrag = verified_kfrag.to_unverified();
+        let kfrag = verified_kfrag.unverify();
 
         let signature = signer.sign(&[hrac.as_ref(), kfrag.to_array().as_ref()].concat());
 
@@ -107,7 +107,7 @@ impl EncryptedKeyFrag {
         signer: &Signer,
         recipient_key: &PublicKey,
         hrac: &HRAC,
-        verified_kfrag: &VerifiedKeyFrag,
+        verified_kfrag: VerifiedKeyFrag,
     ) -> Self {
         let auth_kfrag = AuthorizedKeyFrag::new(signer, hrac, verified_kfrag);
         // Using Umbral for asymmetric encryption here for simplicity,
