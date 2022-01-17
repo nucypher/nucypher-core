@@ -6,21 +6,19 @@ extern crate wee_alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 extern crate alloc;
+use nucypher_core::ProtocolObject;
 use serde::{Deserialize, Serialize};
 
 use alloc::{
     boxed::Box,
-    collections::BTreeMap,
     format,
     string::{String, ToString},
     vec::Vec,
 };
 use core::fmt;
 use js_sys::{Error, Uint8Array};
-use nucypher_core::ProtocolObject;
-use umbral_pre::{
-    bindings_wasm::{Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag},
-    DeserializableFromArray,
+use umbral_pre::bindings_wasm::{
+    Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 use wasm_bindgen::{
     prelude::{wasm_bindgen, JsValue},
@@ -294,40 +292,66 @@ impl FromBackend<nucypher_core::TreasureMap> for TreasureMap {
 }
 
 #[wasm_bindgen]
-impl TreasureMap {
+pub struct TreasureMapBuilder {
+    signer: umbral_pre::Signer,
+    hrac: nucypher_core::HRAC,
+    policy_encrypting_key: umbral_pre::PublicKey,
+    assigned_kfrags: Vec<(
+        nucypher_core::Address,
+        (umbral_pre::PublicKey, umbral_pre::VerifiedKeyFrag),
+    )>,
+    threshold: u8,
+}
+
+#[wasm_bindgen]
+impl TreasureMapBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: &JsValue,
         threshold: u8,
-    ) -> Result<TreasureMap, JsValue> {
-        // Using String here to avoid issue where Deserialize is not implemented
-        // for every possible lifetime.
-        let assigned_kfrags: BTreeMap<String, (Vec<u8>, Vec<u8>)> =
-            serde_wasm_bindgen::from_value(assigned_kfrags.clone())?;
-        let assigned_kfrags_backend = assigned_kfrags
-            .iter()
-            .map(|(address, (key, vkfrag))| {
-                // TODO: How to avoid unwrapping here?
-                let address = try_make_address(address.as_bytes()).unwrap();
-                let key = umbral_pre::PublicKey::from_bytes(key).unwrap();
-                let vkfrag = umbral_pre::VerifiedKeyFrag::from_verified_bytes(vkfrag).unwrap();
-                (address, (key, vkfrag))
-            })
-            .collect::<Vec<_>>();
+    ) -> Result<TreasureMapBuilder, JsValue> {
         Ok(Self {
-            backend: nucypher_core::TreasureMap::new(
-                signer.inner(),
-                &hrac.backend,
-                policy_encrypting_key.inner(),
-                assigned_kfrags_backend,
-                threshold,
-            ),
+            signer: signer.inner().clone(),
+            hrac: hrac.inner().clone(),
+            policy_encrypting_key: policy_encrypting_key.inner().clone(),
+            assigned_kfrags: Vec::new(),
+            threshold,
         })
     }
 
+    #[wasm_bindgen(js_name = withKFrag)]
+    pub fn with_kfrag(
+        mut self,
+        address: String,
+        public_key: PublicKey,
+        vkfrag: VerifiedKeyFrag,
+    ) -> Result<TreasureMapBuilder, JsValue> {
+        let address = try_make_address(address.as_bytes())?;
+        self.assigned_kfrags.push((
+            address,
+            (public_key.inner().clone(), vkfrag.inner().clone()),
+        ));
+        Ok(self)
+    }
+
+    #[wasm_bindgen]
+    pub fn build(self) -> TreasureMap {
+        TreasureMap {
+            backend: nucypher_core::TreasureMap::new(
+                &self.signer,
+                &self.hrac,
+                &self.policy_encrypting_key,
+                self.assigned_kfrags,
+                self.threshold,
+            ),
+        }
+    }
+}
+
+#[wasm_bindgen]
+impl TreasureMap {
     pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
         EncryptedTreasureMap {
             backend: self.backend.encrypt(signer.inner(), recipient_key.inner()),

@@ -12,6 +12,7 @@ import {
   SecretKey,
   Signer,
   TreasureMap,
+  TreasureMapBuilder,
 } from "nucypher-core";
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
@@ -45,28 +46,23 @@ const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
     false
   );
 
-  const assignedKeyFrags = {
-    "00000000000000000001": [
-      SecretKey.random().publicKey().toBytes(),
-      vkfrags[0].toBytes(),
-    ],
-    "00000000000000000002": [
-      SecretKey.random().publicKey().toBytes(),
-      vkfrags[1].toBytes(),
-    ],
-    "00000000000000000003": [
-      SecretKey.random().publicKey().toBytes(),
-      vkfrags[2].toBytes(),
-    ],
-  };
-
-  return new TreasureMap(
-    signer,
-    hrac,
-    recipientPk,
-    assignedKeyFrags,
-    threshold
-  );
+  return new TreasureMapBuilder(signer, hrac, recipientPk, threshold)
+    .withKFrag(
+      "00000000000000000001",
+      SecretKey.random().publicKey(),
+      vkfrags[0]
+    )
+    .withKFrag(
+      "00000000000000000002",
+      SecretKey.random().publicKey(),
+      vkfrags[1]
+    )
+    .withKFrag(
+      "00000000000000000003",
+      SecretKey.random().publicKey(),
+      vkfrags[2]
+    )
+    .build();
 };
 
 const makeKFrags = (delegatingSk: SecretKey, recipientSk: SecretKey) =>

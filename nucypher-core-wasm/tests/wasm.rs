@@ -235,35 +235,38 @@ fn encrypted_to_bytes_from_bytes() {
 // TreasureMap
 //
 
-fn make_assigned_kfrags(
-    verified_kfrags: Vec<VerifiedKeyFrag>,
-) -> BTreeMap<String, (PublicKey, VerifiedKeyFrag)> {
-    verified_kfrags
-        .iter()
-        .enumerate()
-        .map(|(i, vkfrag)| {
-            (
-                format!("0000000000000000000{}", i + 1).to_string(),
-                (SecretKey::random().public_key(), vkfrag.clone()),
-            )
-        })
-        .collect()
-}
-
 fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> TreasureMap {
     let hrac = make_hrac();
-    let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
+    let vkfrags = make_kfrags(&publisher_sk, &receiving_sk);
+    // (
+    //     format!("0000000000000000000{}", i + 1).to_string(),
+    //     (SecretKey::random().public_key(), vkfrag.clone()),
 
-    let assigned_kfrags = make_assigned_kfrags(verified_kfrags);
-
-    TreasureMap::new(
+    TreasureMapBuilder::new(
         &Signer::new(&publisher_sk),
         &hrac,
         &SecretKey::random().public_key(),
-        &serde_wasm_bindgen::to_value(&assigned_kfrags).unwrap(),
         2,
     )
     .unwrap()
+    .with_kfrag(
+        "00000000000000000001".to_string(),
+        SecretKey::random().public_key(),
+        vkfrags[0].clone(),
+    ).unwrap()
+    .with_kfrag(
+        "00000000000000000002".to_string(),
+        SecretKey::random().public_key(),
+        vkfrags[1].clone(),
+    )
+    .unwrap()
+    .with_kfrag(
+        "00000000000000000003".to_string(),
+        SecretKey::random().public_key(),
+        vkfrags[2].clone(),
+    )
+    .unwrap()
+    .build()
 }
 
 #[wasm_bindgen_test]
