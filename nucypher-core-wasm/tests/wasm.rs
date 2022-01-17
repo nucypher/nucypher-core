@@ -1,10 +1,8 @@
-use std::collections::BTreeMap;
-
 use nucypher_core::Address;
 use nucypher_core_wasm::*;
 
 use umbral_pre::bindings_wasm::{
-    generate_kfrags, reencrypt, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+    generate_kfrags, reencrypt, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 use wasm_bindgen::convert::FromWasmAbi;
 use wasm_bindgen::prelude::*;
@@ -253,7 +251,8 @@ fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> Trea
         "00000000000000000001".to_string(),
         SecretKey::random().public_key(),
         vkfrags[0].clone(),
-    ).unwrap()
+    )
+    .unwrap()
     .with_kfrag(
         "00000000000000000002".to_string(),
         SecretKey::random().public_key(),
