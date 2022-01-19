@@ -302,7 +302,7 @@ fn treasure_map_destinations() {
     for i in 0..destinations.len() {
         assert_eq!(
             destinations[i].0.as_ref(),
-            format!("0000000000000000000{}", i).as_bytes(),
+            format!("0000000000000000000{}", i+1).as_bytes(),
             "Destination does not match"
         );
     }
