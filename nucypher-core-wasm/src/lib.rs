@@ -5,10 +5,8 @@ extern crate wee_alloc;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
+#[macro_use]
 extern crate alloc;
-use nucypher_core::ProtocolObject;
-use serde::{Deserialize, Serialize};
-
 use alloc::{
     boxed::Box,
     format,
@@ -16,14 +14,13 @@ use alloc::{
     vec::Vec,
 };
 use core::fmt;
-use js_sys::{Error, Uint8Array};
+use js_sys::Error;
+use nucypher_core::ProtocolObject;
+use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
-use wasm_bindgen::{
-    prelude::{wasm_bindgen, JsValue},
-    JsCast,
-};
+use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 
 fn map_js_err<T: fmt::Display>(err: T) -> JsValue {
     Error::new(&format!("{}", err)).into()
@@ -59,29 +56,12 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
     Ok(addr)
 }
 
-fn js_value_to_u8_vec(array_of_uint8_arrays: &[JsValue]) -> Result<Vec<Vec<u8>>, JsValue> {
-    let vec_vec_u8 = array_of_uint8_arrays
-        .iter()
-        .filter_map(|u8_array| {
-            u8_array
-                .dyn_ref::<Uint8Array>()
-                .map(|u8_array| u8_array.to_vec())
-        })
-        .collect::<Vec<_>>();
-
-    if vec_vec_u8.len() != array_of_uint8_arrays.len() {
-        Err("Invalid Array of Uint8Arrays.".to_string().into())
-    } else {
-        Ok(vec_vec_u8)
-    }
-}
-
 //
 // MessageKit
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct MessageKit(nucypher_core::MessageKit);
 
 impl AsBackend<nucypher_core::MessageKit> for MessageKit {
@@ -99,36 +79,23 @@ impl FromBackend<nucypher_core::MessageKit> for MessageKit {
 #[wasm_bindgen]
 impl MessageKit {
     #[wasm_bindgen(constructor)]
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> MessageKit {
-        MessageKit(nucypher_core::MessageKit::new(
+    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
+        Self(nucypher_core::MessageKit::new(
             policy_encrypting_key.inner(),
             plaintext,
         ))
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<Box<[u8]>, JsValue> {
-        self.0.decrypt(sk.inner()).map_err(map_js_err)
+    #[wasm_bindgen(js_name = withCFrag)]
+    pub fn with_cfrag(self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+        MessageKitWithFrags {
+            message_kit: self,
+            cfrags: vec![cfrag.inner()],
+        }
     }
 
-    #[wasm_bindgen(js_name = decryptReencrypted)]
-    pub fn decrypt_reencrypted(
-        &self,
-        sk: &SecretKey,
-        policy_encrypting_key: &PublicKey,
-        cfrags: Box<[JsValue]>,
-    ) -> Result<Box<[u8]>, JsValue> {
-        let backend_cfrags = js_value_to_u8_vec(&cfrags)?
-            .iter()
-            .map(|bytes| {
-                VerifiedCapsuleFrag::from_verified_bytes(&bytes)
-                    .and_then(|vcfrag| Ok(vcfrag.inner()))
-            })
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-
-        self.0
-            .decrypt_reencrypted(sk.inner(), policy_encrypting_key.inner(), &backend_cfrags)
-            .map_err(map_js_err)
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<Box<[u8]>, JsValue> {
+        self.0.decrypt(sk.inner()).map_err(map_js_err)
     }
 
     #[wasm_bindgen(method, getter)]
@@ -144,6 +111,34 @@ impl MessageKit {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub struct MessageKitWithFrags {
+    message_kit: MessageKit,
+    cfrags: Vec<umbral_pre::VerifiedCapsuleFrag>,
+}
+
+#[wasm_bindgen]
+impl MessageKitWithFrags {
+    #[wasm_bindgen(js_name = withCFrag)]
+    pub fn with_cfrag(&mut self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+        self.cfrags.push(cfrag.inner());
+        self.clone()
+    }
+
+    #[wasm_bindgen(js_name = decryptReencrypted)]
+    pub fn decrypt_reencrypted(
+        &self,
+        sk: &SecretKey,
+        policy_encrypting_key: &PublicKey,
+    ) -> Result<Box<[u8]>, JsValue> {
+        self.message_kit
+            .0
+            .decrypt_reencrypted(sk.inner(), policy_encrypting_key.inner(), &self.cfrags)
+            .map_err(map_js_err)
     }
 }
 
@@ -174,8 +169,8 @@ impl HRAC {
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
         label: &[u8],
-    ) -> HRAC {
-        HRAC(nucypher_core::HRAC::new(
+    ) -> Self {
+        Self(nucypher_core::HRAC::new(
             publisher_verifying_key.inner(),
             bob_verifying_key.inner(),
             label,
@@ -216,8 +211,8 @@ impl EncryptedKeyFrag {
         recipient_key: &PublicKey,
         hrac: &HRAC,
         verified_kfrag: &VerifiedKeyFrag,
-    ) -> EncryptedKeyFrag {
-        EncryptedKeyFrag(nucypher_core::EncryptedKeyFrag::new(
+    ) -> Self {
+        Self(nucypher_core::EncryptedKeyFrag::new(
             signer.inner(),
             recipient_key.inner(),
             &hrac.0,
@@ -253,6 +248,49 @@ impl EncryptedKeyFrag {
 //
 
 #[wasm_bindgen]
+impl TreasureMapBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        signer: &Signer,
+        hrac: &HRAC,
+        policy_encrypting_key: &PublicKey,
+        threshold: u8,
+    ) -> Result<TreasureMapBuilder, JsValue> {
+        Ok(Self {
+            signer: signer.inner().clone(),
+            hrac: hrac.0,
+            policy_encrypting_key: *policy_encrypting_key.inner(),
+            assigned_kfrags: Vec::new(),
+            threshold,
+        })
+    }
+
+    #[wasm_bindgen(js_name = addKfrag)]
+    pub fn add_kfrag(
+        &mut self,
+        address: &str,
+        public_key: &PublicKey,
+        vkfrag: &VerifiedKeyFrag,
+    ) -> Result<TreasureMapBuilder, JsValue> {
+        let address = try_make_address(address.as_bytes())?;
+        self.assigned_kfrags
+            .push((address, (*public_key.inner(), vkfrag.inner().clone())));
+        Ok(self.clone())
+    }
+
+    #[wasm_bindgen]
+    pub fn build(self) -> TreasureMap {
+        TreasureMap(nucypher_core::TreasureMap::new(
+            &self.signer,
+            &self.hrac,
+            &self.policy_encrypting_key,
+            self.assigned_kfrags,
+            self.threshold,
+        ))
+    }
+}
+
+#[wasm_bindgen]
 #[derive(Clone, PartialEq, Debug)]
 pub struct TreasureMap(nucypher_core::TreasureMap);
 
@@ -269,6 +307,7 @@ impl FromBackend<nucypher_core::TreasureMap> for TreasureMap {
 }
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct TreasureMapBuilder {
     signer: umbral_pre::Signer,
     hrac: nucypher_core::HRAC,
@@ -278,51 +317,6 @@ pub struct TreasureMapBuilder {
         (umbral_pre::PublicKey, umbral_pre::VerifiedKeyFrag),
     )>,
     threshold: u8,
-}
-
-#[wasm_bindgen]
-impl TreasureMapBuilder {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        signer: &Signer,
-        hrac: &HRAC,
-        policy_encrypting_key: &PublicKey,
-        threshold: u8,
-    ) -> Result<TreasureMapBuilder, JsValue> {
-        Ok(Self {
-            signer: signer.inner().clone(),
-            hrac: hrac.0.clone(),
-            policy_encrypting_key: policy_encrypting_key.inner().clone(),
-            assigned_kfrags: Vec::new(),
-            threshold,
-        })
-    }
-
-    #[wasm_bindgen(js_name = withKFrag)]
-    pub fn with_kfrag(
-        mut self,
-        address: String,
-        public_key: PublicKey,
-        vkfrag: VerifiedKeyFrag,
-    ) -> Result<TreasureMapBuilder, JsValue> {
-        let address = try_make_address(address.as_bytes())?;
-        self.assigned_kfrags.push((
-            address,
-            (public_key.inner().clone(), vkfrag.inner().clone()),
-        ));
-        Ok(self)
-    }
-
-    #[wasm_bindgen]
-    pub fn build(self) -> TreasureMap {
-        TreasureMap(nucypher_core::TreasureMap::new(
-            &self.signer,
-            &self.hrac,
-            &self.policy_encrypting_key,
-            self.assigned_kfrags,
-            self.threshold,
-        ))
-    }
 }
 
 #[wasm_bindgen]
@@ -401,7 +395,7 @@ impl EncryptedTreasureMap {
         self.0
             .decrypt(sk.inner(), publisher_verifying_key.inner())
             .map_err(map_js_err)
-            .map(|treasure_map| TreasureMap(treasure_map))
+            .map(TreasureMap)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -436,32 +430,53 @@ impl FromBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
 }
 
 #[wasm_bindgen]
-impl ReencryptionRequest {
+#[derive(Clone)]
+pub struct ReencryptionRequestBuilder {
+    capsules: Vec<umbral_pre::Capsule>,
+    hrac: nucypher_core::HRAC,
+    encrypted_kfrag: nucypher_core::EncryptedKeyFrag,
+    publisher_verifying_key: umbral_pre::PublicKey,
+    bob_verifying_key: umbral_pre::PublicKey,
+}
+
+#[wasm_bindgen]
+impl ReencryptionRequestBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        capsules: Box<[JsValue]>,
         hrac: &HRAC,
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
-    ) -> Result<ReencryptionRequest, JsValue> {
-        let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
-            .iter()
-            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ReencryptionRequest(
-            nucypher_core::ReencryptionRequest::new(
-                &capsules_backend,
-                &hrac.0,
-                &encrypted_kfrag.0,
-                publisher_verifying_key.inner(),
-                bob_verifying_key.inner(),
-            ),
-        ))
+    ) -> Result<ReencryptionRequestBuilder, JsValue> {
+        Ok(Self {
+            capsules: Vec::new(),
+            hrac: hrac.0,
+            encrypted_kfrag: encrypted_kfrag.0.clone(),
+            publisher_verifying_key: *publisher_verifying_key.inner(),
+            bob_verifying_key: *bob_verifying_key.inner(),
+        })
     }
 
+    #[wasm_bindgen(js_name = addCapsule)]
+    pub fn add_capsule(&mut self, capsule: &Capsule) -> Self {
+        self.capsules.push(*capsule.inner());
+        self.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn build(self) -> ReencryptionRequest {
+        ReencryptionRequest(nucypher_core::ReencryptionRequest::new(
+            &self.capsules,
+            &self.hrac,
+            &self.encrypted_kfrag,
+            &self.publisher_verifying_key,
+            &self.bob_verifying_key,
+        ))
+    }
+}
+
+#[wasm_bindgen]
+impl ReencryptionRequest {
     #[wasm_bindgen(method, getter)]
     pub fn hrac(&self) -> HRAC {
         HRAC(self.0.hrac)
@@ -508,6 +523,46 @@ impl ReencryptionRequest {
 //
 
 #[wasm_bindgen]
+#[derive(Clone)]
+pub struct ReencryptionResponseBuilder {
+    signer: umbral_pre::Signer,
+    capsules: Vec<umbral_pre::Capsule>,
+    vcfrags: Vec<umbral_pre::VerifiedCapsuleFrag>,
+}
+
+#[wasm_bindgen]
+impl ReencryptionResponseBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new(signer: &Signer) -> Self {
+        Self {
+            signer: signer.inner().clone(),
+            capsules: Vec::new(),
+            vcfrags: Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = addCapsule)]
+    pub fn add_capsule(&mut self, capsule: &Capsule) -> ReencryptionResponseBuilder {
+        self.capsules.push(*capsule.inner());
+        self.clone()
+    }
+
+    #[wasm_bindgen(js_name = addCfrag)]
+    pub fn add_cfrag(&mut self, cfrag: &VerifiedCapsuleFrag) -> ReencryptionResponseBuilder {
+        self.vcfrags.push(cfrag.inner());
+        self.clone()
+    }
+
+    pub fn build(&self) -> ReencryptionResponse {
+        ReencryptionResponse(nucypher_core::ReencryptionResponse::new(
+            &self.signer,
+            &self.capsules,
+            &self.vcfrags,
+        ))
+    }
+}
+
+#[wasm_bindgen]
 pub struct ReencryptionResponse(nucypher_core::ReencryptionResponse);
 
 impl AsBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
@@ -524,54 +579,61 @@ impl FromBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
 
 #[wasm_bindgen]
 impl ReencryptionResponse {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        signer: &Signer,
-        capsules: Box<[JsValue]>,
-        verified_capsule_frags: Box<[JsValue]>,
-    ) -> Result<ReencryptionResponse, JsValue> {
-        let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
-            .iter()
-            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let verified_capsule_frags: Vec<umbral_pre::VerifiedCapsuleFrag> =
-            js_value_to_u8_vec(&verified_capsule_frags)?
-                .iter()
-                .map(|vcfrag| {
-                    VerifiedCapsuleFrag::from_verified_bytes(vcfrag)
-                        .and_then(|vcfrag| Ok(vcfrag.inner()))
-                })
-                .into_iter()
-                .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ReencryptionResponse(
-            nucypher_core::ReencryptionResponse::new(
-                signer.inner(),
-                &capsules_backend,
-                &verified_capsule_frags,
-            ),
-        ))
+    #[wasm_bindgen(js_name = withCapsule)]
+    pub fn with_capsule(&self, capsule: &Capsule) -> ReencryptionResponseWithCapsules {
+        ReencryptionResponseWithCapsules {
+            reencryption_response: self.0.clone(),
+            capsules: vec![*capsule.inner()],
+        }
     }
 
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<ReencryptionResponse, JsValue> {
+        from_bytes(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+impl ReencryptionResponse {
+    pub fn inner(&self) -> &nucypher_core::ReencryptionResponse {
+        &self.0
+    }
+}
+
+#[wasm_bindgen]
+pub struct ReencryptionResponseWithCapsules {
+    reencryption_response: nucypher_core::ReencryptionResponse,
+    capsules: Vec<umbral_pre::Capsule>,
+}
+
+#[wasm_bindgen]
+impl ReencryptionResponseWithCapsules {
+    #[wasm_bindgen(js_name = withCapsule)]
+    pub fn with_capsule(&self, capsule: &Capsule) -> ReencryptionResponseWithCapsules {
+        let mut capsules = self.capsules.clone();
+        capsules.push(*capsule.inner());
+        ReencryptionResponseWithCapsules {
+            reencryption_response: self.reencryption_response.clone(),
+            capsules,
+        }
+    }
+
+    #[wasm_bindgen]
     pub fn verify(
         &self,
-        capsules: Box<[JsValue]>,
         alice_verifying_key: &PublicKey,
         ursula_verifying_key: &PublicKey,
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
     ) -> Result<Box<[JsValue]>, JsValue> {
-        let capsules_backend: Vec<umbral_pre::Capsule> = js_value_to_u8_vec(&capsules)?
-            .iter()
-            .map(|capsule| Capsule::from_bytes(capsule).and_then(|capsule| Ok(*capsule.inner())))
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
         let vcfrags_backend = self
-            .0
+            .reencryption_response
             .verify(
-                &capsules_backend,
+                &self.capsules,
                 alice_verifying_key.inner(),
                 ursula_verifying_key.inner(),
                 policy_encrypting_key.inner(),
@@ -589,21 +651,44 @@ impl ReencryptionResponse {
             .map_err(map_js_err)?;
         Ok(vcfrags_backend_js)
     }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<ReencryptionResponse, JsValue> {
-        from_bytes(data)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
 // RetrievalKit
 //
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub struct RetrievalKitBuilder {
+    capsule: umbral_pre::Capsule,
+    queried_addresses: Vec<nucypher_core::Address>,
+}
+
+#[wasm_bindgen]
+impl RetrievalKitBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new(capsule: &Capsule) -> Self {
+        Self {
+            capsule: *capsule.inner(),
+            queried_addresses: Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = addQueriedAddress)]
+    pub fn add_queried_address(&mut self, address: &str) -> Result<RetrievalKitBuilder, JsValue> {
+        let address = try_make_address(address.as_bytes())?;
+        self.queried_addresses.push(address);
+        Ok(self.clone())
+    }
+
+    #[wasm_bindgen]
+    pub fn build(&self) -> RetrievalKit {
+        RetrievalKit(nucypher_core::RetrievalKit::new(
+            &self.capsule,
+            self.queried_addresses.clone(),
+        ))
+    }
+}
 
 #[wasm_bindgen]
 pub struct RetrievalKit(nucypher_core::RetrievalKit);
@@ -627,22 +712,6 @@ impl RetrievalKit {
         RetrievalKit(nucypher_core::RetrievalKit::from_message_kit(
             &message_kit.0,
         ))
-    }
-
-    #[wasm_bindgen(constructor)]
-    pub fn new(capsule: &Capsule, queried_addresses: JsValue) -> Result<RetrievalKit, JsValue> {
-        // Using String here to avoid issue where Deserialize is not implemented
-        // for every possible lifetime.
-        let queried_addresses: Vec<String> = serde_wasm_bindgen::from_value(queried_addresses)?;
-        let addresses_backend = queried_addresses
-            .iter()
-            .map(|address| try_make_address(address.as_bytes()))
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(RetrievalKit(nucypher_core::RetrievalKit::new(
-            capsule.inner(),
-            addresses_backend,
-        )))
     }
 
     #[wasm_bindgen(method, getter)]
@@ -700,7 +769,7 @@ impl RevocationOrder {
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Result<RevocationOrder, JsValue> {
         let address = try_make_address(ursula_address)?;
-        Ok(RevocationOrder(nucypher_core::RevocationOrder::new(
+        Ok(Self(nucypher_core::RevocationOrder::new(
             signer.inner(),
             &address,
             &encrypted_kfrag.0,
@@ -727,11 +796,6 @@ impl RevocationOrder {
 // NodeMetadataPayload
 //
 
-// TODO: Find a way to avoid this conversion?
-pub fn from_canonical(data: &ethereum_types::H160) -> &str {
-    core::str::from_utf8(&data[..]).unwrap()
-}
-
 #[wasm_bindgen]
 pub struct NodeMetadataPayload(nucypher_core::NodeMetadataPayload);
 
@@ -751,11 +815,11 @@ impl NodeMetadataPayload {
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
         let address = try_make_address(canonical_address)?;
-        Ok(NodeMetadataPayload(nucypher_core::NodeMetadataPayload {
+        Ok(Self(nucypher_core::NodeMetadataPayload {
             canonical_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
-            verifying_key: *verifying_key.inner(),
+            verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
             encrypting_key: *encrypting_key.inner(),
             certificate_bytes: certificate_bytes.into(),
             host: host.to_string(),
@@ -835,7 +899,7 @@ impl FromBackend<nucypher_core::NodeMetadata> for NodeMetadata {
 impl NodeMetadata {
     #[wasm_bindgen(constructor)]
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
-        NodeMetadata(nucypher_core::NodeMetadata::new(signer.inner(), &payload.0))
+        Self(nucypher_core::NodeMetadata::new(signer.inner(), &payload.0))
     }
 
     pub fn verify(&self) -> bool {
@@ -858,11 +922,53 @@ impl NodeMetadata {
     }
 }
 
+// TODO: Replace inner() with From<>?
+impl NodeMetadata {
+    pub fn inner(&self) -> &nucypher_core::NodeMetadata {
+        &self.0
+    }
+}
+
 //
 // FleetStateChecksum
 //
 
 #[wasm_bindgen]
+#[derive(Clone)]
+pub struct FleetStateChecksumBuilder {
+    this_node: Option<nucypher_core::NodeMetadata>,
+    other_nodes: Vec<nucypher_core::NodeMetadata>,
+}
+#[wasm_bindgen]
+impl FleetStateChecksumBuilder {
+    // TODO: Fix lack of reference leading to accidental freeing of memory
+    //       https://github.com/rustwasm/wasm-bindgen/issues/2370
+    // this_node: Option<&NodeMetadata>,
+    #[wasm_bindgen(constructor)]
+    pub fn new(this_node: Option<NodeMetadata>) -> Self {
+        Self {
+            this_node: this_node.map(|n| n.0),
+            other_nodes: Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name=addOtherNode)]
+    pub fn add_other_node(&mut self, other_node: &NodeMetadata) -> Self {
+        self.other_nodes.push(other_node.inner().clone());
+        self.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn build(&self) -> FleetStateChecksum {
+        FleetStateChecksum(nucypher_core::FleetStateChecksum::from_nodes(
+            self.this_node.as_ref(),
+            &self.other_nodes,
+        ))
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Clone)]
 pub struct FleetStateChecksum(nucypher_core::FleetStateChecksum);
 
 impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
@@ -871,44 +977,61 @@ impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
     }
 }
 
-impl FromBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
-    fn from_backend(backend: nucypher_core::FleetStateChecksum) -> Self {
-        FleetStateChecksum(backend)
-    }
-}
-
 #[wasm_bindgen]
 impl FleetStateChecksum {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        // TODO: Fix lack of reference leading to accidental freeing of memory
-        //       https://github.com/rustwasm/wasm-bindgen/issues/2370
-        // this_node: Option<&NodeMetadata>,
-        this_node: Option<NodeMetadata>,
-        other_nodes: JsValue,
-    ) -> Result<FleetStateChecksum, JsValue> {
-        let other_nodes: Vec<NodeMetadata> = serde_wasm_bindgen::from_value(other_nodes)?;
-        let other_nodes_backend = other_nodes
-            .iter()
-            .map(|node| node.0.clone())
-            .collect::<Vec<_>>();
-        Ok(FleetStateChecksum(
-            nucypher_core::FleetStateChecksum::from_nodes(
-                this_node.map(|node| node.0).as_ref(),
-                &other_nodes_backend,
-            ),
-        ))
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
     }
 }
 
+impl FleetStateChecksum {
+    pub fn new(this_node: Option<NodeMetadata>, other_nodes: Vec<NodeMetadata>) -> Self {
+        let this_node = this_node.map(|n| n.0);
+        let other_nodes: Vec<nucypher_core::NodeMetadata> =
+            other_nodes.iter().cloned().map(|n| n.0).collect();
+        FleetStateChecksum(nucypher_core::FleetStateChecksum::from_nodes(
+            this_node.as_ref(),
+            &other_nodes,
+        ))
+    }
+}
+
 //
 // MetadataRequest
 //
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub struct MetadataRequestBuilder {
+    fleet_state_checksum: nucypher_core::FleetStateChecksum,
+    announce_nodes: Vec<nucypher_core::NodeMetadata>,
+}
+
+#[wasm_bindgen]
+impl MetadataRequestBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new(fleet_state_checksum: &FleetStateChecksum) -> Self {
+        Self {
+            fleet_state_checksum: fleet_state_checksum.0,
+            announce_nodes: Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name=addAnnounceNode)]
+    pub fn add_announce_node(&mut self, announce_node: &NodeMetadata) -> Self {
+        self.announce_nodes.push(announce_node.inner().clone());
+        self.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn build(&self) -> MetadataRequest {
+        MetadataRequest(nucypher_core::MetadataRequest::new(
+            &self.fleet_state_checksum,
+            &self.announce_nodes,
+        ))
+    }
+}
 
 #[wasm_bindgen]
 pub struct MetadataRequest(nucypher_core::MetadataRequest);
@@ -927,22 +1050,6 @@ impl FromBackend<nucypher_core::MetadataRequest> for MetadataRequest {
 
 #[wasm_bindgen]
 impl MetadataRequest {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        fleet_state_checksum: &FleetStateChecksum,
-        announce_nodes: JsValue,
-    ) -> Result<MetadataRequest, JsValue> {
-        let announce_nodes: Vec<NodeMetadata> = serde_wasm_bindgen::from_value(announce_nodes)?;
-        let nodes_backend = announce_nodes
-            .iter()
-            .map(|node| node.0.clone())
-            .collect::<Vec<_>>();
-        Ok(MetadataRequest(nucypher_core::MetadataRequest::new(
-            &fleet_state_checksum.0,
-            &nodes_backend,
-        )))
-    }
-
     #[wasm_bindgen(method, getter, js_name = fleetStateChecksum)]
     pub fn fleet_state_checksum(&self) -> FleetStateChecksum {
         FleetStateChecksum(self.0.fleet_state_checksum)
@@ -974,26 +1081,42 @@ impl MetadataRequest {
 //
 
 #[wasm_bindgen]
+#[derive(Clone)]
+pub struct MetadataResponsePayloadBuilder {
+    timestamp_epoch: u32,
+    announce_nodes: Vec<nucypher_core::NodeMetadata>,
+}
+
+#[wasm_bindgen]
+impl MetadataResponsePayloadBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new(timestamp_epoch: u32) -> Self {
+        Self {
+            timestamp_epoch,
+            announce_nodes: Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name=addAnnounceNode)]
+    pub fn add_announce_node(&mut self, announce_node: &NodeMetadata) -> Self {
+        self.announce_nodes.push(announce_node.inner().clone());
+        self.clone()
+    }
+
+    #[wasm_bindgen]
+    pub fn build(&self) -> MetadataResponsePayload {
+        MetadataResponsePayload(nucypher_core::MetadataResponsePayload::new(
+            self.timestamp_epoch,
+            &self.announce_nodes,
+        ))
+    }
+}
+
+#[wasm_bindgen]
 pub struct MetadataResponsePayload(nucypher_core::MetadataResponsePayload);
 
 #[wasm_bindgen]
 impl MetadataResponsePayload {
-    #[wasm_bindgen(constructor)]
-    pub fn new(
-        timestamp_epoch: u32,
-        announce_nodes: JsValue,
-    ) -> Result<MetadataResponsePayload, JsValue> {
-        let announce_nodes: Vec<NodeMetadata> =
-            serde_wasm_bindgen::from_value(announce_nodes).map_err(map_js_err)?;
-        let nodes_backend = announce_nodes
-            .iter()
-            .map(|node| node.0.clone())
-            .collect::<Vec<_>>();
-        Ok(MetadataResponsePayload(
-            nucypher_core::MetadataResponsePayload::new(timestamp_epoch, &nodes_backend),
-        ))
-    }
-
     #[wasm_bindgen(method, getter)]
     pub fn timestamp_epoch(&self) -> u32 {
         self.0.timestamp_epoch
@@ -1044,7 +1167,7 @@ impl MetadataResponse {
             .verify(verifying_pk.inner())
             .ok_or("Invalid signature")
             .map_err(map_js_err)
-            .map(|backend| MetadataResponsePayload(backend))
+            .map(MetadataResponsePayload)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]

@@ -8,11 +8,20 @@ import {
   reencrypt,
   ReencryptionRequest,
   ReencryptionResponse,
+  ReencryptionRequestBuilder,
   RevocationOrder,
   SecretKey,
   Signer,
   TreasureMap,
   TreasureMapBuilder,
+  ReencryptionResponseBuilder,
+  NodeMetadataPayload,
+  NodeMetadata,
+  MetadataRequestBuilder,
+  MetadataRequest,
+  MetadataResponse,
+  MetadataResponsePayloadBuilder,
+  FleetStateChecksumBuilder,
 } from "nucypher-core";
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
@@ -27,7 +36,7 @@ const makeCapsules = (delegatingPk: PublicKey) => {
     delegatingPk,
     new Uint8Array(Buffer.from("Hello, world!"))
   );
-  return [messageKit.capsule.toBytes()];
+  return [messageKit.capsule];
 };
 
 const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
@@ -47,17 +56,17 @@ const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
   );
 
   return new TreasureMapBuilder(signer, hrac, recipientPk, threshold)
-    .withKFrag(
+    .addKfrag(
       "00000000000000000001",
       SecretKey.random().publicKey(),
       vkfrags[0]
     )
-    .withKFrag(
+    .addKfrag(
       "00000000000000000002",
       SecretKey.random().publicKey(),
       vkfrags[1]
     )
-    .withKFrag(
+    .addKfrag(
       "00000000000000000003",
       SecretKey.random().publicKey(),
       vkfrags[2]
@@ -75,6 +84,51 @@ const makeKFrags = (delegatingSk: SecretKey, recipientSk: SecretKey) =>
     false,
     false
   );
+
+const makeNodeMetadata = (sk: SecretKey) => {
+  const payload = new NodeMetadataPayload(
+    Buffer.from("00000000000000000000"),
+    "fake-domain",
+    (Date.now() / 1000) | 0,
+    sk.publicKey(),
+    SecretKey.random().publicKey(),
+    Buffer.from("fake-certificate-bytes"),
+    "example.com",
+    8080
+  );
+  const signer = new Signer(sk);
+  return new NodeMetadata(signer, payload);
+};
+
+const makefleetStateChecksum = () => {
+  const sk = SecretKey.random();
+  const thisNode = makeNodeMetadata(sk);
+  const otherNodes = [
+    makeNodeMetadata(sk),
+    makeNodeMetadata(sk),
+    makeNodeMetadata(sk),
+  ];
+  const builder = new FleetStateChecksumBuilder(thisNode);
+  for (const node of otherNodes) {
+    builder.addOtherNode(node);
+  }
+  return { fleetStateChecksum: builder.build(), otherNodes };
+};
+
+const makeMetadataResponsePayload = () => {
+  const sk = SecretKey.random();
+  const announceNodes = [
+    makeNodeMetadata(sk),
+    makeNodeMetadata(sk),
+    makeNodeMetadata(sk),
+  ];
+  const timestamp = (Date.now() / 1000) | 0;
+  const builder = new MetadataResponsePayloadBuilder(timestamp);
+  for (const node of announceNodes) {
+    builder.addAnnounceNode(node);
+  }
+  return { metadataResponsePayload: builder.build(), announceNodes };
+};
 
 describe("MessageKit", () => {
   it("decrypts", () => {
@@ -102,15 +156,17 @@ describe("MessageKit", () => {
 
     // Reencrypt the capsule from message kit
     const capsule = Capsule.fromBytes(messageKit.capsule.toBytes());
-    const capsuleFrags = vkfrags.map((kfrag) =>
-      reencrypt(capsule, kfrag).toBytes()
-    );
+    const capsuleFrags = vkfrags.map((kfrag) => reencrypt(capsule, kfrag));
+
+    const messageKitWithCfrags = messageKit.withCFrag(capsuleFrags[0]);
+    for (let i = 1; i < capsuleFrags.length; i++) {
+      messageKitWithCfrags.withCFrag(capsuleFrags[i]);
+    }
 
     // Decrypt the reencrypted message kit
-    const decrypted = messageKit.decryptReencrypted(
+    const decrypted = messageKitWithCfrags.decryptReencrypted(
       recipientSk,
-      delegatingPk,
-      capsuleFrags
+      delegatingPk
     );
 
     expect(decrypted).toEqual(message);
@@ -241,13 +297,16 @@ describe("ReencryptionRequest", () => {
       vkfrags[0]
     );
 
-    const reencryptionRequest = new ReencryptionRequest(
-      capsules,
+    const reencryptionRequestBuilder = new ReencryptionRequestBuilder(
       hrac,
       encryptedKeyFrag,
       delegatingPk,
       recipientPk
     );
+    for (const capsule of capsules) {
+      reencryptionRequestBuilder.addCapsule(capsule);
+    }
+    const reencryptionRequest = reencryptionRequestBuilder.build();
 
     expect(reencryptionRequest).toBeTruthy();
     expect(reencryptionRequest.hrac.toBytes()).toEqual(hrac.toBytes());
@@ -260,7 +319,9 @@ describe("ReencryptionRequest", () => {
     expect(reencryptionRequest.encrypted_kfrag.toBytes()).toEqual(
       encryptedKeyFrag.toBytes()
     );
-    expect(reencryptionRequest.capsules[0].toBytes()).toEqual(capsules[0]);
+    expect(reencryptionRequest.capsules[0].toBytes()).toEqual(
+      capsules[0].toBytes()
+    );
 
     const asBytes = reencryptionRequest.toBytes();
     expect(asBytes).toEqual(ReencryptionRequest.fromBytes(asBytes).toBytes());
@@ -268,49 +329,98 @@ describe("ReencryptionRequest", () => {
 });
 
 describe("ReencryptionResponse", () => {
-  it("serializes", () => {});
-
-  it("verifies", () => {
-    // Make capsules
+  it("serializes and verifies", () => {
     const aliceSk = SecretKey.random();
+    const bobSk = SecretKey.random();
+
+    // Make verified key fragments
+    const vkfrags = makeKFrags(aliceSk, bobSk);
+
+    // Make capsules
     const policyEncryptingKey = aliceSk.publicKey();
     const message = new Uint8Array(Buffer.from("Hello, world!"));
     const messageKit = new MessageKit(policyEncryptingKey, message);
-    const capsules = [
-      messageKit.capsule.toBytes(),
-      messageKit.capsule.toBytes(),
-      messageKit.capsule.toBytes(),
-    ];
-
-    // Make verified key fragments
-    const bobSk = SecretKey.random();
-    const vkfrags = makeKFrags(aliceSk, bobSk);
-    expect(capsules.length).toEqual(vkfrags.length);
+    const capsules = vkfrags.map((_) => messageKit.capsule);
 
     // Perform the reencryption
-    const capsule = Capsule.fromBytes(messageKit.capsule.toBytes());
-    const verifiedCapsuleFrags = vkfrags.map((kfrag) =>
-      reencrypt(capsule, kfrag).toBytes()
-    );
+    const cfrags = vkfrags.map((kfrag) => reencrypt(capsules[0], kfrag));
 
     // Make the reencryption response
     const ursulaSk = SecretKey.random();
-    const reencryptionResponse = new ReencryptionResponse(
-      new Signer(ursulaSk),
-      capsules,
-      verifiedCapsuleFrags
-    );
+    const builder = new ReencryptionResponseBuilder(new Signer(ursulaSk));
+    for (const capsule of capsules) {
+      builder.addCapsule(capsule);
+    }
+    for (const cfrag of cfrags) {
+      builder.addCfrag(cfrag);
+    }
+    const reencryptionResponse = builder.build();
 
+    // Test serialization
     const asBytes = reencryptionResponse.toBytes();
     expect(ReencryptionResponse.fromBytes(asBytes).toBytes()).toEqual(asBytes);
 
-    const isOk = reencryptionResponse.verify(
-      capsules,
+    // Add capsules to the response
+    let responseWithCapsules = reencryptionResponse.withCapsule(capsules[0]);
+    for (const capsule of capsules.slice(1)) {
+      responseWithCapsules = responseWithCapsules.withCapsule(capsule);
+    }
+
+    // Verify the reencryption response
+    const verified = responseWithCapsules.verify(
       aliceSk.publicKey(),
       ursulaSk.publicKey(),
       policyEncryptingKey,
       bobSk.publicKey()
     );
-    expect(isOk).toBeTruthy();
+    expect(verified.length).toEqual(vkfrags.length);
+  });
+});
+
+describe("NodeMetadata", () => {
+  it("serializes", () => {
+    const sk = SecretKey.random();
+    const nodeMetadata = makeNodeMetadata(sk);
+    expect(nodeMetadata.verify()).toBeTruthy();
+
+    const asBytes = nodeMetadata.toBytes();
+    expect(NodeMetadata.fromBytes(asBytes).toBytes()).toEqual(asBytes);
+  });
+});
+
+describe("FleetStateChecksum", () => {
+  it("serializes", () => {
+    const { fleetStateChecksum } = makefleetStateChecksum();
+    expect(fleetStateChecksum.toBytes().length > 0).toBeTruthy();
+  });
+});
+
+describe("MetadataRequest", () => {
+  it("serializes", () => {
+    const { fleetStateChecksum, otherNodes } = makefleetStateChecksum();
+    const builder = new MetadataRequestBuilder(fleetStateChecksum);
+    for (const node of otherNodes) {
+      builder.addAnnounceNode(node);
+    }
+    const metadataRequest = builder.build();
+    const asBytes = metadataRequest.toBytes();
+    expect(MetadataRequest.fromBytes(asBytes).toBytes()).toEqual(asBytes);
+  });
+});
+
+describe("MetadataResponse", () => {
+  it("verifies and serializes", () => {
+    const sk = SecretKey.random();
+    const verifyingKey = sk.publicKey();
+    const signer = new Signer(sk);
+    const { metadataResponsePayload } = makeMetadataResponsePayload();
+    const metadataResponse = new MetadataResponse(
+      signer,
+      metadataResponsePayload
+    );
+    expect(metadataResponse.verify(verifyingKey)).toBeTruthy();
+
+    const asBytes = metadataResponse.toBytes();
+    expect(MetadataResponse.fromBytes(asBytes).toBytes()).toEqual(asBytes);
   });
 });

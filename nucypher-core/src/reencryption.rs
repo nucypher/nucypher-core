@@ -72,7 +72,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
 impl<'a> ProtocolObject<'a> for ReencryptionRequest {}
 
 /// A response from Ursula with reencrypted capsule frags.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct ReencryptionResponse {
     cfrags: Box<[CapsuleFrag]>,
     signature: Signature,
