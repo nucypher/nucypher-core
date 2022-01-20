@@ -32,10 +32,7 @@ impl RetrievalKit {
     }
 
     /// Creates a new retrieval kit recording the addresses already queried for reencryption.
-    pub fn new<I>(capsule: &Capsule, queried_addresses: I) -> Self
-    where
-        I: IntoIterator<Item = Address>,
-    {
+    pub fn new(capsule: &Capsule, queried_addresses: impl IntoIterator<Item = Address>) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,

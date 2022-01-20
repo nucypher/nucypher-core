@@ -135,14 +135,11 @@ impl MessageKit {
         policy_encrypting_key: &PublicKey,
         cfrags: Vec<VerifiedCapsuleFrag>,
     ) -> PyResult<PyObject> {
-        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> = cfrags
-            .iter()
-            .cloned()
-            .map(|vcfrag| vcfrag.backend)
-            .collect();
+        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> =
+            cfrags.into_iter().map(|vcfrag| vcfrag.backend).collect();
         let plaintext = self
             .backend
-            .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, &backend_cfrags)
+            .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, backend_cfrags)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
@@ -233,14 +230,14 @@ impl EncryptedKeyFrag {
         signer: &Signer,
         recipient_key: &PublicKey,
         hrac: &HRAC,
-        verified_kfrag: &VerifiedKeyFrag,
+        verified_kfrag: VerifiedKeyFrag,
     ) -> Self {
         Self {
             backend: nucypher_core::EncryptedKeyFrag::new(
                 &signer.backend,
                 &recipient_key.backend,
                 &hrac.backend,
-                &verified_kfrag.backend,
+                verified_kfrag.backend,
             ),
         }
     }
@@ -300,10 +297,10 @@ impl TreasureMap {
         threshold: u8,
     ) -> PyResult<Self> {
         let assigned_kfrags_backend = assigned_kfrags
-            .iter()
+            .into_iter()
             .map(|(address_bytes, (key, vkfrag))| {
                 try_make_address(address_bytes)
-                    .map(|address| (address, (&key.backend, &vkfrag.backend)))
+                    .map(|address| (address, (key.backend, vkfrag.backend)))
             })
             .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {
@@ -538,18 +535,18 @@ impl ReencryptionResponse {
     #[new]
     pub fn new(signer: &Signer, capsules: Vec<Capsule>, vcfrags: Vec<VerifiedCapsuleFrag>) -> Self {
         let capsules_backend = capsules
-            .iter()
+            .into_iter()
             .map(|capsule| capsule.backend)
             .collect::<Vec<_>>();
         let vcfrags_backend = vcfrags
-            .iter()
-            .map(|vcfrag| vcfrag.backend.clone())
+            .into_iter()
+            .map(|vcfrag| vcfrag.backend)
             .collect::<Vec<_>>();
         ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
                 &signer.backend,
                 &capsules_backend,
-                &vcfrags_backend,
+                vcfrags_backend,
             ),
         }
     }
