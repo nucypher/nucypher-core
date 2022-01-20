@@ -52,7 +52,7 @@ impl TreasureMap {
         for (ursula_address, (ursula_encrypting_key, verified_kfrag)) in assigned_kfrags.into_iter()
         {
             let encrypted_kfrag =
-                EncryptedKeyFrag::new(signer, &ursula_encrypting_key, hrac, &verified_kfrag);
+                EncryptedKeyFrag::new(signer, &ursula_encrypting_key, hrac, verified_kfrag);
             if destinations
                 .insert(ursula_address, encrypted_kfrag)
                 .is_some()

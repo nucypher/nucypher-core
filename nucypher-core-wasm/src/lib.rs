@@ -1,5 +1,8 @@
 #![no_std]
 
+// Disable false-positive warnings caused by `#[wasm-bindgen]` on struct impls
+#![allow(clippy::unused_unit)]
+
 // Use `wee_alloc` as the global allocator.
 extern crate wee_alloc;
 #[global_allocator]
@@ -79,8 +82,8 @@ impl FromBackend<nucypher_core::MessageKit> for MessageKit {
 #[wasm_bindgen]
 impl MessageKit {
     #[wasm_bindgen(constructor)]
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
-        Self(nucypher_core::MessageKit::new(
+    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> MessageKit {
+        MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.inner(),
             plaintext,
         ))
@@ -137,7 +140,11 @@ impl MessageKitWithFrags {
     ) -> Result<Box<[u8]>, JsValue> {
         self.message_kit
             .0
-            .decrypt_reencrypted(sk.inner(), policy_encrypting_key.inner(), &self.cfrags)
+            .decrypt_reencrypted(
+                sk.inner(),
+                policy_encrypting_key.inner(),
+                self.cfrags.clone(),
+            )
             .map_err(map_js_err)
     }
 }
@@ -216,7 +223,7 @@ impl EncryptedKeyFrag {
             signer.inner(),
             recipient_key.inner(),
             &hrac.0,
-            verified_kfrag.inner(),
+            verified_kfrag.inner().clone(),
         ))
     }
 
@@ -553,11 +560,12 @@ impl ReencryptionResponseBuilder {
         self.clone()
     }
 
+    #[wasm_bindgen]
     pub fn build(&self) -> ReencryptionResponse {
         ReencryptionResponse(nucypher_core::ReencryptionResponse::new(
             &self.signer,
             &self.capsules,
-            &self.vcfrags,
+            self.vcfrags.clone(),
         ))
     }
 }
