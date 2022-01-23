@@ -19,7 +19,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-umbral-pre = { path = "../../rust-umbral/umbral-pre", features = ["bindings-wasm"] }
+umbral-pre = { version = "0.5.1", features = ["bindings-wasm"] }
 nucypher-core = { path = "../nucypher-core" }
 wasm-bindgen = { version = "0.2.74", features = ["serde-serialize"] }
 js-sys = "0.3.51"
