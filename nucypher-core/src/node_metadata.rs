@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::string::ToString;
+use core::fmt;
 
 use k256::ecdsa::recoverable;
 use k256::ecdsa::signature::Signature as SignatureTrait;
@@ -14,6 +15,40 @@ use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+
+/// Indicates an error during canonical address derivation from a signature.
+pub enum AddressDerivationError {
+    /// Signature is missing from the payload.
+    NoSignatureInPayload,
+    /// Invalid signature format.
+    InvalidSignature(signature::Error),
+    /// Failed to recover the public key from the signature.
+    RecoveryFailed(signature::Error),
+}
+
+impl fmt::Display for AddressDerivationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NoSignatureInPayload => write!(f, "Signature is missing from the payload"),
+            Self::InvalidSignature(err) => write!(f, "Invalid signature format: {}", err),
+            Self::RecoveryFailed(err) => write!(
+                f,
+                "Failed to recover the public key from the signature: {}",
+                err
+            ),
+        }
+    }
+}
+
+/// Mimics the format of `eth_account.messages.encode_defunct()` which NuCypher codebase uses.
+fn encode_defunct(message: &[u8]) -> Keccak256 {
+    Keccak256::new()
+        .chain(b"\x19")
+        .chain(b"E") // version
+        .chain(b"thereum Signed Message:\n") // header
+        .chain(message.len().to_string().as_bytes())
+        .chain(message)
+}
 
 /// The size of the Ethereum signature with the recovery byte
 pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
@@ -48,6 +83,21 @@ impl NodeMetadataPayload {
     fn to_bytes(&self) -> Box<[u8]> {
         messagepack_serialize(self)
     }
+
+    /// Derives the address corresponding to the public key that was used
+    /// to create `decentralized_identity_evidence`.
+    pub fn derive_worker_address(&self) -> Result<Address, AddressDerivationError> {
+        let evidence = self
+            .decentralized_identity_evidence
+            .ok_or(AddressDerivationError::NoSignatureInPayload)?;
+        let signature = recoverable::Signature::from_bytes(&evidence)
+            .map_err(AddressDerivationError::InvalidSignature)?;
+        let message = encode_defunct(&self.verifying_key.to_array());
+        let key = signature
+            .recover_verify_key_from_digest(message)
+            .map_err(AddressDerivationError::RecoveryFailed)?;
+        Ok(Address::from_k256_public_key(&key))
+    }
 }
 
 /// Signed node metadata.
@@ -56,16 +106,6 @@ pub struct NodeMetadata {
     signature: Signature,
     /// Authorized metadata payload.
     pub payload: NodeMetadataPayload,
-}
-
-/// Mimics the format of `eth_account.messages.encode_defunct()` which NuCypher codebase uses.
-fn encode_defunct(message: &[u8]) -> Keccak256 {
-    Keccak256::new()
-        .chain(b"\x19")
-        .chain(b"E") // version
-        .chain(b"thereum Signed Message:\n") // header
-        .chain(message.len().to_string().as_bytes())
-        .chain(message)
 }
 
 impl NodeMetadata {
@@ -79,36 +119,14 @@ impl NodeMetadata {
     }
 
     /// Verifies the consistency of signed node metadata.
-    pub fn verify(&self, worker_address: &Address) -> bool {
+    pub fn verify(&self) -> bool {
         // This method returns bool and not NodeMetadataPayload,
         // because NodeMetadata can be used before verification,
         // so we need access to its fields right away.
 
         // We could do this on deserialization, but it is a relatively expensive operation.
-        if !self
-            .signature
+        self.signature
             .verify(&self.payload.verifying_key, &self.payload.to_bytes())
-        {
-            return false;
-        }
-
-        let evidence = match self.payload.decentralized_identity_evidence {
-            Some(evidence) => evidence,
-            None => return true, // If there's no evidence present, there's nothing to check
-        };
-
-        let signature = match recoverable::Signature::from_bytes(&evidence) {
-            Ok(signature) => signature,
-            Err(_) => return false, // Incorrect evidence format
-        };
-
-        let message = encode_defunct(&self.payload.verifying_key.to_array());
-        let key = match signature.recover_verify_key_from_digest(message) {
-            Ok(key) => key,
-            Err(_) => return false,
-        };
-
-        &Address::from_k256_public_key(&key) == worker_address
     }
 }
 

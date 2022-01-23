@@ -621,7 +621,7 @@ impl RetrievalKit {
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
-            .map(|address_bytes| nucypher_core::Address::new(address_bytes))
+            .map(nucypher_core::Address::new)
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend),
@@ -797,6 +797,16 @@ impl NodeMetadataPayload {
     fn certificate_bytes(&self) -> &[u8] {
         self.backend.certificate_bytes.as_ref()
     }
+
+    fn derive_worker_address(&self) -> PyResult<PyObject> {
+        let address = self
+            .backend
+            .derive_worker_address()
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(Python::with_gil(|py| -> PyObject {
+            PyBytes::new(py, address.as_ref()).into()
+        }))
+    }
 }
 
 //
@@ -830,9 +840,8 @@ impl NodeMetadata {
         }
     }
 
-    pub fn verify(&self, worker_address: [u8; nucypher_core::ADDRESS_SIZE]) -> bool {
-        let address = nucypher_core::Address::new(&worker_address);
-        self.backend.verify(&address)
+    pub fn verify(&self) -> bool {
+        self.backend.verify()
     }
 
     #[getter]
