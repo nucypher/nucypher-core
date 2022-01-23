@@ -9,7 +9,7 @@ build: pkg
 pkg: src
 	# Build for both targets
 	wasm-pack build -t bundler -d pkg/pkg-bundler
-	wasm-pack build -t nodejs --debug -d pkg/pkg-node
+	wasm-pack build -t nodejs -d pkg/pkg-node
 
 	# Clean-up non-essential files
 	(cd pkg/pkg-bundler && rm package.json README.md .gitignore LICENSE)
