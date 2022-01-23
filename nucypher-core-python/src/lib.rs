@@ -26,13 +26,13 @@ trait FromBackend<T> {
     fn from_backend(backend: T) -> Self;
 }
 
-fn to_bytes<'a, T, U>(obj: &T) -> PyResult<PyObject>
+fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
     T: AsBackend<U>,
     U: ProtocolObject<'a>,
 {
     let serialized = obj.as_backend().to_bytes();
-    Python::with_gil(|py| -> PyResult<PyObject> { Ok(PyBytes::new(py, &serialized).into()) })
+    Python::with_gil(|py| -> PyObject { PyBytes::new(py, &serialized).into() })
 }
 
 fn from_bytes<'a, T, U>(data: &'a [u8]) -> PyResult<T>
@@ -100,7 +100,7 @@ impl MessageKit {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 
@@ -250,7 +250,7 @@ impl EncryptedKeyFrag {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -360,7 +360,7 @@ impl TreasureMap {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -404,7 +404,7 @@ impl EncryptedTreasureMap {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -497,7 +497,7 @@ impl ReencryptionRequest {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -579,7 +579,7 @@ impl ReencryptionResponse {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -649,7 +649,7 @@ impl RetrievalKit {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -702,7 +702,7 @@ impl RevocationOrder {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -856,7 +856,7 @@ impl NodeMetadata {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -972,7 +972,7 @@ impl MetadataRequest {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -1060,7 +1060,7 @@ impl MetadataResponse {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
