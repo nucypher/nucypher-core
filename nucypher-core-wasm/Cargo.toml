@@ -5,7 +5,7 @@ authors = [
     "Bogdan Opanchuk <bogdan@opanchuk.net>",
     "Piotr Roslaniec <p.roslaniec@gmail.com>"
 ]
-edition = "2018"
+edition = "2021"
 license = "GPL-3.0-only"
 description = "NuCypher network core data structures"
 repository = "https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-wasm"
