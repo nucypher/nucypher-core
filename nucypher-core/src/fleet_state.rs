@@ -24,8 +24,8 @@ impl FleetStateChecksum {
         nodes.sort_unstable_by(|node1, node2| {
             node1
                 .payload
-                .canonical_address
-                .cmp(&node2.payload.canonical_address)
+                .staker_address
+                .cmp(&node2.payload.staker_address)
         });
 
         let checksum = nodes

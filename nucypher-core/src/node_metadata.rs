@@ -57,7 +57,7 @@ pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
     /// The staker's Ethereum address.
-    pub canonical_address: Address,
+    pub staker_address: Address,
     /// The network identifier.
     pub domain: String,
     /// The timestamp of the metadata creation.

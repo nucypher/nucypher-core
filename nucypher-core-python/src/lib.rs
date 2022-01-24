@@ -680,10 +680,10 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        address_bytes: [u8; nucypher_core::ADDRESS_SIZE],
+        staker_address: [u8; nucypher_core::ADDRESS_SIZE],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
-        let address = nucypher_core::Address::new(&address_bytes);
+        let address = nucypher_core::Address::new(&staker_address);
         Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
@@ -721,7 +721,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        canonical_address: [u8; nucypher_core::ADDRESS_SIZE],
+        staker_address: [u8; nucypher_core::ADDRESS_SIZE],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -733,7 +733,7 @@ impl NodeMetadataPayload {
     ) -> Self {
         Self {
             backend: nucypher_core::NodeMetadataPayload {
-                canonical_address: nucypher_core::Address::new(&canonical_address),
+                staker_address: nucypher_core::Address::new(&staker_address),
                 domain: domain.to_string(),
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
@@ -747,8 +747,8 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn canonical_address(&self) -> &[u8] {
-        self.backend.canonical_address.as_ref()
+    fn staker_address(&self) -> &[u8] {
+        self.backend.staker_address.as_ref()
     }
 
     #[getter]
