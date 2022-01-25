@@ -9,7 +9,7 @@ use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
-use nucypher_core::{RECOVERABLE_SIGNATURE_SIZE, ProtocolObject};
+use nucypher_core::{ProtocolObject, RECOVERABLE_SIGNATURE_SIZE};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
@@ -69,15 +69,6 @@ where
         let arg1 = PyUnicode::new(py, type_name);
         let arg2: PyObject = PyBytes::new(py, serialized).into();
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
-    })
-}
-
-fn try_make_address(address_bytes: &[u8]) -> PyResult<nucypher_core::Address> {
-    nucypher_core::Address::from_slice(address_bytes).ok_or_else(|| {
-        PyValueError::new_err(format!(
-            "Incorrect length of Ethereum address: expected 20 bytes, got {}",
-            address_bytes.len()
-        ))
     })
 }
 
@@ -293,17 +284,19 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: BTreeMap<&[u8], (PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<[u8; nucypher_core::ADDRESS_SIZE], (PublicKey, VerifiedKeyFrag)>,
         threshold: u8,
-    ) -> PyResult<Self> {
+    ) -> Self {
         let assigned_kfrags_backend = assigned_kfrags
             .into_iter()
             .map(|(address_bytes, (key, vkfrag))| {
-                try_make_address(address_bytes)
-                    .map(|address| (address, (key.backend, vkfrag.backend.clone())))
+                (
+                    nucypher_core::Address::new(&address_bytes),
+                    (key.backend, vkfrag.backend),
+                )
             })
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(Self {
+            .collect::<Vec<_>>();
+        Self {
             backend: nucypher_core::TreasureMap::new(
                 &signer.backend,
                 &hrac.backend,
@@ -311,7 +304,7 @@ impl TreasureMap {
                 assigned_kfrags_backend,
                 threshold,
             ),
-        })
+        }
     }
 
     pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
@@ -622,14 +615,17 @@ impl RetrievalKit {
     }
 
     #[new]
-    pub fn new(capsule: &Capsule, queried_addresses: BTreeSet<&[u8]>) -> PyResult<Self> {
+    pub fn new(
+        capsule: &Capsule,
+        queried_addresses: BTreeSet<[u8; nucypher_core::ADDRESS_SIZE]>,
+    ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
-            .map(|address_bytes| try_make_address(address_bytes))
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(Self {
+            .map(|address_bytes| nucypher_core::Address::new(address_bytes))
+            .collect::<Vec<_>>();
+        Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend),
-        })
+        }
     }
 
     #[getter]
@@ -684,17 +680,17 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        ursula_address: &[u8],
+        address_bytes: [u8; nucypher_core::ADDRESS_SIZE],
         encrypted_kfrag: &EncryptedKeyFrag,
-    ) -> PyResult<Self> {
-        let address = try_make_address(ursula_address)?;
-        Ok(Self {
+    ) -> Self {
+        let address = nucypher_core::Address::new(&address_bytes);
+        Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
                 &address,
                 &encrypted_kfrag.backend,
             ),
-        })
+        }
     }
 
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
@@ -725,7 +721,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        canonical_address: &[u8],
+        canonical_address: [u8; nucypher_core::ADDRESS_SIZE],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -734,11 +730,10 @@ impl NodeMetadataPayload {
         host: &str,
         port: u16,
         decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
-    ) -> PyResult<Self> {
-        let address = try_make_address(canonical_address)?;
-        Ok(Self {
+    ) -> Self {
+        Self {
             backend: nucypher_core::NodeMetadataPayload {
-                canonical_address: address,
+                canonical_address: nucypher_core::Address::new(&canonical_address),
                 domain: domain.to_string(),
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
@@ -748,7 +743,7 @@ impl NodeMetadataPayload {
                 port,
                 decentralized_identity_evidence,
             },
-        })
+        }
     }
 
     #[getter]
@@ -835,8 +830,8 @@ impl NodeMetadata {
         }
     }
 
-    pub fn verify(&self, worker_address: &[u8]) -> bool {
-        let address = try_make_address(worker_address).unwrap();
+    pub fn verify(&self, worker_address: [u8; nucypher_core::ADDRESS_SIZE]) -> bool {
+        let address = nucypher_core::Address::new(&worker_address);
         self.backend.verify(&address)
     }
 

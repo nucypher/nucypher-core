@@ -1,5 +1,3 @@
-use core::convert::TryInto;
-
 use generic_array::sequence::Split;
 use generic_array::GenericArray;
 use k256::elliptic_curve::sec1::ToEncodedPoint;
@@ -15,15 +13,17 @@ use crate::arrays_as_bytes;
 // So for simplicity we just use our own type since we only need the size check.
 // Later a conversion method can be easily defined to/from `ethereum_types::Address`.
 
+/// Size of canonical Ethereum address, in bytes.
+pub const ADDRESS_SIZE: usize = 20;
+
 /// Represents an Ethereum address (20 bytes).
 #[derive(PartialEq, Debug, Serialize, Deserialize, Copy, Clone, PartialOrd, Eq, Ord)]
-pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; 20]);
+pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; ADDRESS_SIZE]);
 
 impl Address {
-    /// Attempts to create an address from a byte slice.
-    /// Fails if the size of the slice is incorrect.
-    pub fn from_slice(bytes: &[u8]) -> Option<Self> {
-        bytes.try_into().ok().map(Address)
+    /// Creates an address from a fixed-length array.
+    pub fn new(bytes: &[u8; ADDRESS_SIZE]) -> Self {
+        Self(*bytes)
     }
 
     pub(crate) fn from_k256_public_key(pk: &impl ToEncodedPoint<Secp256k1>) -> Self {
