@@ -72,16 +72,20 @@ fn make_fleet_state_checksum() -> FleetStateChecksum {
 }
 
 fn make_node_metadata() -> NodeMetadata {
+    // Just a random valid key.
+    // Need to fix it to check the worker address derivation.
+    let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
+
     let staker_address = b"00000000000000000001";
     let domain = "localhost";
     let timestamp_epoch = 1546300800;
-    let verifying_key = SecretKey::random().public_key();
+    let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
     let certificate_bytes = b"certificate_bytes";
     let host = "https://localhost.com";
     let port = 443;
     let decentralized_identity_evidence =
-        Some(b"00000000000000000000000000000001000000000000000000000000000000010".to_vec());
+        Some(b"0000000000000000000000000000000100000000000000000000000000000001\x00".to_vec());
 
     let node_metadata_payload = NodeMetadataPayload::new(
         staker_address,
@@ -96,7 +100,7 @@ fn make_node_metadata() -> NodeMetadata {
     )
     .unwrap();
 
-    let signer = Signer::new(&SecretKey::random());
+    let signer = Signer::new(&signing_key);
     NodeMetadata::new(&signer, &node_metadata_payload)
 }
 
@@ -547,6 +551,18 @@ fn node_metadata() {
         as_bytes,
         NodeMetadata::from_bytes(&as_bytes).unwrap().to_bytes(),
         "NodeMetadata does not roundtrip"
+    );
+}
+
+#[wasm_bindgen_test]
+fn node_metadata_derive_worker_address() {
+    let node_metadata = make_node_metadata();
+    let worker_address = node_metadata.payload().derive_worker_address();
+
+    assert_eq!(
+        worker_address.unwrap(),
+        b"\x01l\xac\x82\x9fj\x06/\r8d\xb5bX\xdd\xc75\xa1\xf9;",
+        "Worker address derivation failed"
     );
 }
 

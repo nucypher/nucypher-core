@@ -898,6 +898,14 @@ impl NodeMetadataPayload {
     pub fn certificate_bytes(&self) -> Box<[u8]> {
         self.0.certificate_bytes.clone()
     }
+
+    #[wasm_bindgen(js_name = deriveWorkerAddress)]
+    pub fn derive_worker_address(&self) -> Result<Vec<u8>, JsValue> {
+        self.0
+            .derive_worker_address()
+            .map(|address| address.as_ref().to_vec())
+            .map_err(map_js_err)
+    }
 }
 
 //
