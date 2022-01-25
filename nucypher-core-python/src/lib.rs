@@ -300,7 +300,7 @@ impl TreasureMap {
             .into_iter()
             .map(|(address_bytes, (key, vkfrag))| {
                 try_make_address(address_bytes)
-                    .map(|address| (address, (key.backend, vkfrag.backend)))
+                    .map(|address| (address, (key.backend, vkfrag.backend.clone())))
             })
             .collect::<PyResult<Vec<_>>>()?;
         Ok(Self {

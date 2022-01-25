@@ -54,7 +54,7 @@ impl MessageKit {
             policy_encrypting_key,
             &self.capsule,
             cfrags,
-            &self.ciphertext,
+            self.ciphertext.clone(),
         )
     }
 }

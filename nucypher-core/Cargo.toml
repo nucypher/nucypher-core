@@ -10,7 +10,7 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-umbral-pre = { version = "0.5", features = ["serde-support"] }
+umbral-pre = { version = "0.5.1", features = ["serde-support"]  }
 serde = { version = "1", default-features = false, features = ["derive"] }
 serde_bytes = "0.11"
 generic-array = "0.14"
