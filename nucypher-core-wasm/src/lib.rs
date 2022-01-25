@@ -17,7 +17,7 @@ use alloc::{
 };
 use core::fmt;
 use js_sys::Error;
-use nucypher_core::ProtocolObject;
+use nucypher_core::{ProtocolObject, ADDRESS_SIZE, RECOVERABLE_SIGNATURE_SIZE};
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -53,9 +53,16 @@ where
 }
 
 fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsValue> {
-    let addr = nucypher_core::Address::from_slice(address_bytes)
-        .ok_or_else(|| Error::new(&format!("Invalid address: {:?}", address_bytes)))?;
-    Ok(addr)
+    address_bytes
+        .try_into()
+        .map(nucypher_core::Address::new)
+        .map_err(|_err| {
+            JsValue::from(Error::new(&format!(
+                "Incorrect address size: {}, expected {}",
+                address_bytes.len(),
+                ADDRESS_SIZE
+            )))
+        })
 }
 
 //
@@ -274,11 +281,11 @@ impl TreasureMapBuilder {
     #[wasm_bindgen(js_name = addKfrag)]
     pub fn add_kfrag(
         &mut self,
-        address: &str,
+        address: &[u8],
         public_key: &PublicKey,
         vkfrag: &VerifiedKeyFrag,
     ) -> Result<TreasureMapBuilder, JsValue> {
-        let address = try_make_address(address.as_bytes())?;
+        let address = try_make_address(address)?;
         self.assigned_kfrags
             .push((address, (*public_key.inner(), vkfrag.inner().clone())));
         Ok(self.clone())
@@ -682,8 +689,8 @@ impl RetrievalKitBuilder {
     }
 
     #[wasm_bindgen(js_name = addQueriedAddress)]
-    pub fn add_queried_address(&mut self, address: &str) -> Result<RetrievalKitBuilder, JsValue> {
-        let address = try_make_address(address.as_bytes())?;
+    pub fn add_queried_address(&mut self, address: &[u8]) -> Result<RetrievalKitBuilder, JsValue> {
+        let address = try_make_address(address)?;
         self.queried_addresses.push(address);
         Ok(self.clone())
     }
@@ -772,10 +779,10 @@ impl RevocationOrder {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
-        ursula_address: &[u8],
+        staker_address: &[u8],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Result<RevocationOrder, JsValue> {
-        let address = try_make_address(ursula_address)?;
+        let address = try_make_address(staker_address)?;
         Ok(Self(nucypher_core::RevocationOrder::new(
             signer.inner(),
             &address,
@@ -811,7 +818,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
-        canonical_address: &[u8],
+        staker_address: &[u8],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -821,9 +828,19 @@ impl NodeMetadataPayload {
         port: u16,
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
-        let address = try_make_address(canonical_address)?;
+        let address = try_make_address(staker_address)?;
+        let evidence = decentralized_identity_evidence
+            .map(|evidence| evidence.try_into())
+            .transpose()
+            .map_err(|evidence_vec: Vec<u8>| {
+                JsValue::from(Error::new(&format!(
+                    "Incorrect decentralized identity evidence length: {}, expected {}",
+                    evidence_vec.len(),
+                    RECOVERABLE_SIGNATURE_SIZE
+                )))
+            })?;
         Ok(Self(nucypher_core::NodeMetadataPayload {
-            canonical_address: address,
+            staker_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
             verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
@@ -831,14 +848,13 @@ impl NodeMetadataPayload {
             certificate_bytes: certificate_bytes.into(),
             host: host.to_string(),
             port,
-            decentralized_identity_evidence: decentralized_identity_evidence
-                .map(|v| v.into_boxed_slice()),
+            decentralized_identity_evidence: evidence,
         }))
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn canonical_address(&self) -> Vec<u8> {
-        self.0.canonical_address.as_ref().to_vec()
+    pub fn staker_address(&self) -> Vec<u8> {
+        self.0.staker_address.as_ref().to_vec()
     }
 
     #[wasm_bindgen(method, getter)]
@@ -853,7 +869,9 @@ impl NodeMetadataPayload {
 
     #[wasm_bindgen(method, getter)]
     pub fn decentralized_identity_evidence(&self) -> Option<Box<[u8]>> {
-        self.0.decentralized_identity_evidence.clone()
+        self.0
+            .decentralized_identity_evidence
+            .map(|evidence| evidence.into())
     }
 
     #[wasm_bindgen(method, getter)]
