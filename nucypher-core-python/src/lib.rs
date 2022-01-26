@@ -9,7 +9,7 @@ use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
-use nucypher_core::ProtocolObject;
+use nucypher_core::{ProtocolObject, RECOVERABLE_SIGNATURE_SIZE};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
@@ -26,13 +26,13 @@ trait FromBackend<T> {
     fn from_backend(backend: T) -> Self;
 }
 
-fn to_bytes<'a, T, U>(obj: &T) -> PyResult<PyObject>
+fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
     T: AsBackend<U>,
     U: ProtocolObject<'a>,
 {
     let serialized = obj.as_backend().to_bytes();
-    Python::with_gil(|py| -> PyResult<PyObject> { Ok(PyBytes::new(py, &serialized).into()) })
+    Python::with_gil(|py| -> PyObject { PyBytes::new(py, &serialized).into() })
 }
 
 fn from_bytes<'a, T, U>(data: &'a [u8]) -> PyResult<T>
@@ -72,15 +72,6 @@ where
     })
 }
 
-fn try_make_address(address_bytes: &[u8]) -> PyResult<nucypher_core::Address> {
-    nucypher_core::Address::from_slice(address_bytes).ok_or_else(|| {
-        PyValueError::new_err(format!(
-            "Incorrect length of Ethereum address: expected 20 bytes, got {}",
-            address_bytes.len()
-        ))
-    })
-}
-
 //
 // MessageKit
 //
@@ -109,7 +100,7 @@ impl MessageKit {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 
@@ -259,7 +250,7 @@ impl EncryptedKeyFrag {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -293,17 +284,19 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: BTreeMap<&[u8], (PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<[u8; nucypher_core::ADDRESS_SIZE], (PublicKey, VerifiedKeyFrag)>,
         threshold: u8,
-    ) -> PyResult<Self> {
+    ) -> Self {
         let assigned_kfrags_backend = assigned_kfrags
             .into_iter()
             .map(|(address_bytes, (key, vkfrag))| {
-                try_make_address(address_bytes)
-                    .map(|address| (address, (key.backend, vkfrag.backend.clone())))
+                (
+                    nucypher_core::Address::new(&address_bytes),
+                    (key.backend, vkfrag.backend),
+                )
             })
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(Self {
+            .collect::<Vec<_>>();
+        Self {
             backend: nucypher_core::TreasureMap::new(
                 &signer.backend,
                 &hrac.backend,
@@ -311,7 +304,7 @@ impl TreasureMap {
                 assigned_kfrags_backend,
                 threshold,
             ),
-        })
+        }
     }
 
     pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
@@ -367,7 +360,7 @@ impl TreasureMap {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -411,7 +404,7 @@ impl EncryptedTreasureMap {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -504,7 +497,7 @@ impl ReencryptionRequest {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -586,7 +579,7 @@ impl ReencryptionResponse {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -622,14 +615,17 @@ impl RetrievalKit {
     }
 
     #[new]
-    pub fn new(capsule: &Capsule, queried_addresses: BTreeSet<&[u8]>) -> PyResult<Self> {
+    pub fn new(
+        capsule: &Capsule,
+        queried_addresses: BTreeSet<[u8; nucypher_core::ADDRESS_SIZE]>,
+    ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
-            .map(|address_bytes| try_make_address(address_bytes))
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(Self {
+            .map(nucypher_core::Address::new)
+            .collect::<Vec<_>>();
+        Self {
             backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend),
-        })
+        }
     }
 
     #[getter]
@@ -653,7 +649,7 @@ impl RetrievalKit {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -684,17 +680,17 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        ursula_address: &[u8],
+        staker_address: [u8; nucypher_core::ADDRESS_SIZE],
         encrypted_kfrag: &EncryptedKeyFrag,
-    ) -> PyResult<Self> {
-        let address = try_make_address(ursula_address)?;
-        Ok(Self {
+    ) -> Self {
+        let address = nucypher_core::Address::new(&staker_address);
+        Self {
             backend: nucypher_core::RevocationOrder::new(
                 &signer.backend,
                 &address,
                 &encrypted_kfrag.backend,
             ),
-        })
+        }
     }
 
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
@@ -706,7 +702,7 @@ impl RevocationOrder {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -725,7 +721,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        canonical_address: &[u8],
+        staker_address: [u8; nucypher_core::ADDRESS_SIZE],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -733,12 +729,11 @@ impl NodeMetadataPayload {
         certificate_bytes: &[u8],
         host: &str,
         port: u16,
-        decentralized_identity_evidence: Option<Vec<u8>>,
-    ) -> PyResult<Self> {
-        let address = try_make_address(canonical_address)?;
-        Ok(Self {
+        decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
+    ) -> Self {
+        Self {
             backend: nucypher_core::NodeMetadataPayload {
-                canonical_address: address,
+                staker_address: nucypher_core::Address::new(&staker_address),
                 domain: domain.to_string(),
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
@@ -746,15 +741,14 @@ impl NodeMetadataPayload {
                 certificate_bytes: certificate_bytes.into(),
                 host: host.to_string(),
                 port,
-                decentralized_identity_evidence: decentralized_identity_evidence
-                    .map(|v| v.into_boxed_slice()),
+                decentralized_identity_evidence,
             },
-        })
+        }
     }
 
     #[getter]
-    fn canonical_address(&self) -> &[u8] {
-        self.backend.canonical_address.as_ref()
+    fn staker_address(&self) -> &[u8] {
+        self.backend.staker_address.as_ref()
     }
 
     #[getter]
@@ -802,6 +796,16 @@ impl NodeMetadataPayload {
     #[getter]
     fn certificate_bytes(&self) -> &[u8] {
         self.backend.certificate_bytes.as_ref()
+    }
+
+    fn derive_worker_address(&self) -> PyResult<PyObject> {
+        let address = self
+            .backend
+            .derive_worker_address()
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(Python::with_gil(|py| -> PyObject {
+            PyBytes::new(py, address.as_ref()).into()
+        }))
     }
 }
 
@@ -852,7 +856,7 @@ impl NodeMetadata {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -968,7 +972,7 @@ impl MetadataRequest {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }
@@ -1056,7 +1060,7 @@ impl MetadataResponse {
         from_bytes(data)
     }
 
-    fn __bytes__(&self) -> PyResult<PyObject> {
+    fn __bytes__(&self) -> PyObject {
         to_bytes(self)
     }
 }

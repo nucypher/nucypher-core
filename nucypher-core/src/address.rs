@@ -1,6 +1,10 @@
-use core::convert::TryInto;
-
+use generic_array::sequence::Split;
+use generic_array::GenericArray;
+use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::Secp256k1;
 use serde::{Deserialize, Serialize};
+use sha3::{Digest, Keccak256};
+use typenum::{U12, U20};
 
 use crate::arrays_as_bytes;
 
@@ -9,15 +13,29 @@ use crate::arrays_as_bytes;
 // So for simplicity we just use our own type since we only need the size check.
 // Later a conversion method can be easily defined to/from `ethereum_types::Address`.
 
+/// Size of canonical Ethereum address, in bytes.
+pub const ADDRESS_SIZE: usize = 20;
+
 /// Represents an Ethereum address (20 bytes).
 #[derive(PartialEq, Debug, Serialize, Deserialize, Copy, Clone, PartialOrd, Eq, Ord)]
-pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; 20]);
+pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; ADDRESS_SIZE]);
 
 impl Address {
-    /// Attempts to create an address from a byte slice.
-    /// Fails if the size of the slice is incorrect.
-    pub fn from_slice(bytes: &[u8]) -> Option<Self> {
-        bytes.try_into().ok().map(Address)
+    /// Creates an address from a fixed-length array.
+    pub fn new(bytes: &[u8; ADDRESS_SIZE]) -> Self {
+        Self(*bytes)
+    }
+
+    pub(crate) fn from_k256_public_key(pk: &impl ToEncodedPoint<Secp256k1>) -> Self {
+        // Canonical address is the last 20 bytes of keccak256 hash
+        // of the uncompressed public key (without the header, so 64 bytes in total).
+        let ep = pk.to_encoded_point(false);
+        let pk_bytes = ep.as_bytes();
+        let digest = Keccak256::new().chain(&pk_bytes[1..]).finalize();
+
+        let (_prefix, address): (GenericArray<u8, U12>, GenericArray<u8, U20>) = digest.split();
+
+        Self(address.into())
     }
 }
 

@@ -20,13 +20,14 @@ mod revocation_order;
 mod treasure_map;
 mod versioning;
 
-pub use address::Address;
+pub use address::{Address, ADDRESS_SIZE};
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;
 pub use message_kit::MessageKit;
 pub use node_metadata::{
     MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
+    RECOVERABLE_SIGNATURE_SIZE,
 };
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;

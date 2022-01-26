@@ -46,7 +46,7 @@ fn make_message_kit(sk: &SecretKey, plaintext: &[u8]) -> MessageKit {
 fn make_hrac() -> HRAC {
     let publisher_verifying_key = SecretKey::random().public_key();
     let bob_verifying_key = SecretKey::random().public_key();
-    let label = "Hello, world!".as_bytes();
+    let label = b"Hello, world!";
     HRAC::new(&publisher_verifying_key, &bob_verifying_key, label)
 }
 
@@ -72,18 +72,23 @@ fn make_fleet_state_checksum() -> FleetStateChecksum {
 }
 
 fn make_node_metadata() -> NodeMetadata {
-    let canonical_address = "00000000000000000001".as_bytes();
+    // Just a random valid key.
+    // Need to fix it to check the worker address derivation.
+    let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
+
+    let staker_address = b"00000000000000000001";
     let domain = "localhost";
     let timestamp_epoch = 1546300800;
-    let verifying_key = SecretKey::random().public_key();
+    let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
-    let certificate_bytes = "certificate_bytes".as_bytes();
+    let certificate_bytes = b"certificate_bytes";
     let host = "https://localhost.com";
     let port = 443;
-    let decentralized_identity_evidence = Some(vec![1, 2, 3]);
+    let decentralized_identity_evidence =
+        Some(b"0000000000000000000000000000000100000000000000000000000000000001\x00".to_vec());
 
     let node_metadata_payload = NodeMetadataPayload::new(
-        canonical_address,
+        staker_address,
         domain,
         timestamp_epoch,
         &verifying_key,
@@ -95,7 +100,7 @@ fn make_node_metadata() -> NodeMetadata {
     )
     .unwrap();
 
-    let signer = Signer::new(&SecretKey::random());
+    let signer = Signer::new(&signing_key);
     NodeMetadata::new(&signer, &node_metadata_payload)
 }
 
@@ -116,7 +121,7 @@ fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadat
 #[wasm_bindgen_test]
 fn message_kit_decrypts() {
     let sk = SecretKey::random();
-    let plaintext = "Hello, world!".as_bytes();
+    let plaintext = b"Hello, world!";
     let message_kit = make_message_kit(&sk, plaintext);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
@@ -131,7 +136,7 @@ fn message_kit_decrypt_reencrypted() {
     // Create a message kit
     let delegating_sk = SecretKey::random();
     let delegating_pk = delegating_sk.public_key();
-    let plaintext = "Hello, world!".as_bytes();
+    let plaintext = b"Hello, world!";
     let message_kit = MessageKit::new(&delegating_pk, plaintext);
 
     // Create key fragments for reencryption
@@ -178,7 +183,7 @@ fn message_kit_decrypt_reencrypted() {
 fn message_kit_to_bytes_from_bytes() {
     let sk = SecretKey::random();
     let policy_encrypting_key = sk.public_key();
-    let plaintext = "Hello, world!".as_bytes();
+    let plaintext = b"Hello, world!";
 
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
 
@@ -266,7 +271,7 @@ fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> Trea
     )
     .unwrap()
     .add_kfrag(
-        "00000000000000000001",
+        b"00000000000000000001",
         &SecretKey::random().public_key(),
         &vkfrags[0].clone(),
     )
@@ -275,13 +280,13 @@ fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> Trea
     // Also try using the consuming variant of builder:
     builder
         .add_kfrag(
-            "00000000000000000002",
+            b"00000000000000000002",
             &SecretKey::random().public_key(),
             &vkfrags[1].clone(),
         )
         .unwrap()
         .add_kfrag(
-            "00000000000000000003",
+            b"00000000000000000003",
             &SecretKey::random().public_key(),
             &vkfrags[2].clone(),
         )
@@ -353,7 +358,7 @@ fn reencryption_request_from_bytes_to_bytes() {
     // Make capsules
     let publisher_sk = SecretKey::random();
     let policy_encrypting_key = publisher_sk.public_key();
-    let plaintext = "Hello, world!".as_bytes();
+    let plaintext = b"Hello, world!";
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsules = vec![message_kit.capsule()];
 
@@ -401,7 +406,7 @@ fn reencryption_response_verify() {
 
     // Make capsules
     let policy_encrypting_key = alice_sk.public_key();
-    let plaintext = "Hello, world!".as_bytes();
+    let plaintext = b"Hello, world!";
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsules: Vec<Capsule> = kfrags.iter().map(|_| message_kit.capsule()).collect();
 
@@ -466,7 +471,7 @@ fn reencryption_response_verify() {
 #[wasm_bindgen_test]
 fn retrieval_kit() {
     // Make a message kit
-    let message_kit = make_message_kit(&SecretKey::random(), "Hello, world!".as_bytes());
+    let message_kit = make_message_kit(&SecretKey::random(), b"Hello, world!");
 
     let retrieval_kit_from_mk = RetrievalKit::from_message_kit(&message_kit);
     assert_eq!(
@@ -476,12 +481,12 @@ fn retrieval_kit() {
     );
 
     let queried_addresses = [
-        "00000000000000000001".to_string(),
-        "00000000000000000002".to_string(),
-        "00000000000000000003".to_string(),
+        b"00000000000000000001",
+        b"00000000000000000002",
+        b"00000000000000000003",
     ];
     let mut builder = RetrievalKitBuilder::new(&message_kit.capsule());
-    for address in &queried_addresses {
+    for address in queried_addresses {
         builder.add_queried_address(address).unwrap();
     }
     let retreival_kit = builder.build();
@@ -514,7 +519,7 @@ fn revocation_order() {
     let signer = Signer::new(&delegating_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
-    let ursula_address = "00000000000000000001".as_bytes();
+    let ursula_address = b"00000000000000000001";
     let revocation_order = RevocationOrder::new(&signer, ursula_address, &encrypted_kfrag).unwrap();
 
     assert!(revocation_order.verify_signature(&delegating_sk.public_key()));
@@ -546,6 +551,18 @@ fn node_metadata() {
         as_bytes,
         NodeMetadata::from_bytes(&as_bytes).unwrap().to_bytes(),
         "NodeMetadata does not roundtrip"
+    );
+}
+
+#[wasm_bindgen_test]
+fn node_metadata_derive_worker_address() {
+    let node_metadata = make_node_metadata();
+    let worker_address = node_metadata.payload().derive_worker_address();
+
+    assert_eq!(
+        worker_address.unwrap(),
+        b"\x01l\xac\x82\x9fj\x06/\r8d\xb5bX\xdd\xc75\xa1\xf9;",
+        "Worker address derivation failed"
     );
 }
 
