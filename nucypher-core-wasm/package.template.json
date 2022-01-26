@@ -1,5 +1,5 @@
 {
-  "name": "nucypher-core-wasm",
+  "name": "nucypher-core",
   "collaborators": [
     "Piotr Roslaniec <p.roslaniec@gmail.com>",
     "Bogdan Opanchuk <bogdan@opanchuk.net>"
