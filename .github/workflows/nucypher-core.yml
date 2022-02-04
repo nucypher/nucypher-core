@@ -27,7 +27,7 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            rust: 1.56.0 # MSRV
+            rust: 1.56.1 # MSRV
           - target: x86_64-unknown-linux-gnu
             rust: stable
 
@@ -48,7 +48,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.56.0 # MSRV
+          - 1.56.1 # MSRV
           - stable
         target:
           - wasm32-unknown-unknown
