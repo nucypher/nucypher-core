@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing here yet.
+### Fixed
+
+- Added the manifest to the Python bindings package, fixing the source distribution build.
 
 
 ## [0.0.2] - 2022-01-25
