@@ -4,7 +4,7 @@ from setuptools_rust import Binding, RustExtension
 setup(
     name="nucypher_core",
     description="Protocol structures of Nucypher network",
-    version="0.0.2",
+    version="0.0.3",
     author="Bogdan Opanchuk",
     author_email="bogdan@opanchuk.net",
     url="https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python",
