@@ -73,7 +73,7 @@ fn make_fleet_state_checksum() -> FleetStateChecksum {
 
 fn make_node_metadata() -> NodeMetadata {
     // Just a random valid key.
-    // Need to fix it to check the worker address derivation.
+    // Need to fix it to check the operator address derivation.
     let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
 
     let staker_address = b"00000000000000000001";
@@ -555,14 +555,14 @@ fn node_metadata() {
 }
 
 #[wasm_bindgen_test]
-fn node_metadata_derive_worker_address() {
+fn node_metadata_derive_operator_address() {
     let node_metadata = make_node_metadata();
-    let worker_address = node_metadata.payload().derive_worker_address();
+    let operator_address = node_metadata.payload().derive_operator_address();
 
     assert_eq!(
-        worker_address.unwrap(),
+        operator_address.unwrap(),
         b"\x01l\xac\x82\x9fj\x06/\r8d\xb5bX\xdd\xc75\xa1\xf9;",
-        "Worker address derivation failed"
+        "Operator address derivation failed"
     );
 }
 

@@ -899,10 +899,10 @@ impl NodeMetadataPayload {
         self.0.certificate_bytes.clone()
     }
 
-    #[wasm_bindgen(js_name = deriveWorkerAddress)]
-    pub fn derive_worker_address(&self) -> Result<Vec<u8>, JsValue> {
+    #[wasm_bindgen(js_name = deriveOperatorAddress)]
+    pub fn derive_operator_address(&self) -> Result<Vec<u8>, JsValue> {
         self.0
-            .derive_worker_address()
+            .derive_operator_address()
             .map(|address| address.as_ref().to_vec())
             .map_err(map_js_err)
     }

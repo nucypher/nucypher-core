@@ -798,10 +798,10 @@ impl NodeMetadataPayload {
         self.backend.certificate_bytes.as_ref()
     }
 
-    fn derive_worker_address(&self) -> PyResult<PyObject> {
+    fn derive_operator_address(&self) -> PyResult<PyObject> {
         let address = self
             .backend
-            .derive_worker_address()
+            .derive_operator_address()
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(Python::with_gil(|py| -> PyObject {
             PyBytes::new(py, address.as_ref()).into()

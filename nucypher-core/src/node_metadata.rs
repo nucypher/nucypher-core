@@ -73,7 +73,7 @@ pub struct NodeMetadataPayload {
     pub host: String,
     /// The port of the node's REST service.
     pub port: u16,
-    /// The node's verifying key signed by the private key corresponding to the worker address.
+    /// The node's verifying key signed by the private key corresponding to the operator address.
     #[serde(with = "arrays_as_bytes")]
     pub decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
 }
@@ -86,7 +86,7 @@ impl NodeMetadataPayload {
 
     /// Derives the address corresponding to the public key that was used
     /// to create `decentralized_identity_evidence`.
-    pub fn derive_worker_address(&self) -> Result<Address, AddressDerivationError> {
+    pub fn derive_operator_address(&self) -> Result<Address, AddressDerivationError> {
         let evidence = self
             .decentralized_identity_evidence
             .ok_or(AddressDerivationError::NoSignatureInPayload)?;
