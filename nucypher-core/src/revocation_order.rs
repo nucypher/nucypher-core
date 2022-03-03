@@ -13,7 +13,8 @@ use crate::versioning::{
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RevocationOrder {
-    staking_provider_address: Address,
+    /// The address of the Ursula that is being revoked.
+    pub staking_provider_address: Address,
     encrypted_kfrag: EncryptedKeyFrag,
     signature: Signature,
 }

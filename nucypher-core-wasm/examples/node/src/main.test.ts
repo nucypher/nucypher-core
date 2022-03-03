@@ -57,17 +57,17 @@ const makeTreasureMap = (publisherSk: SecretKey, recipientSk: SecretKey) => {
 
   return new TreasureMapBuilder(signer, hrac, recipientPk, threshold)
     .addKfrag(
-      "00000000000000000001",
+      Buffer.from("00000000000000000001"),
       SecretKey.random().publicKey(),
       vkfrags[0]
     )
     .addKfrag(
-      "00000000000000000002",
+      Buffer.from("00000000000000000002"),
       SecretKey.random().publicKey(),
       vkfrags[1]
     )
     .addKfrag(
-      "00000000000000000003",
+      Buffer.from("00000000000000000003"),
       SecretKey.random().publicKey(),
       vkfrags[2]
     )
@@ -186,7 +186,8 @@ describe("MessageKit", () => {
 describe("HRAC", () => {
   it("serializes", () => {
     const hrac = makeHrac();
-    expect(hrac.toBytes()).toBeTruthy();
+    const asBytes = hrac.toBytes();
+    expect(asBytes).toEqual(HRAC.fromBytes(asBytes).toBytes());
   });
 });
 
@@ -232,6 +233,7 @@ describe("TreasureMap", () => {
     const recipientPk = recipientSk.publicKey();
 
     const treasureMap = makeTreasureMap(publisherSk, recipientSk);
+    expect(treasureMap.destinations.length).toEqual(3);
 
     const encryptedTreasureMap = treasureMap.encrypt(signer, recipientPk);
 
@@ -310,13 +312,13 @@ describe("ReencryptionRequest", () => {
 
     expect(reencryptionRequest).toBeTruthy();
     expect(reencryptionRequest.hrac.toBytes()).toEqual(hrac.toBytes());
-    expect(reencryptionRequest.publisher_verifying_key.toBytes()).toEqual(
+    expect(reencryptionRequest.publisherVerifyingKey.toBytes()).toEqual(
       delegatingPk.toBytes()
     );
-    expect(reencryptionRequest.bob_verifying_key.toBytes()).toEqual(
+    expect(reencryptionRequest.bobVerifyingKey.toBytes()).toEqual(
       recipientPk.toBytes()
     );
-    expect(reencryptionRequest.encrypted_kfrag.toBytes()).toEqual(
+    expect(reencryptionRequest.encryptedKfrag.toBytes()).toEqual(
       encryptedKeyFrag.toBytes()
     );
     expect(reencryptionRequest.capsules[0].toBytes()).toEqual(
