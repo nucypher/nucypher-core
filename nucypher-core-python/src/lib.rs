@@ -729,7 +729,7 @@ impl NodeMetadataPayload {
         certificate_bytes: &[u8],
         host: &str,
         port: u16,
-        decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
+        operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
     ) -> Self {
         Self {
             backend: nucypher_core::NodeMetadataPayload {
@@ -741,7 +741,7 @@ impl NodeMetadataPayload {
                 certificate_bytes: certificate_bytes.into(),
                 host: host.to_string(),
                 port,
-                decentralized_identity_evidence,
+                operator_signature,
             },
         }
     }
@@ -766,11 +766,11 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn decentralized_identity_evidence(&self) -> Option<&[u8]> {
+    fn operator_signature(&self) -> Option<&[u8]> {
         self.backend
-            .decentralized_identity_evidence
+            .operator_signature
             .as_ref()
-            .map(|boxed_evidence| boxed_evidence.as_ref())
+            .map(|boxed_signature| boxed_signature.as_ref())
     }
 
     #[getter]

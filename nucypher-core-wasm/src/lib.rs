@@ -826,16 +826,16 @@ impl NodeMetadataPayload {
         certificate_bytes: &[u8],
         host: &str,
         port: u16,
-        decentralized_identity_evidence: Option<Vec<u8>>,
+        operator_signature: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
         let address = try_make_address(staking_provider_address)?;
-        let evidence = decentralized_identity_evidence
-            .map(|evidence| evidence.try_into())
+        let signature = operator_signature
+            .map(|sig| sig.try_into())
             .transpose()
-            .map_err(|evidence_vec: Vec<u8>| {
+            .map_err(|sig_vec: Vec<u8>| {
                 JsValue::from(Error::new(&format!(
-                    "Incorrect decentralized identity evidence length: {}, expected {}",
-                    evidence_vec.len(),
+                    "Incorrect operator signature length: {}, expected {}",
+                    sig_vec.len(),
                     RECOVERABLE_SIGNATURE_SIZE
                 )))
             })?;
@@ -848,7 +848,7 @@ impl NodeMetadataPayload {
             certificate_bytes: certificate_bytes.into(),
             host: host.to_string(),
             port,
-            decentralized_identity_evidence: evidence,
+            operator_signature: signature,
         }))
     }
 
@@ -868,10 +868,8 @@ impl NodeMetadataPayload {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn decentralized_identity_evidence(&self) -> Option<Box<[u8]>> {
-        self.0
-            .decentralized_identity_evidence
-            .map(|evidence| evidence.into())
+    pub fn operator_signature(&self) -> Option<Box<[u8]>> {
+        self.0.operator_signature.map(|signature| signature.into())
     }
 
     #[wasm_bindgen(method, getter)]

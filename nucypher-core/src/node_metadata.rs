@@ -75,7 +75,7 @@ pub struct NodeMetadataPayload {
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the operator address.
     #[serde(with = "arrays_as_bytes")]
-    pub decentralized_identity_evidence: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
+    pub operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
 }
 
 impl NodeMetadataPayload {
@@ -85,12 +85,12 @@ impl NodeMetadataPayload {
     }
 
     /// Derives the address corresponding to the public key that was used
-    /// to create `decentralized_identity_evidence`.
+    /// to create `operator_signature`.
     pub fn derive_operator_address(&self) -> Result<Address, AddressDerivationError> {
-        let evidence = self
-            .decentralized_identity_evidence
+        let signature = self
+            .operator_signature
             .ok_or(AddressDerivationError::NoSignatureInPayload)?;
-        let signature = recoverable::Signature::from_bytes(&evidence)
+        let signature = recoverable::Signature::from_bytes(&signature)
             .map_err(AddressDerivationError::InvalidSignature)?;
         let message = encode_defunct(&self.verifying_key.to_array());
         let key = signature
