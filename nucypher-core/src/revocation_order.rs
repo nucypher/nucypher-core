@@ -13,7 +13,7 @@ use crate::versioning::{
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct RevocationOrder {
-    staker_address: Address,
+    staking_provider_address: Address,
     encrypted_kfrag: EncryptedKeyFrag,
     signature: Signature,
 }
@@ -22,14 +22,19 @@ impl RevocationOrder {
     /// Create and sign a new revocation order.
     pub fn new(
         signer: &Signer,
-        staker_address: &Address,
+        staking_provider_address: &Address,
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
         Self {
-            staker_address: *staker_address,
+            staking_provider_address: *staking_provider_address,
             encrypted_kfrag: encrypted_kfrag.clone(),
-            signature: signer
-                .sign(&[staker_address.as_ref(), &encrypted_kfrag.to_bytes()].concat()),
+            signature: signer.sign(
+                &[
+                    staking_provider_address.as_ref(),
+                    &encrypted_kfrag.to_bytes(),
+                ]
+                .concat(),
+            ),
         }
     }
 
@@ -37,7 +42,7 @@ impl RevocationOrder {
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         // TODO: return an Option of something instead of returning `bool`?
         let message = [
-            self.staker_address.as_ref(),
+            self.staking_provider_address.as_ref(),
             &self.encrypted_kfrag.to_bytes(),
         ]
         .concat();

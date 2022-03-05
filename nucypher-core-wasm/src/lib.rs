@@ -779,10 +779,10 @@ impl RevocationOrder {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
-        staker_address: &[u8],
+        staking_provider_address: &[u8],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Result<RevocationOrder, JsValue> {
-        let address = try_make_address(staker_address)?;
+        let address = try_make_address(staking_provider_address)?;
         Ok(Self(nucypher_core::RevocationOrder::new(
             signer.inner(),
             &address,
@@ -818,7 +818,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
-        staker_address: &[u8],
+        staking_provider_address: &[u8],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -828,7 +828,7 @@ impl NodeMetadataPayload {
         port: u16,
         decentralized_identity_evidence: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
-        let address = try_make_address(staker_address)?;
+        let address = try_make_address(staking_provider_address)?;
         let evidence = decentralized_identity_evidence
             .map(|evidence| evidence.try_into())
             .transpose()
@@ -840,7 +840,7 @@ impl NodeMetadataPayload {
                 )))
             })?;
         Ok(Self(nucypher_core::NodeMetadataPayload {
-            staker_address: address,
+            staking_provider_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
             verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
@@ -853,8 +853,8 @@ impl NodeMetadataPayload {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn staker_address(&self) -> Vec<u8> {
-        self.0.staker_address.as_ref().to_vec()
+    pub fn staking_provider_address(&self) -> Vec<u8> {
+        self.0.staking_provider_address.as_ref().to_vec()
     }
 
     #[wasm_bindgen(method, getter)]
