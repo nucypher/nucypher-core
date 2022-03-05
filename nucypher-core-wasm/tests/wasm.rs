@@ -76,7 +76,7 @@ fn make_node_metadata() -> NodeMetadata {
     // Need to fix it to check the operator address derivation.
     let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
 
-    let staker_address = b"00000000000000000001";
+    let staking_provider_address = b"00000000000000000001";
     let domain = "localhost";
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
@@ -84,11 +84,11 @@ fn make_node_metadata() -> NodeMetadata {
     let certificate_bytes = b"certificate_bytes";
     let host = "https://localhost.com";
     let port = 443;
-    let decentralized_identity_evidence =
+    let operator_signature =
         Some(b"0000000000000000000000000000000100000000000000000000000000000001\x00".to_vec());
 
     let node_metadata_payload = NodeMetadataPayload::new(
-        staker_address,
+        staking_provider_address,
         domain,
         timestamp_epoch,
         &verifying_key,
@@ -96,7 +96,7 @@ fn make_node_metadata() -> NodeMetadata {
         certificate_bytes,
         host,
         port,
-        decentralized_identity_evidence,
+        operator_signature,
     )
     .unwrap();
 

@@ -4,6 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Changed
+
+- Renamed `staker_address` to `staking_provider_address` in `NodeMetadataPayload` fields and `RevocationOrder::new` parameters. ([#10])
+- Renamed `NodeMetadataPayload.decentralized_identity_evidence` to `operator_signature`. ([#10])
+
+
+[#10]: https://github.com/nucypher/nucypher-core/pull/10
+
+
 ## [0.0.4] - 2022-02-09
 
 ### Changed

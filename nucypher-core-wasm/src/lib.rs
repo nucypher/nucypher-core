@@ -779,10 +779,10 @@ impl RevocationOrder {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
-        staker_address: &[u8],
+        staking_provider_address: &[u8],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Result<RevocationOrder, JsValue> {
-        let address = try_make_address(staker_address)?;
+        let address = try_make_address(staking_provider_address)?;
         Ok(Self(nucypher_core::RevocationOrder::new(
             signer.inner(),
             &address,
@@ -818,7 +818,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
-        staker_address: &[u8],
+        staking_provider_address: &[u8],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -826,21 +826,21 @@ impl NodeMetadataPayload {
         certificate_bytes: &[u8],
         host: &str,
         port: u16,
-        decentralized_identity_evidence: Option<Vec<u8>>,
+        operator_signature: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
-        let address = try_make_address(staker_address)?;
-        let evidence = decentralized_identity_evidence
-            .map(|evidence| evidence.try_into())
+        let address = try_make_address(staking_provider_address)?;
+        let signature = operator_signature
+            .map(|sig| sig.try_into())
             .transpose()
-            .map_err(|evidence_vec: Vec<u8>| {
+            .map_err(|sig_vec: Vec<u8>| {
                 JsValue::from(Error::new(&format!(
-                    "Incorrect decentralized identity evidence length: {}, expected {}",
-                    evidence_vec.len(),
+                    "Incorrect operator signature length: {}, expected {}",
+                    sig_vec.len(),
                     RECOVERABLE_SIGNATURE_SIZE
                 )))
             })?;
         Ok(Self(nucypher_core::NodeMetadataPayload {
-            staker_address: address,
+            staking_provider_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
             verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
@@ -848,13 +848,13 @@ impl NodeMetadataPayload {
             certificate_bytes: certificate_bytes.into(),
             host: host.to_string(),
             port,
-            decentralized_identity_evidence: evidence,
+            operator_signature: signature,
         }))
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn staker_address(&self) -> Vec<u8> {
-        self.0.staker_address.as_ref().to_vec()
+    pub fn staking_provider_address(&self) -> Vec<u8> {
+        self.0.staking_provider_address.as_ref().to_vec()
     }
 
     #[wasm_bindgen(method, getter)]
@@ -868,10 +868,8 @@ impl NodeMetadataPayload {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn decentralized_identity_evidence(&self) -> Option<Box<[u8]>> {
-        self.0
-            .decentralized_identity_evidence
-            .map(|evidence| evidence.into())
+    pub fn operator_signature(&self) -> Option<Box<[u8]>> {
+        self.0.operator_signature.map(|signature| signature.into())
     }
 
     #[wasm_bindgen(method, getter)]
