@@ -9,6 +9,8 @@ use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 use pyo3::PyObjectProtocol;
 
+use nucypher_core::k256::ecdsa::recoverable;
+use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
 use nucypher_core::{ProtocolObject, RECOVERABLE_SIGNATURE_SIZE};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -730,8 +732,15 @@ impl NodeMetadataPayload {
         host: &str,
         port: u16,
         operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
-    ) -> Self {
-        Self {
+    ) -> PyResult<Self> {
+        let signature = operator_signature
+            .map(|signature_bytes| {
+                recoverable::Signature::from_bytes(&signature_bytes).map_err(|err| {
+                    PyValueError::new_err(format!("Invalid operator signature format: {}", err))
+                })
+            })
+            .transpose()?;
+        Ok(Self {
             backend: nucypher_core::NodeMetadataPayload {
                 staking_provider_address: nucypher_core::Address::new(&staking_provider_address),
                 domain: domain.to_string(),
@@ -741,9 +750,9 @@ impl NodeMetadataPayload {
                 certificate_bytes: certificate_bytes.into(),
                 host: host.to_string(),
                 port,
-                operator_signature,
+                operator_signature: signature,
             },
-        }
+        })
     }
 
     #[getter]
