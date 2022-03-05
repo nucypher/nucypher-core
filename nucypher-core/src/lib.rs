@@ -36,4 +36,5 @@ pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
 
 // Re-export umbral_pre so that the users don't have to version-match.
+pub use k256;
 pub use umbral_pre;

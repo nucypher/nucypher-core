@@ -5,23 +5,56 @@ use core::fmt;
 
 use k256::ecdsa::recoverable;
 use k256::ecdsa::signature::Signature as SignatureTrait;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use sha3::{Digest, Keccak256};
 use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
 
 use crate::address::Address;
-use crate::arrays_as_bytes;
+use crate::arrays_as_bytes::{self, DeserializeAsBytes, SerializeAsBytes};
 use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
 
+impl SerializeAsBytes for recoverable::Signature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(self.as_ref())
+    }
+}
+
+impl<'de> DeserializeAsBytes<'de> for recoverable::Signature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct BytesVisitor;
+
+        impl<'de> de::Visitor<'de> for BytesVisitor {
+            type Value = recoverable::Signature;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Recoverable signature bytes")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                recoverable::Signature::from_bytes(v).map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(BytesVisitor)
+    }
+}
+
 /// Indicates an error during canonical address derivation from a signature.
 pub enum AddressDerivationError {
     /// Signature is missing from the payload.
     NoSignatureInPayload,
-    /// Invalid signature format.
-    InvalidSignature(signature::Error),
     /// Failed to recover the public key from the signature.
     RecoveryFailed(signature::Error),
 }
@@ -30,7 +63,6 @@ impl fmt::Display for AddressDerivationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::NoSignatureInPayload => write!(f, "Signature is missing from the payload"),
-            Self::InvalidSignature(err) => write!(f, "Invalid signature format: {}", err),
             Self::RecoveryFailed(err) => write!(
                 f,
                 "Failed to recover the public key from the signature: {}",
@@ -75,7 +107,7 @@ pub struct NodeMetadataPayload {
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the operator address.
     #[serde(with = "arrays_as_bytes")]
-    pub operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
+    pub operator_signature: Option<recoverable::Signature>,
 }
 
 impl NodeMetadataPayload {
@@ -90,8 +122,6 @@ impl NodeMetadataPayload {
         let signature = self
             .operator_signature
             .ok_or(AddressDerivationError::NoSignatureInPayload)?;
-        let signature = recoverable::Signature::from_bytes(&signature)
-            .map_err(AddressDerivationError::InvalidSignature)?;
         let message = encode_defunct(&self.verifying_key.to_array());
         let key = signature
             .recover_verify_key_from_digest(message)

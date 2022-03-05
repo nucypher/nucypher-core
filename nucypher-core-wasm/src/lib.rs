@@ -17,7 +17,9 @@ use alloc::{
 };
 use core::fmt;
 use js_sys::Error;
-use nucypher_core::{ProtocolObject, ADDRESS_SIZE, RECOVERABLE_SIGNATURE_SIZE};
+use nucypher_core::k256::ecdsa::recoverable;
+use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
+use nucypher_core::{ProtocolObject, ADDRESS_SIZE};
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -829,16 +831,18 @@ impl NodeMetadataPayload {
         operator_signature: Option<Vec<u8>>,
     ) -> Result<NodeMetadataPayload, JsValue> {
         let address = try_make_address(staking_provider_address)?;
+
         let signature = operator_signature
-            .map(|sig| sig.try_into())
-            .transpose()
-            .map_err(|sig_vec: Vec<u8>| {
-                JsValue::from(Error::new(&format!(
-                    "Incorrect operator signature length: {}, expected {}",
-                    sig_vec.len(),
-                    RECOVERABLE_SIGNATURE_SIZE
-                )))
-            })?;
+            .map(|signature_bytes| {
+                recoverable::Signature::from_bytes(&signature_bytes).map_err(|err| {
+                    JsValue::from(Error::new(&format!(
+                        "Incorrect operator signature format: {}",
+                        err
+                    )))
+                })
+            })
+            .transpose()?;
+
         Ok(Self(nucypher_core::NodeMetadataPayload {
             staking_provider_address: address,
             domain: domain.to_string(),
@@ -869,7 +873,9 @@ impl NodeMetadataPayload {
 
     #[wasm_bindgen(method, getter)]
     pub fn operator_signature(&self) -> Option<Box<[u8]>> {
-        self.0.operator_signature.map(|signature| signature.into())
+        self.0
+            .operator_signature
+            .map(|signature| signature.as_ref().into())
     }
 
     #[wasm_bindgen(method, getter)]
