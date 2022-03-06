@@ -5,9 +5,10 @@ use core::fmt;
 
 use k256::ecdsa::recoverable;
 use k256::ecdsa::signature::Signature as SignatureTrait;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
 use sha3::{Digest, Keccak256};
 use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
+use x509_certificate::certificate::X509Certificate;
 
 use crate::address::Address;
 use crate::arrays_as_bytes::{self, DeserializeAsBytes, SerializeAsBytes};
@@ -44,6 +45,42 @@ impl<'de> DeserializeAsBytes<'de> for recoverable::Signature {
                 E: de::Error,
             {
                 recoverable::Signature::from_bytes(v).map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_bytes(BytesVisitor)
+    }
+}
+
+impl SerializeAsBytes for X509Certificate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let der_bytes = self.encode_der().map_err(ser::Error::custom)?;
+        serializer.serialize_bytes(&der_bytes)
+    }
+}
+
+impl<'de> DeserializeAsBytes<'de> for X509Certificate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct BytesVisitor;
+
+        impl<'de> de::Visitor<'de> for BytesVisitor {
+            type Value = X509Certificate;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "Certificate bytes (DER-encoded)")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                X509Certificate::from_der(v).map_err(de::Error::custom)
             }
         }
 
@@ -99,8 +136,8 @@ pub struct NodeMetadataPayload {
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
     /// The node's SSL certificate (serialized in PEM format).
-    #[serde(with = "serde_bytes")]
-    pub certificate_bytes: Box<[u8]>,
+    #[serde(with = "arrays_as_bytes")]
+    pub certificate: X509Certificate,
     /// The hostname of the node's REST service.
     pub host: String,
     /// The port of the node's REST service.

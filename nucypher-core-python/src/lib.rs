@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::collections::{BTreeMap, BTreeSet};
 
 use pyo3::class::basic::CompareOp;
-use pyo3::exceptions::{PyTypeError, PyValueError};
+use pyo3::exceptions::{PyException, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
@@ -11,6 +11,7 @@ use pyo3::PyObjectProtocol;
 
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
+use nucypher_core::x509_certificate::certificate::X509Certificate;
 use nucypher_core::{ProtocolObject, RECOVERABLE_SIGNATURE_SIZE};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -728,7 +729,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        certificate_bytes: &[u8],
+        certificate_der: &[u8],
         host: &str,
         port: u16,
         operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
@@ -740,6 +741,12 @@ impl NodeMetadataPayload {
                 })
             })
             .transpose()?;
+        let certificate = X509Certificate::from_der(certificate_der).map_err(|err| {
+            PyValueError::new_err(format!(
+                "Invalid certificate (expected DER-encoded): {}",
+                err
+            ))
+        })?;
         Ok(Self {
             backend: nucypher_core::NodeMetadataPayload {
                 staking_provider_address: nucypher_core::Address::new(&staking_provider_address),
@@ -747,7 +754,7 @@ impl NodeMetadataPayload {
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
                 encrypting_key: encrypting_key.backend,
-                certificate_bytes: certificate_bytes.into(),
+                certificate,
                 host: host.to_string(),
                 port,
                 operator_signature: signature,
@@ -803,8 +810,13 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn certificate_bytes(&self) -> &[u8] {
-        self.backend.certificate_bytes.as_ref()
+    fn certificate_der(&self) -> PyResult<PyObject> {
+        let der_bytes = self.backend.certificate.encode_der().map_err(|err| {
+            PyException::new_err(format!("Failed to DER-encode the certificate: {}", err))
+        })?;
+        Ok(Python::with_gil(|py| -> PyObject {
+            PyBytes::new(py, der_bytes.as_ref()).into()
+        }))
     }
 
     fn derive_operator_address(&self) -> PyResult<PyObject> {

@@ -19,6 +19,7 @@ use core::fmt;
 use js_sys::Error;
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
+use nucypher_core::x509_certificate::certificate::X509Certificate;
 use nucypher_core::{ProtocolObject, ADDRESS_SIZE};
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
@@ -825,7 +826,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        certificate_bytes: &[u8],
+        certificate_der: &[u8],
         host: &str,
         port: u16,
         operator_signature: Option<Vec<u8>>,
@@ -843,13 +844,20 @@ impl NodeMetadataPayload {
             })
             .transpose()?;
 
+        let certificate = X509Certificate::from_der(certificate_der).map_err(|err| {
+            JsValue::from(Error::new(&format!(
+                "Invalid certificate (expected DER-encoded): {}",
+                err
+            )))
+        })?;
+
         Ok(Self(nucypher_core::NodeMetadataPayload {
             staking_provider_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
             verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
             encrypting_key: *encrypting_key.inner(),
-            certificate_bytes: certificate_bytes.into(),
+            certificate,
             host: host.to_string(),
             port,
             operator_signature: signature,
@@ -898,9 +906,14 @@ impl NodeMetadataPayload {
         self.0.timestamp_epoch
     }
 
-    #[wasm_bindgen(method, getter)]
-    pub fn certificate_bytes(&self) -> Box<[u8]> {
-        self.0.certificate_bytes.clone()
+    #[wasm_bindgen(method, getter, js_name = certificateDer)]
+    pub fn certificate_der(&self) -> Result<Vec<u8>, JsValue> {
+        self.0.certificate.encode_der().map_err(|err| {
+            JsValue::from(Error::new(&format!(
+                "Failed to DER-encode the certificate: {}",
+                err
+            )))
+        })
     }
 
     #[wasm_bindgen(js_name = deriveOperatorAddress)]
