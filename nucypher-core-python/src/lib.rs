@@ -317,6 +317,14 @@ impl TreasureMap {
         }
     }
 
+    pub fn make_revocation_orders(&self, signer: &Signer) -> Vec<RevocationOrder> {
+        self.backend
+            .make_revocation_orders(&signer.backend)
+            .into_iter()
+            .map(|backend| RevocationOrder { backend })
+            .collect()
+    }
+
     #[getter]
     fn destinations(&self) -> BTreeMap<&[u8], EncryptedKeyFrag> {
         let mut result = BTreeMap::new();

@@ -114,11 +114,6 @@ impl MessageKit {
         Capsule::new(self.0.capsule)
     }
 
-    #[wasm_bindgen(method, getter)]
-    pub fn ciphertext(&self) -> Vec<u8> {
-        self.0.ciphertext.clone().to_vec()
-    }
-
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<MessageKit, JsValue> {
         from_bytes(data)
@@ -363,13 +358,8 @@ impl TreasureMap {
     #[wasm_bindgen(js_name = makeRevocationOrders)]
     pub fn make_revocation_orders(&self, signer: &Signer) -> Vec<JsValue> {
         self.0
-            .destinations
+            .make_revocation_orders(signer.inner())
             .iter()
-            .map(|(address, ekfrag)| {
-                // TODO: Remove this unwrap
-                RevocationOrder::new(signer, address.as_ref(), &EncryptedKeyFrag(ekfrag.clone()))
-                    .unwrap()
-            })
             .map(|order| JsValue::from_serde(&order).unwrap())
             .collect()
     }
@@ -819,7 +809,11 @@ impl RevocationOrder {
 
     #[wasm_bindgen(method, getter, js_name=stakingProviderAddress)]
     pub fn staking_provider_address(&self) -> Box<[u8]> {
-        self.0.staking_provider_address.as_ref().to_vec().into_boxed_slice()
+        self.0
+            .staking_provider_address
+            .as_ref()
+            .to_vec()
+            .into_boxed_slice()
     }
 
     #[wasm_bindgen(js_name=verifySignature)]

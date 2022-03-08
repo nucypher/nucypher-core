@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use alloc::collections::BTreeMap;
 use alloc::format;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
@@ -15,6 +16,7 @@ use crate::key_frag::{DecryptionError, EncryptedKeyFrag};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::RevocationOrder;
 
 /// A structure containing `KeyFrag` objects encrypted for Ursulas chosen for this policy.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -84,6 +86,14 @@ impl TreasureMap {
     /// Encrypts the treasure map for Bob.
     pub fn encrypt(&self, signer: &Signer, recipient_key: &PublicKey) -> EncryptedTreasureMap {
         EncryptedTreasureMap::new(signer, recipient_key, self)
+    }
+
+    /// Makes revocation orders for all destinations in the treasure map.
+    pub fn make_revocation_orders(&self, signer: &Signer) -> Vec<RevocationOrder> {
+        self.destinations
+            .iter()
+            .map(|(address, ekfrag)| RevocationOrder::new(signer, address, ekfrag))
+            .collect()
     }
 }
 

@@ -17,8 +17,7 @@ pub struct MessageKit {
     /// Encapsulated symmetric key for this message.
     pub capsule: Capsule,
     #[serde(with = "serde_bytes")]
-    /// Ciphertext of the message.
-    pub ciphertext: Box<[u8]>,
+    ciphertext: Box<[u8]>,
 }
 
 impl MessageKit {
