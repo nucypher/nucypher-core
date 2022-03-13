@@ -12,8 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `NodeMetadataPayload.decentralized_identity_evidence` to `operator_signature`. ([#10])
 - Declared `NodeMetadataPayload.operator_signature` as `recoverable::Signature` instead of just a byte array. This allows the user to detect an invalid signature on `NodeMetadata` creation. ([#11])
 - Renamed `NodeMetadataPayload.certificate_bytes` to `certificate_der` (although it is not deserialized on the Rust side, so the DER format is not strictly enforced). ([#13])
+- Changed some method and field names in WASM bindings to conform to JS style (camel case). New names are: `TreasureMap.publisherVerifyingKey`, `TreasureMap.bobVerifyingKey`, `TreasureMap.encryptedKfrag`, `RetrievalKit.queriedAddresses`, `RevocationOrder.verifySignature`, `NodeMetadataPayload.verifyingKey`, `NodeMetadataPayload.encryptingKey`, `NodeMetadataPayload.timestampEpoch`, `MetadataRequest.announceNodes`. ([#9])
 
 
+### Added
+
+- `TreasureMap::make_revocation_orders()` (with the corresponding methods in Python and WASM bindings). ([#9])
+- `HRAC.fromBytes()` in WASM bindings. ([#9])
+- `RevocationOrder.stakingProviderAddress` in WASM bindings. ([#9])
+- `MetadataResponse.verify()` in WASM bindings. ([#9])
+- `impl From<[u8; 16]>` for `HRAC`. ([#9])
+- Made `RevocationOrder.staking_provider_address` public. ([#9])
+
+
+### Fixed
+
+- Some methods in WASM bindings that were previously taking `self` are now taking `&self`, leading to a more idiomatic behavior in JS. ([#9])
+
+
+[#9]: https://github.com/nucypher/nucypher-core/pull/9
 [#10]: https://github.com/nucypher/nucypher-core/pull/10
 [#11]: https://github.com/nucypher/nucypher-core/pull/11
 [#13]: https://github.com/nucypher/nucypher-core/pull/13
