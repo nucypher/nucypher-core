@@ -293,7 +293,7 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: BTreeMap<[u8; nucypher_core::ADDRESS_SIZE], (PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<[u8; nucypher_core::Address::SIZE], (PublicKey, VerifiedKeyFrag)>,
         threshold: u8,
     ) -> Self {
         let assigned_kfrags_backend = assigned_kfrags
@@ -634,7 +634,7 @@ impl RetrievalKit {
     #[new]
     pub fn new(
         capsule: &Capsule,
-        queried_addresses: BTreeSet<[u8; nucypher_core::ADDRESS_SIZE]>,
+        queried_addresses: BTreeSet<[u8; nucypher_core::Address::SIZE]>,
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
@@ -697,7 +697,7 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        staking_provider_address: [u8; nucypher_core::ADDRESS_SIZE],
+        staking_provider_address: [u8; nucypher_core::Address::SIZE],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
         let address = nucypher_core::Address::new(&staking_provider_address);
@@ -738,7 +738,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        staking_provider_address: [u8; nucypher_core::ADDRESS_SIZE],
+        staking_provider_address: [u8; nucypher_core::Address::SIZE],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,

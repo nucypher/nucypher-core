@@ -13,16 +13,16 @@ use crate::arrays_as_bytes;
 // So for simplicity we just use our own type since we only need the size check.
 // Later a conversion method can be easily defined to/from `ethereum_types::Address`.
 
-/// Size of canonical Ethereum address, in bytes.
-pub const ADDRESS_SIZE: usize = 20;
-
 /// Represents an Ethereum address (20 bytes).
 #[derive(PartialEq, Debug, Serialize, Deserialize, Copy, Clone, PartialOrd, Eq, Ord)]
-pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; ADDRESS_SIZE]);
+pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; Address::SIZE]);
 
 impl Address {
+    /// Size of canonical Ethereum address, in bytes.
+    pub const SIZE: usize = 20;
+
     /// Creates an address from a fixed-length array.
-    pub fn new(bytes: &[u8; ADDRESS_SIZE]) -> Self {
+    pub fn new(bytes: &[u8; Self::SIZE]) -> Self {
         Self(*bytes)
     }
 

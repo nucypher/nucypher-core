@@ -19,7 +19,7 @@ use core::fmt;
 use js_sys::Error;
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
-use nucypher_core::{ProtocolObject, ADDRESS_SIZE};
+use nucypher_core::ProtocolObject;
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -62,7 +62,7 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
             JsValue::from(Error::new(&format!(
                 "Incorrect address size: {}, expected {}",
                 address_bytes.len(),
-                ADDRESS_SIZE
+                nucypher_core::Address::SIZE
             )))
         })
 }
