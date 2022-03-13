@@ -153,6 +153,8 @@ impl NodeMetadata {
         // This method returns bool and not NodeMetadataPayload,
         // because NodeMetadata can be used before verification,
         // so we need access to its fields right away.
+        // This may change depending on the decision in
+        // https://github.com/nucypher/nucypher/issues/2876
 
         // We could do this on deserialization, but it is a relatively expensive operation.
         self.signature
