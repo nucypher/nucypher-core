@@ -37,9 +37,10 @@ impl HRAC {
         let (hrac, _rest): (GenericArray<u8, U16>, GenericArray<u8, _>) = digest.split();
         Self(hrac.into())
     }
+}
 
-    /// Creates a new HRAC from an array of bytes.
-    pub fn from_bytes(bytes: [u8; 16]) -> Self {
+impl From<[u8; 16]> for HRAC {
+    fn from(bytes: [u8; 16]) -> Self {
         Self(bytes)
     }
 }
