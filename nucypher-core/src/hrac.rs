@@ -18,9 +18,12 @@ use crate::arrays_as_bytes;
 /// Ursula does not, so we share it with her.
 #[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct HRAC(#[serde(with = "arrays_as_bytes")] [u8; 16]);
+pub struct HRAC(#[serde(with = "arrays_as_bytes")] [u8; HRAC::SIZE]);
 
 impl HRAC {
+    /// The size of HRAC in bytes.
+    pub const SIZE: usize = 16;
+
     /// Creates a new HRAC.
     pub fn new(
         publisher_verifying_key: &PublicKey,
@@ -39,8 +42,8 @@ impl HRAC {
     }
 }
 
-impl From<[u8; 16]> for HRAC {
-    fn from(bytes: [u8; 16]) -> Self {
+impl From<[u8; HRAC::SIZE]> for HRAC {
+    fn from(bytes: [u8; HRAC::SIZE]) -> Self {
         Self(bytes)
     }
 }

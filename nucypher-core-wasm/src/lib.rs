@@ -194,7 +194,7 @@ impl HRAC {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<HRAC, JsValue> {
-        let bytes: [u8; 16] = bytes.try_into().map_err(map_js_err)?;
+        let bytes: [u8; nucypher_core::HRAC::SIZE] = bytes.try_into().map_err(map_js_err)?;
         Ok(Self(bytes.into()))
     }
 
