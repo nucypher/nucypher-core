@@ -98,9 +98,9 @@ impl MessageKit {
     }
 
     #[wasm_bindgen(js_name = withCFrag)]
-    pub fn with_cfrag(self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+    pub fn with_cfrag(&self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
         MessageKitWithFrags {
-            message_kit: self,
+            message_kit: self.clone(),
             cfrags: vec![cfrag.inner()],
         }
     }
@@ -190,6 +190,12 @@ impl HRAC {
             bob_verifying_key.inner(),
             label,
         ))
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(bytes: &[u8]) -> Result<HRAC, JsValue> {
+        let bytes: [u8; 16] = bytes.try_into().map_err(map_js_err)?;
+        Ok(Self(bytes.into()))
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -294,12 +300,12 @@ impl TreasureMapBuilder {
     }
 
     #[wasm_bindgen]
-    pub fn build(self) -> TreasureMap {
+    pub fn build(&self) -> TreasureMap {
         TreasureMap(nucypher_core::TreasureMap::new(
             &self.signer,
             &self.hrac,
             &self.policy_encrypting_key,
-            self.assigned_kfrags,
+            self.assigned_kfrags.clone(),
             self.threshold,
         ))
     }
@@ -347,6 +353,15 @@ impl TreasureMap {
             result.push((address, EncryptedKeyFrag(ekfrag.clone())));
         }
         Ok(serde_wasm_bindgen::to_value(&result)?)
+    }
+
+    #[wasm_bindgen(js_name = makeRevocationOrders)]
+    pub fn make_revocation_orders(&self, signer: &Signer) -> Vec<JsValue> {
+        self.0
+            .make_revocation_orders(signer.inner())
+            .iter()
+            .map(|order| JsValue::from_serde(&order).unwrap())
+            .collect()
     }
 
     #[wasm_bindgen(method, getter)]
@@ -479,7 +494,7 @@ impl ReencryptionRequestBuilder {
     }
 
     #[wasm_bindgen]
-    pub fn build(self) -> ReencryptionRequest {
+    pub fn build(&self) -> ReencryptionRequest {
         ReencryptionRequest(nucypher_core::ReencryptionRequest::new(
             &self.capsules,
             &self.hrac,
@@ -497,17 +512,17 @@ impl ReencryptionRequest {
         HRAC(self.0.hrac)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name = publisherVerifyingKey)]
     pub fn publisher_verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.publisher_verifying_key)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name = bobVerifyingKey)]
     pub fn bob_verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.bob_verifying_key)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name = encryptedKfrag)]
     pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
         EncryptedKeyFrag(self.0.encrypted_kfrag.clone())
     }
@@ -655,7 +670,6 @@ impl ReencryptionResponseWithCapsules {
                 policy_encrypting_key.inner(),
                 bob_encrypting_key.inner(),
             )
-            // TODO: Should we throw an error here or return an empty result, i.e. JS `null`?
             .ok_or_else(|| JsValue::from_str("ReencryptionResponse verification failed"))?;
 
         let vcfrags_backend_js = vcfrags_backend
@@ -735,7 +749,7 @@ impl RetrievalKit {
         Capsule::new(self.0.capsule)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name = queriedAddresses)]
     pub fn queried_addresses(&self) -> Result<Vec<JsValue>, JsValue> {
         self.0
             .queried_addresses
@@ -762,6 +776,7 @@ impl RetrievalKit {
 //
 
 #[wasm_bindgen]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct RevocationOrder(nucypher_core::RevocationOrder);
 
 impl AsBackend<nucypher_core::RevocationOrder> for RevocationOrder {
@@ -792,7 +807,16 @@ impl RevocationOrder {
         )))
     }
 
-    #[wasm_bindgen]
+    #[wasm_bindgen(method, getter, js_name=stakingProviderAddress)]
+    pub fn staking_provider_address(&self) -> Box<[u8]> {
+        self.0
+            .staking_provider_address
+            .as_ref()
+            .to_vec()
+            .into_boxed_slice()
+    }
+
+    #[wasm_bindgen(js_name=verifySignature)]
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         self.0.verify_signature(alice_verifying_key.inner())
     }
@@ -847,7 +871,7 @@ impl NodeMetadataPayload {
             staking_provider_address: address,
             domain: domain.to_string(),
             timestamp_epoch,
-            verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
+            verifying_key: *verifying_key.inner(),
             encrypting_key: *encrypting_key.inner(),
             certificate_der: certificate_der.into(),
             host: host.to_string(),
@@ -861,12 +885,12 @@ impl NodeMetadataPayload {
         self.0.staking_provider_address.as_ref().to_vec()
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name=verifyingKey)]
     pub fn verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.verifying_key)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name=encryptingKey)]
     pub fn encrypting_key(&self) -> PublicKey {
         PublicKey::new(self.0.encrypting_key)
     }
@@ -893,7 +917,7 @@ impl NodeMetadataPayload {
         self.0.port
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name=timestampEpoch)]
     pub fn timestamp_epoch(&self) -> u32 {
         self.0.timestamp_epoch
     }
@@ -1159,7 +1183,7 @@ impl MetadataResponsePayload {
         self.0.timestamp_epoch
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(method, getter, js_name=announceNodes)]
     pub fn announce_nodes(&self) -> Vec<JsValue> {
         self.0
             .announce_nodes
@@ -1199,6 +1223,7 @@ impl MetadataResponse {
         ))
     }
 
+    #[wasm_bindgen]
     pub fn verify(&self, verifying_pk: &PublicKey) -> Result<MetadataResponsePayload, JsValue> {
         self.0
             .verify(verifying_pk.inner())

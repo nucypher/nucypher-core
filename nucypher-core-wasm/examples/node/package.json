@@ -7,9 +7,8 @@
   "files": [
     "/dist"
   ],
-  "type": "module",
   "scripts": {
-    "cli": "ts-node src/cli.ts",
+    "start": "ts-node src/main.ts",
     "test": "jest",
     "test:watch": "jest --watchAll",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",

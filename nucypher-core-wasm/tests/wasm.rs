@@ -199,13 +199,14 @@ fn message_kit_to_bytes_from_bytes() {
 //
 
 #[wasm_bindgen_test]
-fn hrac_to_bytes() {
+fn hrac_serializes() {
     let hrac = make_hrac();
+    let as_bytes = hrac.to_bytes();
 
     assert_eq!(
-        hrac.to_bytes().len(),
-        16,
-        "HRAC does not serialize to bytes"
+        as_bytes,
+        HRAC::from_bytes(&as_bytes).unwrap().to_bytes(),
+        "HRAC does not roundtrip"
     );
 }
 
