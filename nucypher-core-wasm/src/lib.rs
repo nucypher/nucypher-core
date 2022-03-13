@@ -825,7 +825,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        certificate_bytes: &[u8],
+        certificate_der: &[u8],
         host: &str,
         port: u16,
         operator_signature: Option<Vec<u8>>,
@@ -849,7 +849,7 @@ impl NodeMetadataPayload {
             timestamp_epoch,
             verifying_key: *verifying_key.inner(), // TODO: Use * instead of clone everywhere
             encrypting_key: *encrypting_key.inner(),
-            certificate_bytes: certificate_bytes.into(),
+            certificate_der: certificate_der.into(),
             host: host.to_string(),
             port,
             operator_signature: signature,
@@ -899,8 +899,8 @@ impl NodeMetadataPayload {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn certificate_bytes(&self) -> Box<[u8]> {
-        self.0.certificate_bytes.clone()
+    pub fn certificate_der(&self) -> Box<[u8]> {
+        self.0.certificate_der.clone()
     }
 
     #[wasm_bindgen(js_name = deriveOperatorAddress)]

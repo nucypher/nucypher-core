@@ -81,7 +81,7 @@ fn make_node_metadata() -> NodeMetadata {
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
-    let certificate_bytes = b"certificate_bytes";
+    let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
     let operator_signature =
@@ -93,7 +93,7 @@ fn make_node_metadata() -> NodeMetadata {
         timestamp_epoch,
         &verifying_key,
         &encrypting_key,
-        certificate_bytes,
+        certificate_der,
         host,
         port,
         operator_signature,
