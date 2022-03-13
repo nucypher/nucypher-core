@@ -9,6 +9,7 @@ use crate::key_frag::EncryptedKeyFrag;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +45,7 @@ impl RevocationOrder {
     pub fn verify(
         self,
         alice_verifying_key: &PublicKey,
-    ) -> Result<(Address, EncryptedKeyFrag), ()> {
+    ) -> Result<(Address, EncryptedKeyFrag), VerificationError> {
         let message = [
             self.staking_provider_address.as_ref(),
             &self.encrypted_kfrag.to_bytes(),
@@ -53,7 +54,7 @@ impl RevocationOrder {
         if self.signature.verify(alice_verifying_key, &message) {
             Ok((self.staking_provider_address, self.encrypted_kfrag))
         } else {
-            Err(())
+            Err(VerificationError)
         }
     }
 }

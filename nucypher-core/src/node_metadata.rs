@@ -15,6 +15,7 @@ use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 impl SerializeAsBytes for recoverable::Signature {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -275,14 +276,17 @@ impl MetadataResponse {
     }
 
     /// Verifies the metadata response and returns the contained payload.
-    pub fn verify(self, verifying_pk: &PublicKey) -> Result<MetadataResponsePayload, ()> {
+    pub fn verify(
+        self,
+        verifying_pk: &PublicKey,
+    ) -> Result<MetadataResponsePayload, VerificationError> {
         if self
             .signature
             .verify(verifying_pk, &self.payload.to_bytes())
         {
             Ok(self.payload)
         } else {
-            Err(())
+            Err(VerificationError)
         }
     }
 }
