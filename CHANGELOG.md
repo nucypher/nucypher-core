@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed `staker_address` to `staking_provider_address` in `NodeMetadataPayload` fields and `RevocationOrder::new` parameters. ([#10])
 - Renamed `NodeMetadataPayload.decentralized_identity_evidence` to `operator_signature`. ([#10])
 - Declared `NodeMetadataPayload.operator_signature` as `recoverable::Signature` instead of just a byte array. This allows the user to detect an invalid signature on `NodeMetadata` creation. ([#11])
+- Renamed `NodeMetadataPayload.certificate_bytes` to `certificate_der` (although it is not deserialized on the Rust side, so the DER format is not strictly enforced). ([#13])
 
 
 [#10]: https://github.com/nucypher/nucypher-core/pull/10
 [#11]: https://github.com/nucypher/nucypher-core/pull/11
+[#13]: https://github.com/nucypher/nucypher-core/pull/13
 
 
 ## [0.0.4] - 2022-02-09
