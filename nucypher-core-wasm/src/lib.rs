@@ -670,7 +670,9 @@ impl ReencryptionResponseWithCapsules {
                 policy_encrypting_key.inner(),
                 bob_encrypting_key.inner(),
             )
-            .ok_or_else(|| JsValue::from_str("ReencryptionResponse verification failed"))?;
+            .map_err(|_err| {
+                JsValue::from(Error::new("ReencryptionResponse verification failed"))
+            })?;
 
         let vcfrags_backend_js = vcfrags_backend
             .iter()

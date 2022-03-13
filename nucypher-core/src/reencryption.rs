@@ -121,10 +121,10 @@ impl ReencryptionResponse {
         ursula_verifying_key: &PublicKey,
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
-    ) -> Option<Box<[VerifiedCapsuleFrag]>> {
+    ) -> Result<Box<[VerifiedCapsuleFrag]>, ()> {
         if capsules.len() != self.cfrags.len() {
             // Mismatched number of capsules and cfrags
-            return None;
+            return Err(());
         }
 
         // Validate re-encryption signature
@@ -132,7 +132,7 @@ impl ReencryptionResponse {
             ursula_verifying_key,
             &signed_message(capsules, &self.cfrags),
         ) {
-            return None;
+            return Err(());
         }
 
         let vcfrags = self
@@ -150,7 +150,11 @@ impl ReencryptionResponse {
             })
             .collect::<Result<Vec<_>, _>>();
 
-        vcfrags.ok().map(|vcfrags| vcfrags.into_boxed_slice())
+        // From the above statement we get a list of (CapsuleFragVerificationError, CapsuleFrag)
+        // in the error case, but at this point nobody's interested in that.
+        vcfrags
+            .map(|vcfrags| vcfrags.into_boxed_slice())
+            .map_err(|_err| ())
     }
 }
 

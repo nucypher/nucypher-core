@@ -582,7 +582,7 @@ impl ReencryptionResponse {
                 &policy_encrypting_key.backend,
                 &bob_encrypting_key.backend,
             )
-            .ok_or_else(|| PyValueError::new_err("ReencryptionResponse verification failed"))?;
+            .map_err(|_err| PyValueError::new_err("ReencryptionResponse verification failed"))?;
         Ok(vcfrags_backend
             .iter()
             .map(|vcfrag| VerifiedCapsuleFrag {
