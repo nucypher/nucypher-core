@@ -44,3 +44,9 @@ impl AsRef<[u8]> for Address {
         self.0.as_ref()
     }
 }
+
+impl From<Address> for [u8; Address::SIZE] {
+    fn from(address: Address) -> [u8; Address::SIZE] {
+        address.0
+    }
+}
