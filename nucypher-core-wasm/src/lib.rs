@@ -1247,9 +1247,9 @@ impl MetadataResponse {
     #[wasm_bindgen]
     pub fn verify(&self, verifying_pk: &PublicKey) -> Result<MetadataResponsePayload, JsValue> {
         self.0
+            .clone()
             .verify(verifying_pk.inner())
-            .ok_or("Invalid signature")
-            .map_err(map_js_err)
+            .map_err(|_err| Error::new("Failed to verify MetadataResponse").into())
             .map(MetadataResponsePayload)
     }
 

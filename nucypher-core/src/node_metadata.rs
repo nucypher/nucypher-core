@@ -273,14 +273,14 @@ impl MetadataResponse {
     }
 
     /// Verifies the metadata response and returns the contained payload.
-    pub fn verify(&self, verifying_pk: &PublicKey) -> Option<MetadataResponsePayload> {
+    pub fn verify(self, verifying_pk: &PublicKey) -> Result<MetadataResponsePayload, ()> {
         if self
             .signature
             .verify(verifying_pk, &self.payload.to_bytes())
         {
-            Some(self.payload.clone())
+            Ok(self.payload)
         } else {
-            None
+            Err(())
         }
     }
 }

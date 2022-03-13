@@ -1079,11 +1079,12 @@ impl MetadataResponse {
 
     pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<MetadataResponsePayload> {
         self.backend
+            .clone()
             .verify(&verifying_pk.backend)
             .map(|backend_payload| MetadataResponsePayload {
                 backend: backend_payload,
             })
-            .ok_or_else(|| VerificationError::new_err("MetadataResponse verification failed"))
+            .map_err(|_err| VerificationError::new_err("MetadataResponse verification failed"))
     }
 
     #[staticmethod]
