@@ -523,7 +523,7 @@ fn revocation_order() {
     let ursula_address = b"00000000000000000001";
     let revocation_order = RevocationOrder::new(&signer, ursula_address, &encrypted_kfrag).unwrap();
 
-    assert!(revocation_order.verify_signature(&delegating_sk.public_key()));
+    assert!(revocation_order.verify(&delegating_sk.public_key()).is_ok());
 
     let as_bytes = revocation_order.to_bytes();
     assert_eq!(

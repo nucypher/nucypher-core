@@ -710,13 +710,15 @@ impl RevocationOrder {
         }
     }
 
-    #[getter]
-    fn staking_provider_address(&self) -> &[u8] {
-        self.backend.staking_provider_address.as_ref()
-    }
-
-    pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
-        self.backend.verify_signature(&alice_verifying_key.backend)
+    pub fn verify(
+        &self,
+        alice_verifying_key: &PublicKey,
+    ) -> PyResult<([u8; nucypher_core::Address::SIZE], EncryptedKeyFrag)> {
+        self.backend
+            .clone()
+            .verify(&alice_verifying_key.backend)
+            .map(|(address, ekfrag)| (address.into(), EncryptedKeyFrag { backend: ekfrag }))
+            .map_err(|_err| VerificationError::new_err("RevocationOrder verification failed"))
     }
 
     #[staticmethod]
