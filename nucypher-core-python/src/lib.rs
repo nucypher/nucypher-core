@@ -710,6 +710,11 @@ impl RevocationOrder {
         }
     }
 
+    #[getter]
+    fn staking_provider_address(&self) -> &[u8] {
+        self.backend.staking_provider_address.as_ref()
+    }
+
     pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
         self.backend.verify_signature(&alice_verifying_key.backend)
     }
