@@ -98,9 +98,9 @@ pub struct NodeMetadataPayload {
     pub verifying_key: PublicKey,
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
-    /// The node's SSL certificate (serialized in PEM format).
+    /// The node's SSL certificate (serialized in DER format).
     #[serde(with = "serde_bytes")]
-    pub certificate_bytes: Box<[u8]>,
+    pub certificate_der: Box<[u8]>,
     /// The hostname of the node's REST service.
     pub host: String,
     /// The port of the node's REST service.

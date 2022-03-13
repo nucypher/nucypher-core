@@ -728,7 +728,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        certificate_bytes: &[u8],
+        certificate_der: &[u8],
         host: &str,
         port: u16,
         operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
@@ -747,7 +747,7 @@ impl NodeMetadataPayload {
                 timestamp_epoch,
                 verifying_key: verifying_key.backend,
                 encrypting_key: encrypting_key.backend,
-                certificate_bytes: certificate_bytes.into(),
+                certificate_der: certificate_der.into(),
                 host: host.to_string(),
                 port,
                 operator_signature: signature,
@@ -803,8 +803,8 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn certificate_bytes(&self) -> &[u8] {
-        self.backend.certificate_bytes.as_ref()
+    fn certificate_der(&self) -> &[u8] {
+        self.backend.certificate_der.as_ref()
     }
 
     fn derive_operator_address(&self) -> PyResult<PyObject> {
