@@ -173,6 +173,13 @@ impl HRAC {
         }
     }
 
+    #[staticmethod]
+    pub fn from_bytes(data: [u8; nucypher_core::HRAC::SIZE]) -> Self {
+        Self {
+            backend: data.into(),
+        }
+    }
+
     fn __bytes__(&self) -> &[u8] {
         self.backend.as_ref()
     }
