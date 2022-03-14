@@ -15,6 +15,7 @@ use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 impl SerializeAsBytes for recoverable::Signature {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -153,6 +154,8 @@ impl NodeMetadata {
         // This method returns bool and not NodeMetadataPayload,
         // because NodeMetadata can be used before verification,
         // so we need access to its fields right away.
+        // This may change depending on the decision in
+        // https://github.com/nucypher/nucypher/issues/2876
 
         // We could do this on deserialization, but it is a relatively expensive operation.
         self.signature
@@ -273,14 +276,17 @@ impl MetadataResponse {
     }
 
     /// Verifies the metadata response and returns the contained payload.
-    pub fn verify(&self, verifying_pk: &PublicKey) -> Option<MetadataResponsePayload> {
+    pub fn verify(
+        self,
+        verifying_pk: &PublicKey,
+    ) -> Result<MetadataResponsePayload, VerificationError> {
         if self
             .signature
             .verify(verifying_pk, &self.payload.to_bytes())
         {
-            Some(self.payload.clone())
+            Ok(self.payload)
         } else {
-            None
+            Err(VerificationError)
         }
     }
 }

@@ -19,7 +19,7 @@ use core::fmt;
 use js_sys::Error;
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
-use nucypher_core::{ProtocolObject, ADDRESS_SIZE};
+use nucypher_core::ProtocolObject;
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -62,7 +62,7 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
             JsValue::from(Error::new(&format!(
                 "Incorrect address size: {}, expected {}",
                 address_bytes.len(),
-                ADDRESS_SIZE
+                nucypher_core::Address::SIZE
             )))
         })
 }
@@ -194,7 +194,7 @@ impl HRAC {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(bytes: &[u8]) -> Result<HRAC, JsValue> {
-        let bytes: [u8; 16] = bytes.try_into().map_err(map_js_err)?;
+        let bytes: [u8; nucypher_core::HRAC::SIZE] = bytes.try_into().map_err(map_js_err)?;
         Ok(Self(bytes.into()))
     }
 
@@ -670,7 +670,9 @@ impl ReencryptionResponseWithCapsules {
                 policy_encrypting_key.inner(),
                 bob_encrypting_key.inner(),
             )
-            .ok_or_else(|| JsValue::from_str("ReencryptionResponse verification failed"))?;
+            .map_err(|_err| {
+                JsValue::from(Error::new("ReencryptionResponse verification failed"))
+            })?;
 
         let vcfrags_backend_js = vcfrags_backend
             .iter()
@@ -807,18 +809,19 @@ impl RevocationOrder {
         )))
     }
 
-    #[wasm_bindgen(method, getter, js_name=stakingProviderAddress)]
-    pub fn staking_provider_address(&self) -> Box<[u8]> {
+    #[wasm_bindgen]
+    pub fn verify(
+        &self,
+        alice_verifying_key: &PublicKey,
+    ) -> Result<VerifiedRevocationOrder, JsValue> {
         self.0
-            .staking_provider_address
-            .as_ref()
-            .to_vec()
-            .into_boxed_slice()
-    }
-
-    #[wasm_bindgen(js_name=verifySignature)]
-    pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
-        self.0.verify_signature(alice_verifying_key.inner())
+            .clone()
+            .verify(alice_verifying_key.inner())
+            .map(|(address, ekfrag)| VerifiedRevocationOrder {
+                address: address.as_ref().to_vec().into_boxed_slice(),
+                encrypted_kfrag: ekfrag,
+            })
+            .map_err(|_err| Error::new("Failed to verify RevocationOrder").into())
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -829,6 +832,26 @@ impl RevocationOrder {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+}
+
+// wasm-bindgen does not support returning tuples, so have to use a struct.
+#[wasm_bindgen]
+pub struct VerifiedRevocationOrder {
+    address: Box<[u8]>,
+    encrypted_kfrag: nucypher_core::EncryptedKeyFrag,
+}
+
+#[wasm_bindgen]
+impl VerifiedRevocationOrder {
+    #[wasm_bindgen(getter)]
+    pub fn address(&self) -> Box<[u8]> {
+        self.address.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name=encryptedKFrag)]
+    pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
+        EncryptedKeyFrag(self.encrypted_kfrag.clone())
     }
 }
 
@@ -1226,9 +1249,9 @@ impl MetadataResponse {
     #[wasm_bindgen]
     pub fn verify(&self, verifying_pk: &PublicKey) -> Result<MetadataResponsePayload, JsValue> {
         self.0
+            .clone()
             .verify(verifying_pk.inner())
-            .ok_or("Invalid signature")
-            .map_err(map_js_err)
+            .map_err(|_err| Error::new("Failed to verify MetadataResponse").into())
             .map(MetadataResponsePayload)
     }
 

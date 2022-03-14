@@ -33,11 +33,7 @@ impl AuthorizedKeyFrag {
         Self { signature, kfrag }
     }
 
-    pub fn verify(
-        &self,
-        hrac: &HRAC,
-        publisher_verifying_key: &PublicKey,
-    ) -> Option<VerifiedKeyFrag> {
+    fn verify(&self, hrac: &HRAC, publisher_verifying_key: &PublicKey) -> Option<VerifiedKeyFrag> {
         if !self.signature.verify(
             publisher_verifying_key,
             &[hrac.as_ref(), self.kfrag.to_array().as_ref()].concat(),

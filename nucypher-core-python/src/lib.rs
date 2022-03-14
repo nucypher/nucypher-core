@@ -173,6 +173,13 @@ impl HRAC {
         }
     }
 
+    #[staticmethod]
+    pub fn from_bytes(data: [u8; nucypher_core::HRAC::SIZE]) -> Self {
+        Self {
+            backend: data.into(),
+        }
+    }
+
     fn __bytes__(&self) -> &[u8] {
         self.backend.as_ref()
     }
@@ -286,7 +293,7 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: BTreeMap<[u8; nucypher_core::ADDRESS_SIZE], (PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<[u8; nucypher_core::Address::SIZE], (PublicKey, VerifiedKeyFrag)>,
         threshold: u8,
     ) -> Self {
         let assigned_kfrags_backend = assigned_kfrags
@@ -575,7 +582,7 @@ impl ReencryptionResponse {
                 &policy_encrypting_key.backend,
                 &bob_encrypting_key.backend,
             )
-            .ok_or_else(|| PyValueError::new_err("ReencryptionResponse verification failed"))?;
+            .map_err(|_err| PyValueError::new_err("ReencryptionResponse verification failed"))?;
         Ok(vcfrags_backend
             .iter()
             .map(|vcfrag| VerifiedCapsuleFrag {
@@ -627,7 +634,7 @@ impl RetrievalKit {
     #[new]
     pub fn new(
         capsule: &Capsule,
-        queried_addresses: BTreeSet<[u8; nucypher_core::ADDRESS_SIZE]>,
+        queried_addresses: BTreeSet<[u8; nucypher_core::Address::SIZE]>,
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
@@ -690,7 +697,7 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        staking_provider_address: [u8; nucypher_core::ADDRESS_SIZE],
+        staking_provider_address: [u8; nucypher_core::Address::SIZE],
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
         let address = nucypher_core::Address::new(&staking_provider_address);
@@ -703,8 +710,15 @@ impl RevocationOrder {
         }
     }
 
-    pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
-        self.backend.verify_signature(&alice_verifying_key.backend)
+    pub fn verify(
+        &self,
+        alice_verifying_key: &PublicKey,
+    ) -> PyResult<([u8; nucypher_core::Address::SIZE], EncryptedKeyFrag)> {
+        self.backend
+            .clone()
+            .verify(&alice_verifying_key.backend)
+            .map(|(address, ekfrag)| (address.into(), EncryptedKeyFrag { backend: ekfrag }))
+            .map_err(|_err| VerificationError::new_err("RevocationOrder verification failed"))
     }
 
     #[staticmethod]
@@ -731,7 +745,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        staking_provider_address: [u8; nucypher_core::ADDRESS_SIZE],
+        staking_provider_address: [u8; nucypher_core::Address::SIZE],
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -1065,11 +1079,12 @@ impl MetadataResponse {
 
     pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<MetadataResponsePayload> {
         self.backend
+            .clone()
             .verify(&verifying_pk.backend)
             .map(|backend_payload| MetadataResponsePayload {
                 backend: backend_payload,
             })
-            .ok_or_else(|| VerificationError::new_err("MetadataResponse verification failed"))
+            .map_err(|_err| VerificationError::new_err("MetadataResponse verification failed"))
     }
 
     #[staticmethod]

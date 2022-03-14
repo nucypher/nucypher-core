@@ -20,7 +20,10 @@ mod revocation_order;
 mod treasure_map;
 mod versioning;
 
-pub use address::{Address, ADDRESS_SIZE};
+/// Error returned by various `verify()` methods in the crate.
+pub struct VerificationError;
+
+pub use address::Address;
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;

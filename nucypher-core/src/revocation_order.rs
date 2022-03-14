@@ -9,12 +9,13 @@ use crate::key_frag::EncryptedKeyFrag;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 /// Represents a string used by characters to perform a revocation on a specific Ursula.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct RevocationOrder {
     /// The address of the Ursula that is being revoked.
-    pub staking_provider_address: Address,
+    staking_provider_address: Address,
     encrypted_kfrag: EncryptedKeyFrag,
     signature: Signature,
 }
@@ -40,14 +41,21 @@ impl RevocationOrder {
     }
 
     /// Verifies the revocation order against Alice's key.
-    pub fn verify_signature(&self, alice_verifying_key: &PublicKey) -> bool {
-        // TODO: return an Option of something instead of returning `bool`?
+    /// On success, returns the staking provider address and the encrypted keyfrag.
+    pub fn verify(
+        self,
+        alice_verifying_key: &PublicKey,
+    ) -> Result<(Address, EncryptedKeyFrag), VerificationError> {
         let message = [
             self.staking_provider_address.as_ref(),
             &self.encrypted_kfrag.to_bytes(),
         ]
         .concat();
-        self.signature.verify(alice_verifying_key, &message)
+        if self.signature.verify(alice_verifying_key, &message) {
+            Ok((self.staking_provider_address, self.encrypted_kfrag))
+        } else {
+            Err(VerificationError)
+        }
     }
 }
 

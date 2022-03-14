@@ -12,6 +12,7 @@ use crate::key_frag::EncryptedKeyFrag;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -121,10 +122,10 @@ impl ReencryptionResponse {
         ursula_verifying_key: &PublicKey,
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
-    ) -> Option<Box<[VerifiedCapsuleFrag]>> {
+    ) -> Result<Box<[VerifiedCapsuleFrag]>, VerificationError> {
         if capsules.len() != self.cfrags.len() {
             // Mismatched number of capsules and cfrags
-            return None;
+            return Err(VerificationError);
         }
 
         // Validate re-encryption signature
@@ -132,7 +133,7 @@ impl ReencryptionResponse {
             ursula_verifying_key,
             &signed_message(capsules, &self.cfrags),
         ) {
-            return None;
+            return Err(VerificationError);
         }
 
         let vcfrags = self
@@ -150,7 +151,11 @@ impl ReencryptionResponse {
             })
             .collect::<Result<Vec<_>, _>>();
 
-        vcfrags.ok().map(|vcfrags| vcfrags.into_boxed_slice())
+        // From the above statement we get a list of (CapsuleFragVerificationError, CapsuleFrag)
+        // in the error case, but at this point nobody's interested in that.
+        vcfrags
+            .map(|vcfrags| vcfrags.into_boxed_slice())
+            .map_err(|_err| VerificationError)
     }
 }
 
