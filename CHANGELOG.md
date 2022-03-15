@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Under construction.
+
+
+## [0.1.1] - 2022-03-15
+
 ### Fixed
 
 - `umbral-pre` bumped to 0.5.2 and `k256` bumped to 0.10.4 to make use of an important bugfix (see https://github.com/RustCrypto/elliptic-curves/issues/529). Previous 0.1.* versions (using `k256` 0.10.2 with the bug) are yanked.
@@ -90,9 +95,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release.
 
 
-[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.1.1...HEAD
 [0.0.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.1
 [0.0.2]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.2
 [0.0.3]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.3
 [0.0.4]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.4
 [0.1.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.1.0
+[0.1.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.1.1
