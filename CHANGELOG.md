@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+### Fixed
+
+- `umbral-pre` bumped to 0.5.2 and `k256` bumped to 0.10.4 to make use of an important bugfix (see https://github.com/RustCrypto/elliptic-curves/issues/529). Previous 0.1.* versions (using `k256` 0.10.2 with the bug) are yanked.
 
 
 ## [0.1.0] - 2022-03-14
