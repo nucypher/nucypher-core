@@ -1,7 +1,7 @@
 use generic_array::sequence::Split;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Sha3_256};
+use sha3::{Digest, Keccak256};
 use typenum::U16;
 use umbral_pre::{PublicKey, SerializableToArray};
 
@@ -30,7 +30,7 @@ impl HRAC {
         bob_verifying_key: &PublicKey,
         label: &[u8],
     ) -> Self {
-        let digest = Sha3_256::new()
+        let digest = Keccak256::new()
             .chain(&publisher_verifying_key.to_array())
             .chain(&bob_verifying_key.to_array())
             .chain(label)

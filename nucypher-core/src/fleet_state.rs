@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Sha3_256};
+use sha3::{Digest, Keccak256};
 
 use crate::arrays_as_bytes;
 use crate::node_metadata::NodeMetadata;
@@ -30,7 +30,7 @@ impl FleetStateChecksum {
 
         let checksum = nodes
             .iter()
-            .fold(Sha3_256::new(), |digest, node| {
+            .fold(Keccak256::new(), |digest, node| {
                 // NodeMetadata has a payload signature, which is randomized,
                 // so this may lead to unnecessary fleet state update.
                 // But, unlike ProtocolObject::to_bytes(), payload serialization
