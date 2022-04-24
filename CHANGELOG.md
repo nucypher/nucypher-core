@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Changed from `sha3_256` to `Keccak` for `fleet_state.rs` and `hrac.rs`
+- Changed from `sha3_256` to `Keccak` when building `FleetState` and `HRAC`. ([#15])
+
+
+[#15]: https://github.com/nucypher/nucypher-core/pull/15
+
 
 ## [0.1.1] - 2022-03-15
 
