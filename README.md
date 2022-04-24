@@ -15,9 +15,9 @@ This repo contains Rust implementation of the protocol classes that can be share
 [rust-build-link]: https://github.com/nucypher/nucypher-core/actions?query=workflow%3Anucypher-core
 [rust-coverage-image]: https://codecov.io/gh/nucypher/nucypher-core/branch/master/graph/badge.svg
 [rust-coverage-link]: https://codecov.io/gh/nucypher/nucypher-core
-[js-npm-image]: https://img.shields.io/npm/v/nucypher-core
-[js-npm-link]: https://www.npmjs.com/package/nucypher-core
-[js-license-image]: https://img.shields.io/npm/l/nucypher-core
+[js-npm-image]: https://img.shields.io/npm/v/@nucypher/nucypher-core
+[js-npm-link]: https://www.npmjs.com/package/@nucypher/nucypher-core
+[js-license-image]: https://img.shields.io/npm/l/@nucypher/nucypher-core
 [pypi-image]: https://img.shields.io/pypi/v/nucypher-core
 [pypi-link]: https://pypi.org/project/nucypher-core/
 [pypi-license-image]: https://img.shields.io/pypi/l/nucypher-core
