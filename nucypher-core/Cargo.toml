@@ -19,3 +19,4 @@ sha3 = "0.9"
 rmp-serde = "0.15"
 k256 = { version = "0.10.4", default-features = false, features = ["ecdsa"]}
 signature = "1.4"
+serde_with = "1.14"

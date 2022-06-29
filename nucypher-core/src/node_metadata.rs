@@ -6,49 +6,37 @@ use core::fmt;
 use k256::ecdsa::recoverable;
 use k256::ecdsa::signature::Signature as SignatureTrait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde_with::serde_as;
 use sha3::{Digest, Keccak256};
 use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
 
 use crate::address::Address;
-use crate::arrays_as_bytes::{self, DeserializeAsBytes, SerializeAsBytes};
 use crate::fleet_state::FleetStateChecksum;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
 use crate::VerificationError;
 
-impl SerializeAsBytes for recoverable::Signature {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+#[derive(Serialize, Deserialize)]
+struct SerializableSignature(#[serde(with = "serde_bytes")] Box<[u8]>);
+
+impl serde_with::SerializeAs<recoverable::Signature> for SerializableSignature {
+    fn serialize_as<S>(source: &recoverable::Signature, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_bytes(self.as_ref())
+        let sig = SerializableSignature(source.as_bytes().into());
+        sig.serialize(serializer)
     }
 }
 
-impl<'de> DeserializeAsBytes<'de> for recoverable::Signature {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+impl<'de> serde_with::DeserializeAs<'de, recoverable::Signature> for SerializableSignature {
+    fn deserialize_as<D>(deserializer: D) -> Result<recoverable::Signature, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct BytesVisitor;
-
-        impl<'de> de::Visitor<'de> for BytesVisitor {
-            type Value = recoverable::Signature;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "Recoverable signature bytes")
-            }
-
-            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                recoverable::Signature::from_bytes(v).map_err(de::Error::custom)
-            }
-        }
-
-        deserializer.deserialize_bytes(BytesVisitor)
+        let sig = SerializableSignature::deserialize(deserializer)?;
+        recoverable::Signature::from_bytes(&sig.0).map_err(de::Error::custom)
     }
 }
 
@@ -87,6 +75,7 @@ fn encode_defunct(message: &[u8]) -> Keccak256 {
 pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
 
 /// Node metadata.
+#[serde_as]
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
     /// The staking provider's Ethereum address.
@@ -107,7 +96,8 @@ pub struct NodeMetadataPayload {
     /// The port of the node's REST service.
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the operator address.
-    #[serde(with = "arrays_as_bytes")]
+    //#[serde(with = "arrays_as_bytes")]
+    #[serde_as(as = "Option<SerializableSignature>")]
     pub operator_signature: Option<recoverable::Signature>,
 }
 
