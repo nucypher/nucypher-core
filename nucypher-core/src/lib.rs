@@ -8,7 +8,6 @@
 extern crate alloc;
 
 mod address;
-mod arrays_as_bytes;
 mod fleet_state;
 mod hrac;
 mod key_frag;
