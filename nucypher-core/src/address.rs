@@ -4,9 +4,9 @@ use k256::elliptic_curve::sec1::ToEncodedPoint;
 use k256::Secp256k1;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use signature::digest::Update;
 use typenum::{U12, U20};
-
-use crate::arrays_as_bytes;
+use umbral_pre::serde_bytes;
 
 // We could use the third-party `ethereum_types::Address` here,
 // but it has an inefficient `serde` implementation (serializes as hex instead of bytes).
@@ -15,7 +15,7 @@ use crate::arrays_as_bytes;
 
 /// Represents an Ethereum address (20 bytes).
 #[derive(PartialEq, Debug, Serialize, Deserialize, Copy, Clone, PartialOrd, Eq, Ord)]
-pub struct Address(#[serde(with = "arrays_as_bytes")] [u8; Address::SIZE]);
+pub struct Address(#[serde(with = "serde_bytes::as_hex")] [u8; Address::SIZE]);
 
 impl Address {
     /// Size of canonical Ethereum address, in bytes.

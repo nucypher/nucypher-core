@@ -7,7 +7,6 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
-use pyo3::PyObjectProtocol;
 
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
@@ -183,22 +182,19 @@ impl HRAC {
     fn __bytes__(&self) -> &[u8] {
         self.backend.as_ref()
     }
-}
 
-impl AsBackend<nucypher_core::HRAC> for HRAC {
-    fn as_backend(&self) -> &nucypher_core::HRAC {
-        &self.backend
-    }
-}
-
-#[pyproto]
-impl PyObjectProtocol for HRAC {
     fn __richcmp__(&self, other: PyRef<HRAC>, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
     }
 
     fn __hash__(&self) -> PyResult<isize> {
         hash("HRAC", self)
+    }
+}
+
+impl AsBackend<nucypher_core::HRAC> for HRAC {
+    fn as_backend(&self) -> &nucypher_core::HRAC {
+        &self.backend
     }
 }
 
@@ -927,10 +923,7 @@ impl FleetStateChecksum {
     fn __bytes__(&self) -> &[u8] {
         self.backend.as_ref()
     }
-}
 
-#[pyproto]
-impl PyObjectProtocol for FleetStateChecksum {
     fn __richcmp__(&self, other: PyRef<FleetStateChecksum>, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
     }

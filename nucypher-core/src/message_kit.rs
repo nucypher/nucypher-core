@@ -3,8 +3,8 @@ use alloc::string::String;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
-    decrypt_original, decrypt_reencrypted, encrypt, Capsule, DecryptionError, EncryptionError,
-    PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
+    decrypt_original, decrypt_reencrypted, encrypt, serde_bytes, Capsule, DecryptionError,
+    EncryptionError, PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
 use crate::versioning::{
@@ -16,7 +16,7 @@ use crate::versioning::{
 pub struct MessageKit {
     /// Encapsulated symmetric key for this message.
     pub capsule: Capsule,
-    #[serde(with = "serde_bytes")]
+    #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
 }
 

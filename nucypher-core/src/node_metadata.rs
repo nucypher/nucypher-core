@@ -4,11 +4,11 @@ use alloc::string::ToString;
 use core::fmt;
 
 use k256::ecdsa::recoverable;
-use k256::ecdsa::signature::Signature as SignatureTrait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::serde_as;
 use sha3::{Digest, Keccak256};
-use umbral_pre::{PublicKey, SerializableToArray, Signature, Signer};
+use signature::digest::Update;
+use umbral_pre::{serde_bytes, PublicKey, SerializableToArray, Signature, Signer};
 
 use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
@@ -17,16 +17,20 @@ use crate::versioning::{
 };
 use crate::VerificationError;
 
+// Since we cannot implement `TryFromBytes` for `recoverable::Signature`
+// (foreign trait & foreign type), and the custom deserializer does not work with `TryFrom<&[u8]>`
+// (https://github.com/serde-rs/serde/issues/2241),
+// we have to deserialize into `Box` and then convert it to the signature.
+// A little inefficient (one unnecessary allocation), but can't be helped.
 #[derive(Serialize, Deserialize)]
-struct SerializableSignature(#[serde(with = "serde_bytes")] Box<[u8]>);
+struct SerializableSignature(#[serde(with = "serde_bytes::as_base64")] Box<[u8]>);
 
 impl serde_with::SerializeAs<recoverable::Signature> for SerializableSignature {
     fn serialize_as<S>(source: &recoverable::Signature, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let sig = SerializableSignature(source.as_bytes().into());
-        sig.serialize(serializer)
+        SerializableSignature(source.as_ref().into()).serialize(serializer)
     }
 }
 
@@ -35,8 +39,8 @@ impl<'de> serde_with::DeserializeAs<'de, recoverable::Signature> for Serializabl
     where
         D: Deserializer<'de>,
     {
-        let sig = SerializableSignature::deserialize(deserializer)?;
-        recoverable::Signature::from_bytes(&sig.0).map_err(de::Error::custom)
+        let sig_bytes = SerializableSignature::deserialize(deserializer)?;
+        recoverable::Signature::try_from(sig_bytes.0.as_ref()).map_err(de::Error::custom)
     }
 }
 
@@ -89,14 +93,13 @@ pub struct NodeMetadataPayload {
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
     /// The node's SSL certificate (serialized in DER format).
-    #[serde(with = "serde_bytes")]
+    #[serde(with = "serde_bytes::as_base64")]
     pub certificate_der: Box<[u8]>,
     /// The hostname of the node's REST service.
     pub host: String,
     /// The port of the node's REST service.
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the operator address.
-    //#[serde(with = "arrays_as_bytes")]
     #[serde_as(as = "Option<SerializableSignature>")]
     pub operator_signature: Option<recoverable::Signature>,
 }
@@ -115,7 +118,7 @@ impl NodeMetadataPayload {
             .ok_or(AddressDerivationError::NoSignatureInPayload)?;
         let message = encode_defunct(&self.verifying_key.to_array());
         let key = signature
-            .recover_verify_key_from_digest(message)
+            .recover_verifying_key_from_digest(message)
             .map_err(AddressDerivationError::RecoveryFailed)?;
         Ok(Address::from_k256_public_key(&key))
     }
