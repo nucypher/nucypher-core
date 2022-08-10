@@ -1,4 +1,4 @@
-from .._nucypher_core import umbral as _umbral
+from ._nucypher_core import umbral as _umbral
 
 SecretKey = _umbral.SecretKey
 PublicKey = _umbral.PublicKey
