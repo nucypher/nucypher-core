@@ -6,6 +6,7 @@ SecretKeyFactory =_umbral.SecretKeyFactory
 Signature = _umbral.Signature
 Signer = _umbral.Signer
 Capsule = _umbral.Capsule
+KeyFrag = _umbral.KeyFrag
 VerifiedKeyFrag = _umbral.VerifiedKeyFrag
 CapsuleFrag = _umbral.CapsuleFrag
 VerifiedCapsuleFrag = _umbral.VerifiedCapsuleFrag
