@@ -231,14 +231,14 @@ impl EncryptedKeyFrag {
         signer: &Signer,
         recipient_key: &PublicKey,
         hrac: &HRAC,
-        verified_kfrag: VerifiedKeyFrag,
+        verified_kfrag: &VerifiedKeyFrag,
     ) -> Self {
         Self {
             backend: nucypher_core::EncryptedKeyFrag::new(
                 &signer.backend,
                 &recipient_key.backend,
                 &hrac.backend,
-                verified_kfrag.backend,
+                verified_kfrag.backend.clone(),
             ),
         }
     }
