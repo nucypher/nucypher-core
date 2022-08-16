@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use signature::digest::Update;
+use umbral_pre::serde_bytes;
 
-use crate::arrays_as_bytes;
 use crate::node_metadata::NodeMetadata;
 use crate::versioning::ProtocolObject;
 
 /// An identifier of the fleet state.
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct FleetStateChecksum(#[serde(with = "arrays_as_bytes")] [u8; 32]);
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct FleetStateChecksum(#[serde(with = "serde_bytes::as_hex")] [u8; 32]);
 
 impl FleetStateChecksum {
     /// Creates a checksum from the given list of node metadata, and, possibly,

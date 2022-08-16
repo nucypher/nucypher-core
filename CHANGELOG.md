@@ -6,7 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+### Changed
+
+- Bumped `umbral-pre` to 0.6, and the nested dependencies accordingly. ([#17])
+- Following the changes in `umbral-pre` 0.6, the types that were `serde`-serialized in human readable formats as hex will now have a `"0x"` prefix. ([#17])
+
+
+### Added
+
+- `Eq` marker for `HRAC` and `FleetStateChecksum`. ([#17])
+
+
+[#17]: https://github.com/nucypher/nucypher-core/pull/17
 
 
 ## [0.2.0] - 2022-04-24

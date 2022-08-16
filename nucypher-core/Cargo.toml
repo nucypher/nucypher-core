@@ -10,12 +10,12 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-umbral-pre = { version = "0.5.2", features = ["serde-support"]  }
+umbral-pre = { version = "0.6", features = ["serde-support"] }
 serde = { version = "1", default-features = false, features = ["derive"] }
-serde_bytes = "0.11"
 generic-array = "0.14"
 typenum = "1.14"
-sha3 = "0.9"
+sha3 = "0.10"
 rmp-serde = "0.15"
-k256 = { version = "0.10.4", default-features = false, features = ["ecdsa"]}
-signature = "1.4"
+k256 = { version = "0.11", default-features = false, features = ["ecdsa"]}
+signature = "1.5"
+serde_with = "1.14"

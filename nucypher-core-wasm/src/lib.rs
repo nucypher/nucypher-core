@@ -162,7 +162,7 @@ impl MessageKitWithFrags {
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct HRAC(nucypher_core::HRAC);
 
 impl AsBackend<nucypher_core::HRAC> for HRAC {

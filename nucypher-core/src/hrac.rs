@@ -2,10 +2,9 @@ use generic_array::sequence::Split;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
+use signature::digest::Update;
 use typenum::U16;
-use umbral_pre::{PublicKey, SerializableToArray};
-
-use crate::arrays_as_bytes;
+use umbral_pre::{serde_bytes, PublicKey, SerializableToArray};
 
 /// "hashed resource access code".
 ///
@@ -17,8 +16,8 @@ use crate::arrays_as_bytes;
 /// Publisher and Bob have all the information they need to construct this.
 /// Ursula does not, so we share it with her.
 #[allow(clippy::upper_case_acronyms)]
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct HRAC(#[serde(with = "arrays_as_bytes")] [u8; HRAC::SIZE]);
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct HRAC(#[serde(with = "serde_bytes::as_hex")] [u8; HRAC::SIZE]);
 
 impl HRAC {
     /// The size of HRAC in bytes.
