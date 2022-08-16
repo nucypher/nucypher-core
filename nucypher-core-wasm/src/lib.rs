@@ -202,6 +202,12 @@ impl HRAC {
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
     }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
 }
 
 //
@@ -1066,6 +1072,12 @@ impl FleetStateChecksum {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
     }
 }
 

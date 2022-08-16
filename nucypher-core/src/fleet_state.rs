@@ -1,3 +1,5 @@
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Keccak256};
 use signature::digest::Update;
@@ -47,5 +49,12 @@ impl FleetStateChecksum {
 impl AsRef<[u8]> for FleetStateChecksum {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
+    }
+}
+
+impl fmt::Display for FleetStateChecksum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hex_repr = hex::encode(&self.0[..8]);
+        write!(f, "FleetStateChecksum:{}...", hex_repr)
     }
 }
