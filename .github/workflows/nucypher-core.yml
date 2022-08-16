@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "nucypher-core/**"
+      - "nucypher-core-python/**"
+      - "nucypher-core-wasm/**"
       - "Cargo.*"
   push:
     branches:
