@@ -231,14 +231,14 @@ impl EncryptedKeyFrag {
         signer: &Signer,
         recipient_key: &PublicKey,
         hrac: &HRAC,
-        verified_kfrag: VerifiedKeyFrag,
+        verified_kfrag: &VerifiedKeyFrag,
     ) -> Self {
         Self {
             backend: nucypher_core::EncryptedKeyFrag::new(
                 &signer.backend,
                 &recipient_key.backend,
                 &hrac.backend,
-                verified_kfrag.backend,
+                verified_kfrag.backend.clone(),
             ),
         }
     }
@@ -1125,9 +1125,10 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     umbral_pre::bindings_python::register_reencrypt(umbral_module)?;
     umbral_pre::bindings_python::register_generate_kfrags(umbral_module)?;
 
-    umbral_module.add_class::<umbral_pre::bindings_python::Signer>()?; // Don't need it if we accept secret keys instead
-    umbral_module.add_class::<umbral_pre::bindings_python::Signature>()?; // probably not?
-    umbral_module.add_class::<umbral_pre::bindings_python::CapsuleFrag>()?; // probably not? Porter needs it
+    umbral_module.add_class::<umbral_pre::bindings_python::Signer>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::Signature>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::KeyFrag>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::CapsuleFrag>()?;
     umbral_module.add(
         "VerificationError",
         py.get_type::<umbral_pre::bindings_python::VerificationError>(),

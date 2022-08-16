@@ -9,10 +9,10 @@ setup(
     author_email="bogdan@opanchuk.net",
     url="https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python",
     rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3, debug=False)],
-    packages=["nucypher_core", "nucypher_core.umbral"],
-    #package_data = {
-    #    'nucypher_core': ['py.typed', '__init__.pyi'],
-    #},
+    packages=["nucypher_core"],
+    package_data = {
+        'nucypher_core': ['py.typed', '__init__.pyi', 'umbral.pyi'],
+    },
     # rust extensions are not zip safe, just like C-extensions.
     zip_safe=False,
     classifiers=[

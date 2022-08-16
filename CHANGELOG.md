@@ -15,9 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `Eq` marker for `HRAC` and `FleetStateChecksum`. ([#17])
+- Python typing stubs. ([#20])
+- The Python module `nucypher_core.umbral` now exportd `KeyFrag`. ([#20])
 
 
 [#17]: https://github.com/nucypher/nucypher-core/pull/17
+[#20]: https://github.com/nucypher/nucypher-core/pull/20
 
 
 ## [0.2.0] - 2022-04-24
