@@ -195,6 +195,10 @@ impl HRAC {
     fn __hash__(&self) -> PyResult<isize> {
         hash("HRAC", self)
     }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self.backend))
+    }
 }
 
 impl AsBackend<nucypher_core::HRAC> for HRAC {
@@ -935,6 +939,10 @@ impl FleetStateChecksum {
 
     fn __hash__(&self) -> PyResult<isize> {
         hash("FleetStateChecksum", self)
+    }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self.backend))
     }
 }
 

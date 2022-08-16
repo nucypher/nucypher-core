@@ -19,3 +19,4 @@ rmp-serde = "0.15"
 k256 = { version = "0.11", default-features = false, features = ["ecdsa"]}
 signature = "1.5"
 serde_with = "1.14"
+hex = "0.4"

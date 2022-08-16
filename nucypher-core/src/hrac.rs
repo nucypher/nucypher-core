@@ -1,3 +1,5 @@
+use core::fmt;
+
 use generic_array::sequence::Split;
 use generic_array::GenericArray;
 use serde::{Deserialize, Serialize};
@@ -50,5 +52,12 @@ impl From<[u8; HRAC::SIZE]> for HRAC {
 impl AsRef<[u8]> for HRAC {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
+    }
+}
+
+impl fmt::Display for HRAC {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let hex_repr = hex::encode(&self.0[..8]);
+        write!(f, "HRAC:{}...", hex_repr)
     }
 }
