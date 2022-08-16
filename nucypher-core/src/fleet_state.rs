@@ -7,7 +7,7 @@ use crate::node_metadata::NodeMetadata;
 use crate::versioning::ProtocolObject;
 
 /// An identifier of the fleet state.
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FleetStateChecksum(#[serde(with = "serde_bytes::as_hex")] [u8; 32]);
 
 impl FleetStateChecksum {

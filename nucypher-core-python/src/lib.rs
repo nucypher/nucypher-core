@@ -1,3 +1,8 @@
+// Clippy shows false positives in PyO3 methods.
+// See https://github.com/rust-lang/rust-clippy/issues/8971
+// Will probably be fixed by Rust 1.65
+#![allow(clippy::borrow_deref_ref)]
+
 extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
@@ -150,7 +155,7 @@ impl MessageKit {
 
 #[allow(clippy::upper_case_acronyms)]
 #[pyclass(module = "nucypher_core")]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct HRAC {
     backend: nucypher_core::HRAC,
 }
@@ -893,7 +898,7 @@ impl NodeMetadata {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct FleetStateChecksum {
     backend: nucypher_core::FleetStateChecksum,
 }

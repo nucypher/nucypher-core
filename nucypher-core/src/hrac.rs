@@ -16,7 +16,7 @@ use umbral_pre::{serde_bytes, PublicKey, SerializableToArray};
 /// Publisher and Bob have all the information they need to construct this.
 /// Ursula does not, so we share it with her.
 #[allow(clippy::upper_case_acronyms)]
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct HRAC(#[serde(with = "serde_bytes::as_hex")] [u8; HRAC::SIZE]);
 
 impl HRAC {
