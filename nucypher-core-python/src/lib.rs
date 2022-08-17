@@ -147,6 +147,11 @@ impl MessageKit {
             backend: self.backend.capsule,
         }
     }
+
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend.conditions.as_ref().map(|boxed_condition|boxed_condition.as_ref())
+    }
 }
 
 //

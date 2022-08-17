@@ -18,6 +18,7 @@ pub struct MessageKit {
     pub capsule: Capsule,
     #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
+    pub conditions: Option<Box<[u8]>>
 }
 
 impl MessageKit {
@@ -34,6 +35,7 @@ impl MessageKit {
         Self {
             capsule,
             ciphertext,
+            conditions: None,
         }
     }
 
