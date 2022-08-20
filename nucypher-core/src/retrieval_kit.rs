@@ -20,6 +20,8 @@ pub struct RetrievalKit {
     pub capsule: Capsule,
     /// The addresses that have already been queried for reencryption.
     pub queried_addresses: BTreeSet<Address>,
+    /// A blob of bytes containing decryption conditions for this message.
+    pub conditions: Option<Box<[u8]>>,
 }
 
 impl RetrievalKit {
@@ -28,15 +30,21 @@ impl RetrievalKit {
         Self {
             capsule: message_kit.capsule,
             queried_addresses: BTreeSet::<Address>::new(),
+            conditions: message_kit.conditions.clone(),
         }
     }
 
     /// Creates a new retrieval kit recording the addresses already queried for reencryption.
-    pub fn new(capsule: &Capsule, queried_addresses: impl IntoIterator<Item = Address>) -> Self {
+    pub fn new(
+        capsule: &Capsule,
+        queried_addresses: impl IntoIterator<Item = Address>,
+        conditions: Option<&[u8]>,
+    ) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
             queried_addresses: queried_addresses.into_iter().collect(),
+            conditions: conditions.map(|c| c.into()),
         }
     }
 }

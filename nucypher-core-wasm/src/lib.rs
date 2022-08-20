@@ -2,13 +2,11 @@
 // Disable false-positive warnings caused by `#[wasm-bindgen]` on struct impls
 #![allow(clippy::unused_unit)]
 
-// Use `wee_alloc` as the global allocator.
-extern crate wee_alloc;
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 #[macro_use]
 extern crate alloc;
+// Use `wee_alloc` as the global allocator.
+extern crate wee_alloc;
+
 use alloc::{
     boxed::Box,
     format,
@@ -16,15 +14,20 @@ use alloc::{
     vec::Vec,
 };
 use core::fmt;
+
 use js_sys::Error;
-use nucypher_core::k256::ecdsa::recoverable;
-use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
-use nucypher_core::ProtocolObject;
 use serde::{Deserialize, Serialize};
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
+
+use nucypher_core::k256::ecdsa::recoverable;
+use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
+use nucypher_core::ProtocolObject;
+
+#[global_allocator]
+static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 fn map_js_err<T: fmt::Display>(err: T) -> JsValue {
     Error::new(&format!("{}", err)).into()
@@ -90,10 +93,15 @@ impl FromBackend<nucypher_core::MessageKit> for MessageKit {
 #[wasm_bindgen]
 impl MessageKit {
     #[wasm_bindgen(constructor)]
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> MessageKit {
+    pub fn new(
+        policy_encrypting_key: &PublicKey,
+        plaintext: &[u8],
+        conditions: Option<Vec<u8>>,
+    ) -> MessageKit {
         MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.inner(),
             plaintext,
+            conditions.as_ref().map(|c| c.as_ref()),
         ))
     }
 
@@ -473,6 +481,8 @@ pub struct ReencryptionRequestBuilder {
     encrypted_kfrag: nucypher_core::EncryptedKeyFrag,
     publisher_verifying_key: umbral_pre::PublicKey,
     bob_verifying_key: umbral_pre::PublicKey,
+    conditions: Option<Box<[u8]>>,
+    context: Option<Box<[u8]>>,
 }
 
 #[wasm_bindgen]
@@ -483,6 +493,8 @@ impl ReencryptionRequestBuilder {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
+        conditions: Option<Box<[u8]>>,
+        context: Option<Box<[u8]>>,
     ) -> Result<ReencryptionRequestBuilder, JsValue> {
         Ok(Self {
             capsules: Vec::new(),
@@ -490,6 +502,8 @@ impl ReencryptionRequestBuilder {
             encrypted_kfrag: encrypted_kfrag.0.clone(),
             publisher_verifying_key: *publisher_verifying_key.inner(),
             bob_verifying_key: *bob_verifying_key.inner(),
+            conditions,
+            context,
         })
     }
 
@@ -507,8 +521,14 @@ impl ReencryptionRequestBuilder {
             &self.encrypted_kfrag,
             &self.publisher_verifying_key,
             &self.bob_verifying_key,
+            box_ref(&self.conditions),
+            box_ref(&self.context),
         ))
     }
+}
+
+fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
+    source.as_ref().map(|bytes| bytes.as_ref())
 }
 
 #[wasm_bindgen]
@@ -551,6 +571,16 @@ impl ReencryptionRequest {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+
+    #[wasm_bindgen(method, getter)]
+    pub fn conditions(&self) -> Option<Box<[u8]>> {
+        self.0.conditions.clone()
+    }
+
+    #[wasm_bindgen(method, getter)]
+    pub fn context(&self) -> Option<Box<[u8]>> {
+        self.0.context.clone()
     }
 }
 
@@ -700,15 +730,17 @@ impl ReencryptionResponseWithCapsules {
 pub struct RetrievalKitBuilder {
     capsule: umbral_pre::Capsule,
     queried_addresses: Vec<nucypher_core::Address>,
+    conditions: Option<Box<[u8]>>,
 }
 
 #[wasm_bindgen]
 impl RetrievalKitBuilder {
     #[wasm_bindgen(constructor)]
-    pub fn new(capsule: &Capsule) -> Self {
+    pub fn new(capsule: &Capsule, conditions: Option<Box<[u8]>>) -> Self {
         Self {
             capsule: *capsule.inner(),
             queried_addresses: Vec::new(),
+            conditions,
         }
     }
 
@@ -724,6 +756,7 @@ impl RetrievalKitBuilder {
         RetrievalKit(nucypher_core::RetrievalKit::new(
             &self.capsule,
             self.queried_addresses.clone(),
+            box_ref(&self.conditions),
         ))
     }
 }
@@ -855,7 +888,7 @@ impl VerifiedRevocationOrder {
         self.address.clone()
     }
 
-    #[wasm_bindgen(getter, js_name=encryptedKFrag)]
+    #[wasm_bindgen(getter, js_name = encryptedKFrag)]
     pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
         EncryptedKeyFrag(self.encrypted_kfrag.clone())
     }
@@ -914,12 +947,12 @@ impl NodeMetadataPayload {
         self.0.staking_provider_address.as_ref().to_vec()
     }
 
-    #[wasm_bindgen(method, getter, js_name=verifyingKey)]
+    #[wasm_bindgen(method, getter, js_name = verifyingKey)]
     pub fn verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.verifying_key)
     }
 
-    #[wasm_bindgen(method, getter, js_name=encryptingKey)]
+    #[wasm_bindgen(method, getter, js_name = encryptingKey)]
     pub fn encrypting_key(&self) -> PublicKey {
         PublicKey::new(self.0.encrypting_key)
     }
@@ -946,7 +979,7 @@ impl NodeMetadataPayload {
         self.0.port
     }
 
-    #[wasm_bindgen(method, getter, js_name=timestampEpoch)]
+    #[wasm_bindgen(method, getter, js_name = timestampEpoch)]
     pub fn timestamp_epoch(&self) -> u32 {
         self.0.timestamp_epoch
     }
@@ -1029,6 +1062,7 @@ pub struct FleetStateChecksumBuilder {
     this_node: Option<nucypher_core::NodeMetadata>,
     other_nodes: Vec<nucypher_core::NodeMetadata>,
 }
+
 #[wasm_bindgen]
 impl FleetStateChecksumBuilder {
     // TODO: Fix lack of reference leading to accidental freeing of memory
@@ -1042,7 +1076,7 @@ impl FleetStateChecksumBuilder {
         }
     }
 
-    #[wasm_bindgen(js_name=addOtherNode)]
+    #[wasm_bindgen(js_name = addOtherNode)]
     pub fn add_other_node(&mut self, other_node: &NodeMetadata) -> Self {
         self.other_nodes.push(other_node.inner().clone());
         self.clone()
@@ -1114,7 +1148,7 @@ impl MetadataRequestBuilder {
         }
     }
 
-    #[wasm_bindgen(js_name=addAnnounceNode)]
+    #[wasm_bindgen(js_name = addAnnounceNode)]
     pub fn add_announce_node(&mut self, announce_node: &NodeMetadata) -> Self {
         self.announce_nodes.push(announce_node.inner().clone());
         self.clone()
@@ -1193,7 +1227,7 @@ impl MetadataResponsePayloadBuilder {
         }
     }
 
-    #[wasm_bindgen(js_name=addAnnounceNode)]
+    #[wasm_bindgen(js_name = addAnnounceNode)]
     pub fn add_announce_node(&mut self, announce_node: &NodeMetadata) -> Self {
         self.announce_nodes.push(announce_node.inner().clone());
         self.clone()
@@ -1218,7 +1252,7 @@ impl MetadataResponsePayload {
         self.0.timestamp_epoch
     }
 
-    #[wasm_bindgen(method, getter, js_name=announceNodes)]
+    #[wasm_bindgen(method, getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> Vec<JsValue> {
         self.0
             .announce_nodes

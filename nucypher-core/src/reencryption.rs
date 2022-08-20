@@ -27,6 +27,10 @@ pub struct ReencryptionRequest {
     pub publisher_verifying_key: PublicKey,
     /// Recipient's (Bob's) verifying key.
     pub bob_verifying_key: PublicKey,
+    /// A blob of bytes containing decryption conditions for this message.
+    pub conditions: Option<Box<[u8]>>,
+    /// A blob of bytes containing context required to evaluate conditions.
+    pub context: Option<Box<[u8]>>,
 }
 
 impl ReencryptionRequest {
@@ -37,6 +41,8 @@ impl ReencryptionRequest {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
+        conditions: Option<&[u8]>,
+        context: Option<&[u8]>,
     ) -> Self {
         Self {
             capsules: capsules.into(),
@@ -44,6 +50,8 @@ impl ReencryptionRequest {
             encrypted_kfrag: encrypted_kfrag.clone(),
             publisher_verifying_key: *publisher_verifying_key,
             bob_verifying_key: *bob_verifying_key,
+            conditions: conditions.map(|c| c.into()),
+            context: context.map(|c| c.into()),
         }
     }
 }
@@ -54,7 +62,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (1, 1)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
