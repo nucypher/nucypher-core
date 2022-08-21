@@ -9,10 +9,10 @@ use umbral_pre::{
 
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
+use crate::VerificationError;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
-use crate::VerificationError;
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -106,7 +106,7 @@ impl ReencryptionResponse {
     pub fn new(
         signer: &Signer,
         capsules: &[Capsule],
-        vcfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
+        vcfrags: impl IntoIterator<Item=VerifiedCapsuleFrag>,
     ) -> Self {
         // un-verify
         let cfrags: Vec<_> = vcfrags
@@ -190,3 +190,25 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
 }
 
 impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
+
+
+#[cfg(test)]
+mod tests {
+    use umbral_pre::encrypt;
+    use umbral_pre::SecretKey;
+    use crate::HRAC;
+
+    use super::ReencryptionRequest;
+
+    #[test]
+    fn conditions_and_context_are_different() {
+        let _some_secret = SecretKey::random();
+        let some_trinket = _some_secret.public_key();
+        let (capsule, _ciphertext) = encrypt(&some_trinket, b"peace at dawn");
+        let hrac = HRAC::from()
+        C::new()
+
+
+        ReencryptionRequest::new(&[capsule], );
+    }
+}
