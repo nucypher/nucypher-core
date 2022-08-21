@@ -79,7 +79,7 @@ where
 }
 
 //
-// MessageKit
+//
 //
 
 #[pyclass(module = "nucypher_core")]
