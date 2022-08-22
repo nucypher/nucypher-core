@@ -62,7 +62,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn version() -> (u16, u16) {
-        (1, 1)
+        (1, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -205,8 +205,8 @@ mod tests {
         let _some_secret = SecretKey::random();
         let some_trinket = _some_secret.public_key();
         let (capsule, _ciphertext) = encrypt(&some_trinket, b"peace at dawn");
-        let hrac = HRAC::from()
-        C::new()
+        let hrac = HRAC::from();
+        C::new();
 
 
         ReencryptionRequest::new(&[capsule], );

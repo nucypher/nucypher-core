@@ -534,6 +534,22 @@ impl ReencryptionRequest {
             .collect::<Vec<_>>()
     }
 
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_condition| boxed_condition.as_ref())
+    }
+
+    #[getter]
+    fn context(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_condition| boxed_condition.as_ref())
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes(data)
@@ -689,6 +705,14 @@ impl RetrievalKit {
             .iter()
             .map(|address| address.as_ref())
             .collect::<BTreeSet<_>>()
+    }
+
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_condition| boxed_condition.as_ref())
     }
 
     #[staticmethod]
