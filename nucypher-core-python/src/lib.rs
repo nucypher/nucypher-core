@@ -539,15 +539,15 @@ impl ReencryptionRequest {
         self.backend
             .conditions
             .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+            .map(|boxed_conditions| boxed_conditions.as_ref())
     }
 
     #[getter]
     fn context(&self) -> Option<&[u8]> {
         self.backend
-            .conditions
+            .context
             .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+            .map(|boxed_context| boxed_context.as_ref())
     }
 
     #[staticmethod]
