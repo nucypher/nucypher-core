@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+### Fixed
+
+- Fixed the type annotation for `signer` in `generate_kfrags()` in Python type stubs. ([#28])
+
+
+[#28]: https://github.com/nucypher/nucypher-core/pull/28
 
 
 ## [0.3.0] - 2022-08-16
