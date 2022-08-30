@@ -204,11 +204,26 @@ mod tests {
     fn conditions_and_context_are_different() {
         let _some_secret = SecretKey::random();
         let some_trinket = _some_secret.public_key();
-        let (capsule, _ciphertext) = encrypt(&some_trinket, b"peace at dawn");
-        let hrac = HRAC::from();
-        C::new();
+
+        let _another_secret = SecretKey::random();
+        let another_trinket = _some_secret.public_key();
+
+        let encryption_result = encrypt(&some_trinket, b"peace at dawn");
+        let (capsule, _ciphertext) = encryption_result.unwrap();
+        let hrac = HRAC::new(
+            &some_trinket,
+            &another_trinket,
+            &[42],
+        );
+        let request = ReencryptionRequest::new(
+            &[capsule],
+
+        );
+
+        assert!(false);
+        // let hrac = HRAC::from();
 
 
-        ReencryptionRequest::new(&[capsule], );
+        // ReencryptionRequest::new(&[capsule], );
     }
 }
