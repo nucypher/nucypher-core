@@ -194,30 +194,56 @@ impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use umbral_pre::encrypt;
+    use umbral_pre::{encrypt, generate_kfrags, Signer};
     use umbral_pre::SecretKey;
-    use crate::HRAC;
+    use crate::{EncryptedKeyFrag, HRAC};
 
     use super::ReencryptionRequest;
 
     #[test]
     fn conditions_and_context_are_different() {
-        let _some_secret = SecretKey::random();
-        let some_trinket = _some_secret.public_key();
+        let some_secret = SecretKey::random();
+        let some_trinket = some_secret.public_key();
 
         let _another_secret = SecretKey::random();
-        let another_trinket = _some_secret.public_key();
+        let another_trinket = some_secret.public_key();
 
         let encryption_result = encrypt(&some_trinket, b"peace at dawn");
+
         let (capsule, _ciphertext) = encryption_result.unwrap();
+
         let hrac = HRAC::new(
             &some_trinket,
             &another_trinket,
             &[42],
         );
+
+        let signer = Signer::new(SecretKey::random());
+
+        let verified_kfrags = generate_kfrags(
+            &some_secret,
+            &another_trinket,
+            &signer,
+            5,
+            8,
+            true,
+            true,
+        );
+
+        let encrypted_kfrag = EncryptedKeyFrag::new(&signer,
+                                                    &another_trinket,
+                                                    &hrac,
+                                                    verified_kfrags[0]);
+
+
         let request = ReencryptionRequest::new(
             &[capsule],
-
+            &hrac,
+            &encrypted_kfrag,
+            &some_trinket,
+            &another_trinket,
+            None,
+            None,
         );
 
         assert!(false);
