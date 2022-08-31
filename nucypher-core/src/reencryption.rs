@@ -247,14 +247,14 @@ mod tests {
             &encrypted_kfrag,
             &some_trinket,
             &another_trinket,
-            None,
-            None,
+            Some(&[47u8]),
+            Some(&[51u8]),
         );
+        let conditions = request.conditions.unwrap();
+        assert!(conditions[0].eq(&47u8));
 
-        assert!(false);
-        // let hrac = HRAC::from();
+        let context= request.context.unwrap();
+        assert!(context[0].eq(&51u8));
 
-
-        // ReencryptionRequest::new(&[capsule], );
     }
 }
