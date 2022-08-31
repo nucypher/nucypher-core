@@ -194,9 +194,6 @@ impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use alloc::boxed::Box;
-    use alloc::vec::Vec;
-
     use umbral_pre::{encrypt, generate_kfrags, Signer};
     use umbral_pre::SecretKey;
 
