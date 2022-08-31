@@ -194,8 +194,12 @@ impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
 
 #[cfg(test)]
 mod tests {
+    use alloc::boxed::Box;
+    use alloc::vec::Vec;
+
     use umbral_pre::{encrypt, generate_kfrags, Signer};
     use umbral_pre::SecretKey;
+
     use crate::{EncryptedKeyFrag, HRAC};
 
     use super::ReencryptionRequest;
@@ -229,11 +233,12 @@ mod tests {
             true,
             true,
         );
-
+        let verified_kfrags_vector = verified_kfrags.into_vec();
+        let one_verified_krag_in_particular = verified_kfrags_vector[0].clone();
         let encrypted_kfrag = EncryptedKeyFrag::new(&signer,
                                                     &another_trinket,
                                                     &hrac,
-                                                    verified_kfrags[0]);
+                                                    one_verified_krag_in_particular);
 
 
         let request = ReencryptionRequest::new(
