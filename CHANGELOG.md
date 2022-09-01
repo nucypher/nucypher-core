@@ -40,7 +40,6 @@ Under Construction
 - The Python module `nucypher_core.umbral` now exports `KeyFrag`. ([#20])
 - `Display` impl for `HRAC` and `FleetStateChecksum`, and exposed it in the Python and WASM bindings. ([#22])
 
-
 [#17]: https://github.com/nucypher/nucypher-core/pull/17
 [#20]: https://github.com/nucypher/nucypher-core/pull/20
 [#22]: https://github.com/nucypher/nucypher-core/pull/22
