@@ -6,8 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+Under construction
 
+## [0.3.1-alpha.0] - 2022-09-01
+
+- `conditions` and `context` to `ReencryptionRequest` with python/wasm bindings to expose them.
+- `conditions` to `MessageKit` and `RetrievalKit` with python/wasm bindings to expose them.
+
+[#23]: https://github.com/nucypher/nucypher-core/pull/23
+[#24]: https://github.com/nucypher/nucypher-core/pull/24
+[#25]: https://github.com/nucypher/nucypher-core/pull/25
+[#26]: https://github.com/nucypher/nucypher-core/pull/26
 
 ## [0.3.0] - 2022-08-16
 
@@ -23,7 +32,6 @@ Under construction.
 - Python typing stubs. ([#20])
 - The Python module `nucypher_core.umbral` now exports `KeyFrag`. ([#20])
 - `Display` impl for `HRAC` and `FleetStateChecksum`, and exposed it in the Python and WASM bindings. ([#22])
-
 
 [#17]: https://github.com/nucypher/nucypher-core/pull/17
 [#20]: https://github.com/nucypher/nucypher-core/pull/20
