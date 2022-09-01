@@ -9,10 +9,10 @@ use umbral_pre::{
 
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
-use crate::VerificationError;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
+use crate::VerificationError;
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -106,7 +106,7 @@ impl ReencryptionResponse {
     pub fn new(
         signer: &Signer,
         capsules: &[Capsule],
-        vcfrags: impl IntoIterator<Item=VerifiedCapsuleFrag>,
+        vcfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
     ) -> Self {
         // un-verify
         let cfrags: Vec<_> = vcfrags
@@ -191,11 +191,10 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
 
 impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
 
-
 #[cfg(test)]
 mod tests {
-    use umbral_pre::{encrypt, generate_kfrags, Signer};
     use umbral_pre::SecretKey;
+    use umbral_pre::{encrypt, generate_kfrags, Signer};
 
     use crate::{EncryptedKeyFrag, HRAC};
 
@@ -213,30 +212,20 @@ mod tests {
 
         let (capsule, _ciphertext) = encryption_result.unwrap();
 
-        let hrac = HRAC::new(
-            &some_trinket,
-            &another_trinket,
-            &[42],
-        );
+        let hrac = HRAC::new(&some_trinket, &another_trinket, &[42]);
 
         let signer = Signer::new(SecretKey::random());
 
-        let verified_kfrags = generate_kfrags(
-            &some_secret,
-            &another_trinket,
-            &signer,
-            5,
-            8,
-            true,
-            true,
-        );
+        let verified_kfrags =
+            generate_kfrags(&some_secret, &another_trinket, &signer, 5, 8, true, true);
         let verified_kfrags_vector = verified_kfrags.into_vec();
         let one_verified_krag_in_particular = verified_kfrags_vector[0].clone();
-        let encrypted_kfrag = EncryptedKeyFrag::new(&signer,
-                                                    &another_trinket,
-                                                    &hrac,
-                                                    one_verified_krag_in_particular);
-
+        let encrypted_kfrag = EncryptedKeyFrag::new(
+            &signer,
+            &another_trinket,
+            &hrac,
+            one_verified_krag_in_particular,
+        );
 
         let request = ReencryptionRequest::new(
             &[capsule],
@@ -250,8 +239,7 @@ mod tests {
         let conditions = request.conditions.unwrap();
         assert!(conditions[0].eq(&47u8));
 
-        let context= request.context.unwrap();
+        let context = request.context.unwrap();
         assert!(context[0].eq(&51u8));
-
     }
 }
