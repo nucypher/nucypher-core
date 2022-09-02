@@ -12,6 +12,7 @@ Under construction
 
 - `conditions` and `context` to `ReencryptionRequest` with python/wasm bindings to expose them.
 - `conditions` to `MessageKit` and `RetrievalKit` with python/wasm bindings to expose them.
+- rust-native tests for these new attributes and getters
 
 [#24]: https://github.com/nucypher/nucypher-core/pull/24
 [#25]: https://github.com/nucypher/nucypher-core/pull/25

@@ -1,5 +1,6 @@
 use nucypher_core::Address;
 use nucypher_core_wasm::*;
+use serde::de::Unexpected::Option;
 
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -38,9 +39,9 @@ pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
     of_js_value_generic(js_value, "NodeMetadata").unwrap_or(None)
 }
 
-fn make_message_kit(sk: &SecretKey, plaintext: &[u8]) -> MessageKit {
+fn make_message_kit(sk: &SecretKey, plaintext: &[u8], conditions: Option<Vec<u8>>) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
-    MessageKit::new(&policy_encrypting_key, plaintext)
+    MessageKit::new(&policy_encrypting_key, plaintext, conditions)
 }
 
 fn make_hrac() -> HRAC {
@@ -121,8 +122,9 @@ fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadat
 #[wasm_bindgen_test]
 fn message_kit_decrypts() {
     let sk = SecretKey::random();
-    let plaintext = b"Hello, world!";
-    let message_kit = make_message_kit(&sk, plaintext);
+    let plaintext = "Hello, world!".as_bytes();
+    let conditions = Option("{'llamas': 'yes'}".as_bytes());
+    let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
     assert_eq!(
