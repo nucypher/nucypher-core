@@ -6,13 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Under Construction
+
+## [0.4.0-alpha.0] 2022-09-07
+
 ### Fixed
 
 - Fixed the type annotation for `signer` in `generate_kfrags()` in Python type stubs. ([#28])
 
+### Added
 
+- `conditions` and `context` to `ReencryptionRequest` with python/wasm bindings to expose them.
+- `conditions` to `MessageKit` and `RetrievalKit` with python/wasm bindings to expose them.
+- rust-native tests for these new attributes and getters
+
+[#24]: https://github.com/nucypher/nucypher-core/pull/24
+[#25]: https://github.com/nucypher/nucypher-core/pull/25
+[#26]: https://github.com/nucypher/nucypher-core/pull/26
 [#28]: https://github.com/nucypher/nucypher-core/pull/28
-
 
 ## [0.3.0] - 2022-08-16
 
