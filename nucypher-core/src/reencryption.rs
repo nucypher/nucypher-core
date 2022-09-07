@@ -14,6 +14,9 @@ use crate::versioning::{
 };
 use crate::VerificationError;
 
+pub struct Conditions(Box<[u8]>);
+pub struct Context(Box<[u8]>);
+
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ReencryptionRequest {
@@ -28,9 +31,9 @@ pub struct ReencryptionRequest {
     /// Recipient's (Bob's) verifying key.
     pub bob_verifying_key: PublicKey,
     /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    pub conditions: Option<Conditions>,
     /// A blob of bytes containing context required to evaluate conditions.
-    pub context: Option<Box<[u8]>>,
+    pub context: Option<Context>,
 }
 
 impl ReencryptionRequest {
