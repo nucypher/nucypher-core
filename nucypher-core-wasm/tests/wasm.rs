@@ -421,9 +421,7 @@ fn reencryption_response_verify() {
     // Make capsules
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions = Some(
-        "{'hello': 'world'}".as_bytes().to_vec(),
-    );
+    let conditions = Some("{'hello': 'world'}".as_bytes().to_vec());
 
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
     let capsules: Vec<Capsule> = kfrags.iter().map(|_| message_kit.capsule()).collect();
