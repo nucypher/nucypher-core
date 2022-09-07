@@ -194,6 +194,8 @@ class RetrievalKit:
 
     queried_addresses: Set[bytes]
 
+    conditions: Optional[bytes]
+
     @staticmethod
     def from_bytes(data: bytes) -> RetrievalKit:
         ...
