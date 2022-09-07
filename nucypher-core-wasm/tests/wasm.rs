@@ -1,6 +1,5 @@
 use nucypher_core::Address;
 use nucypher_core_wasm::*;
-use serde::de::Unexpected::Option;
 
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -123,7 +122,7 @@ fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadat
 fn message_kit_decrypts() {
     let sk = SecretKey::random();
     let plaintext = "Hello, world!".as_bytes();
-    let conditions = Option("{'llamas': 'yes'}".as_bytes());
+    let conditions: Option<Vec<u8>> = Some("{'llamas': 'yes'}".as_bytes().to_vec());
     let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
@@ -139,7 +138,8 @@ fn message_kit_decrypt_reencrypted() {
     let delegating_sk = SecretKey::random();
     let delegating_pk = delegating_sk.public_key();
     let plaintext = b"Hello, world!";
-    let message_kit = MessageKit::new(&delegating_pk, plaintext);
+    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
+    let message_kit = MessageKit::new(&delegating_pk, plaintext, conditions);
 
     // Create key fragments for reencryption
     let receiving_sk = SecretKey::random();
@@ -187,7 +187,8 @@ fn message_kit_to_bytes_from_bytes() {
     let policy_encrypting_key = sk.public_key();
     let plaintext = b"Hello, world!";
 
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
+    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
 
     assert_eq!(
         message_kit,
@@ -362,7 +363,8 @@ fn reencryption_request_from_bytes_to_bytes() {
     let publisher_sk = SecretKey::random();
     let policy_encrypting_key = publisher_sk.public_key();
     let plaintext = b"Hello, world!";
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
+    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
+    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
     let capsules = vec![message_kit.capsule()];
 
     let hrac = make_hrac();
@@ -373,6 +375,8 @@ fn reencryption_request_from_bytes_to_bytes() {
     let signer = Signer::new(&publisher_sk);
     let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
+    let conditions: Option<Box<&[u8]>> = Some(Box::new("{'some': 'condition'}".as_bytes()));
+    let context: Option<Box<&[u8]>> = Some(Box::new("{'user': 'context'}".as_bytes()));
 
     // Make reencryption request
     let reencryption_request = ReencryptionRequestBuilder::new(
@@ -380,6 +384,8 @@ fn reencryption_request_from_bytes_to_bytes() {
         &encrypted_kfrag,
         &publisher_sk.public_key(),
         &receiving_pk,
+        conditions,
+        context
     )
     .unwrap()
     .add_capsule(&capsules[0])
@@ -410,6 +416,8 @@ fn reencryption_response_verify() {
     // Make capsules
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = b"Hello, world!";
+    let conditions: Option<Box<&[u8]>> = Some(Box::new("{'hello': 'world'}".as_bytes()));
+
     let message_kit = MessageKit::new(&policy_encrypting_key, plaintext);
     let capsules: Vec<Capsule> = kfrags.iter().map(|_| message_kit.capsule()).collect();
 
