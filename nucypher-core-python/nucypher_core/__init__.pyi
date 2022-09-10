@@ -25,6 +25,8 @@ class MessageKit:
 
     capsule: Capsule
 
+    conditions: Optional[bytes]
+
 
 class HRAC:
 
@@ -145,6 +147,10 @@ class ReencryptionRequest:
     encrypted_kfrag: EncryptedKeyFrag
 
     capsules: List[Capsule]
+
+    conditions: Optional[bytes]
+
+    context: Optioanl[bytes]
 
     @staticmethod
     def from_bytes(data: bytes) -> ReencryptionRequest:

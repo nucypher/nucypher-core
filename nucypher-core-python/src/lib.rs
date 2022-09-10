@@ -78,6 +78,11 @@ where
     })
 }
 
+/// A simple adapter that unboxes a bytestring inside an `Option`.
+fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
+    source.as_ref().map(|bytes| bytes.as_ref())
+}
+
 //
 //
 //
@@ -158,10 +163,7 @@ impl MessageKit {
 
     #[getter]
     fn conditions(&self) -> Option<&[u8]> {
-        self.backend
-            .conditions
-            .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+        box_ref(&self.backend.conditions)
     }
 }
 
@@ -536,18 +538,12 @@ impl ReencryptionRequest {
 
     #[getter]
     fn conditions(&self) -> Option<&[u8]> {
-        self.backend
-            .conditions
-            .as_ref()
-            .map(|boxed_conditions| boxed_conditions.as_ref())
+        box_ref(&self.backend.conditions)
     }
 
     #[getter]
     fn context(&self) -> Option<&[u8]> {
-        self.backend
-            .context
-            .as_ref()
-            .map(|boxed_context| boxed_context.as_ref())
+        box_ref(&self.backend.context)
     }
 
     #[staticmethod]
@@ -709,10 +705,7 @@ impl RetrievalKit {
 
     #[getter]
     fn conditions(&self) -> Option<&[u8]> {
-        self.backend
-            .conditions
-            .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+        box_ref(&self.backend.conditions)
     }
 
     #[staticmethod]

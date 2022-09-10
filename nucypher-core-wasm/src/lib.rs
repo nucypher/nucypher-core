@@ -70,6 +70,11 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
         })
 }
 
+/// A simple adapter that unboxes a bytestring inside an `Option`.
+fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
+    source.as_ref().map(|bytes| bytes.as_ref())
+}
+
 //
 // MessageKit
 //
@@ -96,12 +101,12 @@ impl MessageKit {
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
-        conditions: Option<Vec<u8>>,
+        conditions: Option<Box<[u8]>>,
     ) -> MessageKit {
         MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.inner(),
             plaintext,
-            conditions.as_ref().map(|c| c.as_ref()),
+            box_ref(&conditions),
         ))
     }
 
@@ -120,6 +125,11 @@ impl MessageKit {
     #[wasm_bindgen(method, getter)]
     pub fn capsule(&self) -> Capsule {
         Capsule::new(self.0.capsule)
+    }
+
+    #[wasm_bindgen(method, getter)]
+    pub fn conditions(&self) -> Option<Box<[u8]>> {
+        self.0.conditions.clone()
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -527,10 +537,6 @@ impl ReencryptionRequestBuilder {
     }
 }
 
-fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
-    source.as_ref().map(|bytes| bytes.as_ref())
-}
-
 #[wasm_bindgen]
 impl ReencryptionRequest {
     #[wasm_bindgen(method, getter)]
@@ -809,6 +815,11 @@ impl RetrievalKit {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+
+    #[wasm_bindgen(method, getter)]
+    pub fn conditions(&self) -> Option<Box<[u8]>> {
+        self.0.conditions.clone()
     }
 }
 
