@@ -122,6 +122,11 @@ impl MessageKit {
         Capsule::new(self.0.capsule)
     }
 
+    #[wasm_bindgen(method, getter)]
+    pub fn conditions(&self) -> Option<Box<[u8]>> {
+        self.0.conditions.clone()
+    }
+
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<MessageKit, JsValue> {
         from_bytes(data)
@@ -809,6 +814,11 @@ impl RetrievalKit {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+
+    #[wasm_bindgen(method, getter)]
+    pub fn conditions(&self) -> Option<Box<[u8]>> {
+        self.0.conditions.clone()
     }
 }
 
