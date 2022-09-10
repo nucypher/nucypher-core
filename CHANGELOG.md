@@ -6,7 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under Construction
+### Added
+
+- `conditions` getters in `MessageKit` and `RetrievalKit` in WASM bindings. (#[32])
+- Attributes `MessageKit.conditions`, `ReencryptionRequest.conditions`, and `ReencryptionRequest.context` in Python typing stubs. ([#32])
+
+
+[#32]: https://github.com/nucypher/nucypher-core/pull/32
 
 
 ## [0.4.0-alpha.0] - 2022-09-07
