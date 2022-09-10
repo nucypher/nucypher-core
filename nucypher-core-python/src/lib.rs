@@ -161,7 +161,7 @@ impl MessageKit {
         self.backend
             .conditions
             .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+            .map(|boxed_conditions| boxed_conditions.as_ref())
     }
 }
 
@@ -712,7 +712,7 @@ impl RetrievalKit {
         self.backend
             .conditions
             .as_ref()
-            .map(|boxed_condition| boxed_condition.as_ref())
+            .map(|boxed_conditions| boxed_conditions.as_ref())
     }
 
     #[staticmethod]
