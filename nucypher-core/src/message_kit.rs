@@ -18,11 +18,17 @@ pub struct MessageKit {
     pub capsule: Capsule,
     #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
+    /// A blob of bytes containing decryption conditions for this message.
+    pub conditions: Option<Box<[u8]>>,
 }
 
 impl MessageKit {
     /// Creates a new encrypted message for the given policy key.
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
+    pub fn new(
+        policy_encrypting_key: &PublicKey,
+        plaintext: &[u8],
+        conditions: Option<&[u8]>,
+    ) -> Self {
         let (capsule, ciphertext) = match encrypt(policy_encrypting_key, plaintext) {
             Ok(result) => result,
             Err(err) => match err {
@@ -34,6 +40,7 @@ impl MessageKit {
         Self {
             capsule,
             ciphertext,
+            conditions: conditions.map(|c| c.into()),
         }
     }
 

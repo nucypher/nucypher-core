@@ -79,7 +79,7 @@ where
 }
 
 //
-// MessageKit
+//
 //
 
 #[pyclass(module = "nucypher_core")]
@@ -111,9 +111,17 @@ impl MessageKit {
     }
 
     #[new]
-    pub fn new(policy_encrypting_key: &PublicKey, plaintext: &[u8]) -> Self {
+    pub fn new(
+        policy_encrypting_key: &PublicKey,
+        plaintext: &[u8],
+        conditions: Option<&[u8]>,
+    ) -> Self {
         Self {
-            backend: nucypher_core::MessageKit::new(&policy_encrypting_key.backend, plaintext),
+            backend: nucypher_core::MessageKit::new(
+                &policy_encrypting_key.backend,
+                plaintext,
+                conditions,
+            ),
         }
     }
 
@@ -146,6 +154,14 @@ impl MessageKit {
         Capsule {
             backend: self.backend.capsule,
         }
+    }
+
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_condition| boxed_condition.as_ref())
     }
 }
 
@@ -461,6 +477,8 @@ impl ReencryptionRequest {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
+        conditions: Option<&[u8]>,
+        context: Option<&[u8]>,
     ) -> Self {
         let capsules_backend = capsules
             .iter()
@@ -473,6 +491,8 @@ impl ReencryptionRequest {
                 &encrypted_kfrag.backend,
                 &publisher_verifying_key.backend,
                 &bob_verifying_key.backend,
+                conditions,
+                context,
             ),
         }
     }
@@ -512,6 +532,22 @@ impl ReencryptionRequest {
             .iter()
             .map(|capsule| Capsule { backend: *capsule })
             .collect::<Vec<_>>()
+    }
+
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_conditions| boxed_conditions.as_ref())
+    }
+
+    #[getter]
+    fn context(&self) -> Option<&[u8]> {
+        self.backend
+            .context
+            .as_ref()
+            .map(|boxed_context| boxed_context.as_ref())
     }
 
     #[staticmethod]
@@ -640,13 +676,18 @@ impl RetrievalKit {
     pub fn new(
         capsule: &Capsule,
         queried_addresses: BTreeSet<[u8; nucypher_core::Address::SIZE]>,
+        conditions: Option<&[u8]>,
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
             .map(nucypher_core::Address::new)
             .collect::<Vec<_>>();
         Self {
-            backend: nucypher_core::RetrievalKit::new(&capsule.backend, addresses_backend),
+            backend: nucypher_core::RetrievalKit::new(
+                &capsule.backend,
+                addresses_backend,
+                conditions,
+            ),
         }
     }
 
@@ -664,6 +705,14 @@ impl RetrievalKit {
             .iter()
             .map(|address| address.as_ref())
             .collect::<BTreeSet<_>>()
+    }
+
+    #[getter]
+    fn conditions(&self) -> Option<&[u8]> {
+        self.backend
+            .conditions
+            .as_ref()
+            .map(|boxed_condition| boxed_condition.as_ref())
     }
 
     #[staticmethod]

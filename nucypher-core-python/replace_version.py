@@ -17,14 +17,24 @@ def get_version():
         lines = f.readlines()
 
     for line in lines:
-        m = re.match(r'^version = "(\d+\.\d+\.\d+)"$', line)
+        pattern = re.compile(
+            r'^version = '        # starts with "version = "
+            r'"('                 # main capturing group
+            r'\d+\.\d+\.\d+'      # standard semver
+            r'(?:-[a-z]+\.\d+)?'  # optional non-capturing group for prereleases
+            r')"'                 # ends main capturing group
+            r'$'                  # nothing more
+        )
+        m = pattern.search(line)
         if m:
-            version = m.group(1)
+            version = m.groups(0)[0]
+            print(f'Found version {version}')
             break
     else:
         raise RuntimeError("Cannot find the package version")
 
     return version
+
 
 def relative_to_published():
 
