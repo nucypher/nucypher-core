@@ -38,9 +38,17 @@ pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
     of_js_value_generic(js_value, "NodeMetadata").unwrap_or(None)
 }
 
-fn make_message_kit(sk: &SecretKey, plaintext: &[u8], conditions: Option<Vec<u8>>) -> MessageKit {
+fn make_message_kit(
+    sk: &SecretKey,
+    plaintext: &[u8],
+    conditions: Option<impl AsRef<[u8]>>,
+) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
-    MessageKit::new(&policy_encrypting_key, plaintext, conditions)
+    MessageKit::new(
+        &policy_encrypting_key,
+        plaintext,
+        conditions.map(|bytes| bytes.as_ref().into()),
+    )
 }
 
 fn make_hrac() -> HRAC {
@@ -122,7 +130,7 @@ fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadat
 fn message_kit_decrypts() {
     let sk = SecretKey::random();
     let plaintext = "Hello, world!".as_bytes();
-    let conditions: Option<Vec<u8>> = Some("{'llamas': 'yes'}".as_bytes().to_vec());
+    let conditions = Some(b"{'llamas': 'yes'}");
     let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
@@ -138,8 +146,8 @@ fn message_kit_decrypt_reencrypted() {
     let delegating_sk = SecretKey::random();
     let delegating_pk = delegating_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
-    let message_kit = MessageKit::new(&delegating_pk, plaintext, conditions);
+    let conditions = Some(&b"{'hello': 'world'}");
+    let message_kit = make_message_kit(&delegating_sk, plaintext, conditions);
 
     // Create key fragments for reencryption
     let receiving_sk = SecretKey::random();
@@ -184,11 +192,10 @@ fn message_kit_decrypt_reencrypted() {
 #[wasm_bindgen_test]
 fn message_kit_to_bytes_from_bytes() {
     let sk = SecretKey::random();
-    let policy_encrypting_key = sk.public_key();
     let plaintext = b"Hello, world!";
 
-    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
+    let conditions = Some(&b"{'hello': 'world'}");
+    let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     assert_eq!(
         message_kit,
@@ -361,10 +368,9 @@ fn encrypted_treasure_map_from_bytes_to_bytes() {
 fn reencryption_request_from_bytes_to_bytes() {
     // Make capsules
     let publisher_sk = SecretKey::random();
-    let policy_encrypting_key = publisher_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions: Option<Vec<u8>> = Some("{'hello': 'world'}".as_bytes().to_vec());
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
+    let conditions = Some(&b"{'hello': 'world'}");
+    let message_kit = make_message_kit(&publisher_sk, plaintext, conditions);
     let capsules = vec![message_kit.capsule()];
 
     let hrac = make_hrac();
@@ -421,9 +427,9 @@ fn reencryption_response_verify() {
     // Make capsules
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions = Some("{'hello': 'world'}".as_bytes().to_vec());
+    let conditions = Some(b"{'hello': 'world'}");
 
-    let message_kit = MessageKit::new(&policy_encrypting_key, plaintext, conditions);
+    let message_kit = make_message_kit(&alice_sk, plaintext, conditions);
     let capsules: Vec<Capsule> = kfrags.iter().map(|_| message_kit.capsule()).collect();
 
     assert_eq!(capsules.len(), kfrags.len());
