@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Under Construction
 
-## [0.4.0-alpha.0] 2022-09-07
+
+## [0.4.0-alpha.0] - 2022-09-07
 
 ### Fixed
 
@@ -16,14 +17,14 @@ Under Construction
 
 ### Added
 
-- `conditions` and `context` to `ReencryptionRequest` with python/wasm bindings to expose them.
-- `conditions` to `MessageKit` and `RetrievalKit` with python/wasm bindings to expose them.
-- rust-native tests for these new attributes and getters
+- `conditions` and `context` to `ReencryptionRequest` with python/wasm bindings to expose them. ([#26])
+- `conditions` to `MessageKit` and `RetrievalKit` with python/wasm bindings to expose them. ([#26])
+- Rust-native tests for these new attributes and getters. ([#26])
 
-[#24]: https://github.com/nucypher/nucypher-core/pull/24
-[#25]: https://github.com/nucypher/nucypher-core/pull/25
+
 [#26]: https://github.com/nucypher/nucypher-core/pull/26
 [#28]: https://github.com/nucypher/nucypher-core/pull/28
+
 
 ## [0.3.0] - 2022-08-16
 
@@ -39,6 +40,7 @@ Under Construction
 - Python typing stubs. ([#20])
 - The Python module `nucypher_core.umbral` now exports `KeyFrag`. ([#20])
 - `Display` impl for `HRAC` and `FleetStateChecksum`, and exposed it in the Python and WASM bindings. ([#22])
+
 
 [#17]: https://github.com/nucypher/nucypher-core/pull/17
 [#20]: https://github.com/nucypher/nucypher-core/pull/20
@@ -109,6 +111,7 @@ Under Construction
 
 [#5]: https://github.com/nucypher/nucypher-core/pull/5
 
+
 ## [0.0.3] - 2022-02-03
 
 ### Fixed
@@ -136,6 +139,7 @@ Under Construction
 [#2]: https://github.com/nucypher/nucypher-core/pull/2
 [#4]: https://github.com/nucypher/nucypher-core/pull/4
 
+
 ## [0.0.1] - 2021-12-25
 
 Initial release.
@@ -150,3 +154,4 @@ Initial release.
 [0.1.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.1.1
 [0.2.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.2.0
 [0.3.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.3.0
+[0.4.0-alpha.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.4.0-alpha.0
