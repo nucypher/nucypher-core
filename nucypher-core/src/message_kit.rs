@@ -7,6 +7,7 @@ use umbral_pre::{
     EncryptionError, PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
+use crate::conditions::Conditions;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
@@ -18,8 +19,8 @@ pub struct MessageKit {
     pub capsule: Capsule,
     #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
-    /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    /// Decryption conditions for this message.
+    pub conditions: Option<Conditions>,
 }
 
 impl MessageKit {
@@ -27,7 +28,7 @@ impl MessageKit {
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         let (capsule, ciphertext) = match encrypt(policy_encrypting_key, plaintext) {
             Ok(result) => result,
@@ -40,7 +41,7 @@ impl MessageKit {
         Self {
             capsule,
             ciphertext,
-            conditions: conditions.map(|c| c.into()),
+            conditions: conditions.cloned(),
         }
     }
 

@@ -70,13 +70,56 @@ where
     })
 }
 
-/// A simple adapter that unboxes a bytestring inside an `Option`.
-fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
-    source.as_ref().map(|bytes| bytes.as_ref())
+#[pyclass(module = "nucypher_core")]
+pub struct Conditions {
+    backend: nucypher_core::Conditions,
+}
+
+#[pymethods]
+impl Conditions {
+    #[new]
+    pub fn new(conditions: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::Conditions::new(conditions),
+        }
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> Self {
+        Self::new(data)
+    }
+
+    fn __bytes__(&self) -> &[u8] {
+        self.backend.as_ref()
+    }
+}
+
+#[pyclass(module = "nucypher_core")]
+pub struct Context {
+    backend: nucypher_core::Context,
+}
+
+#[pymethods]
+impl Context {
+    #[new]
+    pub fn new(context: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::Context::new(context),
+        }
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> Self {
+        Self::new(data)
+    }
+
+    fn __bytes__(&self) -> &[u8] {
+        self.backend.as_ref()
+    }
 }
 
 //
-//
+// MessageKit
 //
 
 #[pyclass(module = "nucypher_core")]
@@ -100,13 +143,13 @@ impl MessageKit {
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         Self {
             backend: nucypher_core::MessageKit::new(
                 &policy_encrypting_key.backend,
                 plaintext,
-                conditions,
+                conditions.map(|conditions| &conditions.backend),
             ),
         }
     }
@@ -143,8 +186,13 @@ impl MessageKit {
     }
 
     #[getter]
-    fn conditions(&self) -> Option<&[u8]> {
-        box_ref(&self.backend.conditions)
+    fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
     }
 }
 
@@ -409,8 +457,8 @@ impl ReencryptionRequest {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
-        conditions: Option<&[u8]>,
-        context: Option<&[u8]>,
+        conditions: Option<&Conditions>,
+        context: Option<&Context>,
     ) -> Self {
         let capsules_backend = capsules
             .iter()
@@ -423,8 +471,8 @@ impl ReencryptionRequest {
                 &encrypted_kfrag.backend,
                 &publisher_verifying_key.backend,
                 &bob_verifying_key.backend,
-                conditions,
-                context,
+                conditions.map(|conditions| &conditions.backend),
+                context.map(|context| &context.backend),
             ),
         }
     }
@@ -467,13 +515,21 @@ impl ReencryptionRequest {
     }
 
     #[getter]
-    fn conditions(&self) -> Option<&[u8]> {
-        box_ref(&self.backend.conditions)
+    fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
     }
 
     #[getter]
-    fn context(&self) -> Option<&[u8]> {
-        box_ref(&self.backend.context)
+    fn context(&self) -> Option<Context> {
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
     }
 
     #[staticmethod]
@@ -580,7 +636,7 @@ impl RetrievalKit {
     pub fn new(
         capsule: &Capsule,
         queried_addresses: BTreeSet<[u8; nucypher_core::Address::SIZE]>,
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
@@ -590,7 +646,7 @@ impl RetrievalKit {
             backend: nucypher_core::RetrievalKit::new(
                 &capsule.backend,
                 addresses_backend,
-                conditions,
+                conditions.map(|conditions| &conditions.backend),
             ),
         }
     }
@@ -612,8 +668,13 @@ impl RetrievalKit {
     }
 
     #[getter]
-    fn conditions(&self) -> Option<&[u8]> {
-        box_ref(&self.backend.conditions)
+    fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
     }
 
     #[staticmethod]
@@ -1005,6 +1066,8 @@ impl MetadataResponse {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Conditions>()?;
+    m.add_class::<Context>()?;
     m.add_class::<MessageKit>()?;
     m.add_class::<HRAC>()?;
     m.add_class::<EncryptedKeyFrag>()?;

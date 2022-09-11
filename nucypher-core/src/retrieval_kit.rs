@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
 
 use crate::address::Address;
+use crate::conditions::Conditions;
 use crate::message_kit::MessageKit;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
@@ -21,7 +22,7 @@ pub struct RetrievalKit {
     /// The addresses that have already been queried for reencryption.
     pub queried_addresses: BTreeSet<Address>,
     /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    pub conditions: Option<Conditions>,
 }
 
 impl RetrievalKit {
@@ -38,13 +39,13 @@ impl RetrievalKit {
     pub fn new(
         capsule: &Capsule,
         queried_addresses: impl IntoIterator<Item = Address>,
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
             queried_addresses: queried_addresses.into_iter().collect(),
-            conditions: conditions.map(|c| c.into()),
+            conditions: conditions.cloned(),
         }
     }
 }

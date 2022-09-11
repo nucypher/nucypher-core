@@ -47,7 +47,7 @@ fn make_message_kit(
     MessageKit::new(
         &policy_encrypting_key,
         plaintext,
-        conditions.map(|bytes| bytes.as_ref().into()),
+        conditions.map(|bytes| Conditions::new(bytes.as_ref())),
     )
 }
 
@@ -381,13 +381,8 @@ fn reencryption_request_from_bytes_to_bytes() {
     let signer = Signer::new(&publisher_sk);
     let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
-    let conditions = Some(
-        "{'some': 'condition'}"
-            .as_bytes()
-            .to_vec()
-            .into_boxed_slice(),
-    );
-    let context = Some("{'user': 'context'}".as_bytes().to_vec().into_boxed_slice());
+    let conditions = Some(Conditions::new(b"{'some': 'condition'}"));
+    let context = Some(Context::new(b"{'user': 'context'}"));
 
     // Make reencryption request
     let reencryption_request = ReencryptionRequestBuilder::new(
@@ -493,9 +488,13 @@ fn reencryption_response_verify() {
 #[wasm_bindgen_test]
 fn retrieval_kit() {
     // Make a message kit
-    let condtions_bytes = "{'hello': 'world'}".as_bytes().to_vec();
-    let conditions = Some(condtions_bytes.clone());
-    let message_kit = make_message_kit(&SecretKey::random(), b"Hello, world!", conditions);
+    let conditions_bytes = b"{'hello': 'world'}";
+    let conditions = Some(Conditions::new(conditions_bytes));
+    let message_kit = make_message_kit(
+        &SecretKey::random(),
+        b"Hello, world!",
+        Some(&conditions_bytes),
+    );
 
     let retrieval_kit_from_mk = RetrievalKit::from_message_kit(&message_kit);
     assert_eq!(
@@ -509,8 +508,7 @@ fn retrieval_kit() {
         b"00000000000000000002",
         b"00000000000000000003",
     ];
-    let conditions_boxed = Some(condtions_bytes.into_boxed_slice());
-    let mut builder = RetrievalKitBuilder::new(&message_kit.capsule(), conditions_boxed);
+    let mut builder = RetrievalKitBuilder::new(&message_kit.capsule(), conditions.clone());
     for address in queried_addresses {
         builder.add_queried_address(address).unwrap();
     }

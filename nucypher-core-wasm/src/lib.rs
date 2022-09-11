@@ -66,9 +66,51 @@ fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsVa
         })
 }
 
-/// A simple adapter that unboxes a bytestring inside an `Option`.
-fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
-    source.as_ref().map(|bytes| bytes.as_ref())
+//
+// Conditions
+//
+
+#[wasm_bindgen]
+#[derive(Clone)]
+pub struct Conditions(nucypher_core::Conditions);
+
+#[wasm_bindgen]
+impl Conditions {
+    #[wasm_bindgen(constructor)]
+    pub fn new(conditions: &[u8]) -> Self {
+        Self(nucypher_core::Conditions::new(conditions))
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Self {
+        Self::new(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        self.0.as_ref().into()
+    }
+}
+
+#[wasm_bindgen]
+pub struct Context(nucypher_core::Context);
+
+#[wasm_bindgen]
+impl Context {
+    #[wasm_bindgen(constructor)]
+    pub fn new(context: &[u8]) -> Self {
+        Self(nucypher_core::Context::new(context))
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Self {
+        Self::new(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        self.0.as_ref().into()
+    }
 }
 
 //
@@ -85,12 +127,12 @@ impl MessageKit {
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
-        conditions: Option<Box<[u8]>>,
-    ) -> MessageKit {
+        conditions: Option<Conditions>,
+    ) -> Self {
         MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.inner(),
             plaintext,
-            box_ref(&conditions),
+            conditions.as_ref().map(|conditions| &conditions.0),
         ))
     }
 
@@ -112,8 +154,8 @@ impl MessageKit {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn conditions(&self) -> Option<Box<[u8]>> {
-        self.0.conditions.clone()
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -137,7 +179,7 @@ pub struct MessageKitWithFrags {
 #[wasm_bindgen]
 impl MessageKitWithFrags {
     #[wasm_bindgen(js_name = withVCFrag)]
-    pub fn with_vcfrag(&mut self, vcfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+    pub fn with_vcfrag(&mut self, vcfrag: &VerifiedCapsuleFrag) -> Self {
         self.vcfrags.push(vcfrag.inner());
         self.clone()
     }
@@ -414,8 +456,8 @@ pub struct ReencryptionRequestBuilder {
     encrypted_kfrag: nucypher_core::EncryptedKeyFrag,
     publisher_verifying_key: umbral_pre::PublicKey,
     bob_verifying_key: umbral_pre::PublicKey,
-    conditions: Option<Box<[u8]>>,
-    context: Option<Box<[u8]>>,
+    conditions: Option<nucypher_core::Conditions>,
+    context: Option<nucypher_core::Context>,
 }
 
 #[wasm_bindgen]
@@ -426,8 +468,8 @@ impl ReencryptionRequestBuilder {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
-        conditions: Option<Box<[u8]>>,
-        context: Option<Box<[u8]>>,
+        conditions: Option<Conditions>,
+        context: Option<Context>,
     ) -> Result<ReencryptionRequestBuilder, JsValue> {
         Ok(Self {
             capsules: Vec::new(),
@@ -435,8 +477,8 @@ impl ReencryptionRequestBuilder {
             encrypted_kfrag: encrypted_kfrag.0.clone(),
             publisher_verifying_key: *publisher_verifying_key.inner(),
             bob_verifying_key: *bob_verifying_key.inner(),
-            conditions,
-            context,
+            conditions: conditions.map(|conditions| conditions.0),
+            context: context.map(|context| context.0),
         })
     }
 
@@ -454,8 +496,8 @@ impl ReencryptionRequestBuilder {
             &self.encrypted_kfrag,
             &self.publisher_verifying_key,
             &self.bob_verifying_key,
-            box_ref(&self.conditions),
-            box_ref(&self.context),
+            self.conditions.as_ref(),
+            self.context.as_ref(),
         ))
     }
 }
@@ -503,13 +545,13 @@ impl ReencryptionRequest {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn conditions(&self) -> Option<Box<[u8]>> {
-        self.0.conditions.clone()
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn context(&self) -> Option<Box<[u8]>> {
-        self.0.context.clone()
+    pub fn context(&self) -> Option<Context> {
+        self.0.context.clone().map(Context)
     }
 }
 
@@ -648,13 +690,13 @@ impl ReencryptionResponseWithCapsules {
 pub struct RetrievalKitBuilder {
     capsule: umbral_pre::Capsule,
     queried_addresses: Vec<nucypher_core::Address>,
-    conditions: Option<Box<[u8]>>,
+    conditions: Option<Conditions>,
 }
 
 #[wasm_bindgen]
 impl RetrievalKitBuilder {
     #[wasm_bindgen(constructor)]
-    pub fn new(capsule: &Capsule, conditions: Option<Box<[u8]>>) -> Self {
+    pub fn new(capsule: &Capsule, conditions: Option<Conditions>) -> Self {
         Self {
             capsule: *capsule.inner(),
             queried_addresses: Vec::new(),
@@ -674,7 +716,7 @@ impl RetrievalKitBuilder {
         RetrievalKit(nucypher_core::RetrievalKit::new(
             &self.capsule,
             self.queried_addresses.clone(),
-            box_ref(&self.conditions),
+            self.conditions.as_ref().map(|conditions| &conditions.0),
         ))
     }
 }
@@ -719,8 +761,8 @@ impl RetrievalKit {
     }
 
     #[wasm_bindgen(method, getter)]
-    pub fn conditions(&self) -> Option<Box<[u8]>> {
-        self.0.conditions.clone()
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
     }
 }
 
