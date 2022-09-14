@@ -463,10 +463,11 @@ fn reencryption_response_verify() {
             &policy_encrypting_key,
             &bob_sk.public_key(),
         )
-        .unwrap();
+        .unwrap()
+        .into_vec();
     let verified: Vec<VerifiedCapsuleFrag> = verified_js
-        .iter()
-        .map(|vkfrag| vkfrag.into_serde().unwrap())
+        .into_iter()
+        .map(|vkfrag| serde_wasm_bindgen::from_value(vkfrag).unwrap())
         .collect();
 
     assert_eq!(cfrags, verified, "Capsule fragments do not match");

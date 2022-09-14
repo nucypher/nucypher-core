@@ -152,12 +152,12 @@ impl MessageKit {
         self.0.decrypt(sk.inner()).map_err(map_js_err)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn capsule(&self) -> Capsule {
         Capsule::new(self.0.capsule)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Option<Conditions> {
         self.0.conditions.clone().map(Conditions)
     }
@@ -363,7 +363,7 @@ impl TreasureMap {
         EncryptedTreasureMap(self.0.encrypt(signer.inner(), recipient_key.inner()))
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn destinations(&self) -> Result<JsValue, JsValue> {
         let mut result = Vec::new();
         for (address, ekfrag) in &self.0.destinations {
@@ -377,26 +377,26 @@ impl TreasureMap {
         self.0
             .make_revocation_orders(signer.inner())
             .iter()
-            .map(|order| JsValue::from_serde(&order).unwrap())
+            .map(|order| serde_wasm_bindgen::to_value(&order).unwrap())
             .collect()
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn hrac(&self) -> HRAC {
         HRAC(self.0.hrac)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn threshold(&self) -> u8 {
         self.0.threshold
     }
 
-    #[wasm_bindgen(method, getter, js_name = policyEncryptingKey)]
+    #[wasm_bindgen(getter, js_name = policyEncryptingKey)]
     pub fn policy_encrypting_key(&self) -> PublicKey {
         PublicKey::new(self.0.policy_encrypting_key)
     }
 
-    #[wasm_bindgen(method, getter, js_name = publisherVerifyingKey)]
+    #[wasm_bindgen(getter, js_name = publisherVerifyingKey)]
     pub fn publisher_verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.publisher_verifying_key)
     }
@@ -508,27 +508,27 @@ impl ReencryptionRequestBuilder {
 
 #[wasm_bindgen]
 impl ReencryptionRequest {
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn hrac(&self) -> HRAC {
         HRAC(self.0.hrac)
     }
 
-    #[wasm_bindgen(method, getter, js_name = publisherVerifyingKey)]
+    #[wasm_bindgen(getter, js_name = publisherVerifyingKey)]
     pub fn publisher_verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.publisher_verifying_key)
     }
 
-    #[wasm_bindgen(method, getter, js_name = bobVerifyingKey)]
+    #[wasm_bindgen(getter, js_name = bobVerifyingKey)]
     pub fn bob_verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.bob_verifying_key)
     }
 
-    #[wasm_bindgen(method, getter, js_name = encryptedKfrag)]
+    #[wasm_bindgen(getter, js_name = encryptedKfrag)]
     pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
         EncryptedKeyFrag(self.0.encrypted_kfrag.clone())
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn capsules(&self) -> Vec<JsValue> {
         self.0
             .capsules
@@ -548,12 +548,12 @@ impl ReencryptionRequest {
         to_bytes(self)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Option<Conditions> {
         self.0.conditions.clone().map(Conditions)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn context(&self) -> Option<Context> {
         self.0.context.clone().map(Context)
     }
@@ -677,7 +677,7 @@ impl ReencryptionResponseWithCapsules {
         let vcfrags_backend_js = vcfrags_backend
             .iter()
             .map(|vcfrag| VerifiedCapsuleFrag::new(vcfrag.clone()))
-            .map(|vcfrag| JsValue::from_serde(&vcfrag))
+            .map(|vcfrag| serde_wasm_bindgen::to_value(&vcfrag))
             .into_iter()
             .collect::<Result<Box<_>, _>>()
             .map_err(map_js_err)?;
@@ -738,17 +738,17 @@ impl RetrievalKit {
         ))
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn capsule(&self) -> Capsule {
         Capsule::new(self.0.capsule)
     }
 
-    #[wasm_bindgen(method, getter, js_name = queriedAddresses)]
+    #[wasm_bindgen(getter, js_name = queriedAddresses)]
     pub fn queried_addresses(&self) -> Result<Vec<JsValue>, JsValue> {
         self.0
             .queried_addresses
             .iter()
-            .map(|address| JsValue::from_serde(&address))
+            .map(|address| serde_wasm_bindgen::to_value(&address))
             .into_iter()
             .collect::<Result<Vec<_>, _>>()
             .map_err(map_js_err)
@@ -764,7 +764,7 @@ impl RetrievalKit {
         to_bytes(self)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Option<Conditions> {
         self.0.conditions.clone().map(Conditions)
     }
@@ -888,49 +888,49 @@ impl NodeMetadataPayload {
         }))
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn staking_provider_address(&self) -> Vec<u8> {
         self.0.staking_provider_address.as_ref().to_vec()
     }
 
-    #[wasm_bindgen(method, getter, js_name = verifyingKey)]
+    #[wasm_bindgen(getter, js_name = verifyingKey)]
     pub fn verifying_key(&self) -> PublicKey {
         PublicKey::new(self.0.verifying_key)
     }
 
-    #[wasm_bindgen(method, getter, js_name = encryptingKey)]
+    #[wasm_bindgen(getter, js_name = encryptingKey)]
     pub fn encrypting_key(&self) -> PublicKey {
         PublicKey::new(self.0.encrypting_key)
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn operator_signature(&self) -> Option<Box<[u8]>> {
         self.0
             .operator_signature
             .map(|signature| signature.as_ref().into())
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn domain(&self) -> String {
         self.0.domain.clone()
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn host(&self) -> String {
         self.0.host.clone()
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn port(&self) -> u16 {
         self.0.port
     }
 
-    #[wasm_bindgen(method, getter, js_name = timestampEpoch)]
+    #[wasm_bindgen(getter, js_name = timestampEpoch)]
     pub fn timestamp_epoch(&self) -> u32 {
         self.0.timestamp_epoch
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn certificate_der(&self) -> Box<[u8]> {
         self.0.certificate_der.clone()
     }
@@ -965,7 +965,7 @@ impl NodeMetadata {
         self.0.verify()
     }
 
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn payload(&self) -> NodeMetadataPayload {
         NodeMetadataPayload(self.0.payload.clone())
     }
@@ -1099,12 +1099,12 @@ pub struct MetadataRequest(nucypher_core::MetadataRequest);
 
 #[wasm_bindgen]
 impl MetadataRequest {
-    #[wasm_bindgen(method, getter, js_name = fleetStateChecksum)]
+    #[wasm_bindgen(getter, js_name = fleetStateChecksum)]
     pub fn fleet_state_checksum(&self) -> FleetStateChecksum {
         FleetStateChecksum(self.0.fleet_state_checksum)
     }
 
-    #[wasm_bindgen(method, getter, js_name = announceNodes)]
+    #[wasm_bindgen(getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> Vec<JsValue> {
         self.0
             .announce_nodes
@@ -1166,12 +1166,12 @@ pub struct MetadataResponsePayload(nucypher_core::MetadataResponsePayload);
 
 #[wasm_bindgen]
 impl MetadataResponsePayload {
-    #[wasm_bindgen(method, getter)]
+    #[wasm_bindgen(getter)]
     pub fn timestamp_epoch(&self) -> u32 {
         self.0.timestamp_epoch
     }
 
-    #[wasm_bindgen(method, getter, js_name = announceNodes)]
+    #[wasm_bindgen(getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> Vec<JsValue> {
         self.0
             .announce_nodes
