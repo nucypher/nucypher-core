@@ -6,13 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Conditions and context are now strings instead of bytestrings. (#[33])
+- Methods taking `VerifiedCapsuleFrag` objects use "vcfrag" instead of "cfrag" for their names and the names of the corresponding parameters. (#[33])
+
+
 ### Added
 
 - `conditions` getters in `MessageKit` and `RetrievalKit` in WASM bindings. (#[32])
 - Attributes `MessageKit.conditions`, `ReencryptionRequest.conditions`, and `ReencryptionRequest.context` in Python typing stubs. ([#32])
+- `Conditions` and `Context` newtypes, to be used instead of raw objects. (#[33])
+- `MessageKit`, `RetrievalKit`, and `ReencryptionRequest` protocol versions bumped to v1.1. (#[33])
 
 
 [#32]: https://github.com/nucypher/nucypher-core/pull/32
+[#33]: https://github.com/nucypher/nucypher-core/pull/33
 
 
 ## [0.4.0-alpha.0] - 2022-09-07
