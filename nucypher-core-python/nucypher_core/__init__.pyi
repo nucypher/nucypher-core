@@ -19,7 +19,7 @@ class MessageKit:
         self,
         sk: SecretKey,
         policy_encrypting_key: PublicKey,
-        cfrags: Iterable[VerifiedCapsuleFrag]
+        vcfrags: Iterable[VerifiedCapsuleFrag]
     ) -> bytes:
         ...
 

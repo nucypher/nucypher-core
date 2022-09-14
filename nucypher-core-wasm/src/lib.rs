@@ -110,11 +110,11 @@ impl MessageKit {
         ))
     }
 
-    #[wasm_bindgen(js_name = withCFrag)]
-    pub fn with_cfrag(&self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+    #[wasm_bindgen(js_name = withVCFrag)]
+    pub fn with_vcfrag(&self, vcfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
         MessageKitWithFrags {
             message_kit: self.clone(),
-            cfrags: vec![cfrag.inner()],
+            vcfrags: vec![vcfrag.inner()],
         }
     }
 
@@ -147,14 +147,14 @@ impl MessageKit {
 #[derive(Clone)]
 pub struct MessageKitWithFrags {
     message_kit: MessageKit,
-    cfrags: Vec<umbral_pre::VerifiedCapsuleFrag>,
+    vcfrags: Vec<umbral_pre::VerifiedCapsuleFrag>,
 }
 
 #[wasm_bindgen]
 impl MessageKitWithFrags {
-    #[wasm_bindgen(js_name = withCFrag)]
-    pub fn with_cfrag(&mut self, cfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
-        self.cfrags.push(cfrag.inner());
+    #[wasm_bindgen(js_name = withVCFrag)]
+    pub fn with_vcfrag(&mut self, vcfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
+        self.vcfrags.push(vcfrag.inner());
         self.clone()
     }
 
@@ -169,7 +169,7 @@ impl MessageKitWithFrags {
             .decrypt_reencrypted(
                 sk.inner(),
                 policy_encrypting_key.inner(),
-                self.cfrags.clone(),
+                self.vcfrags.clone(),
             )
             .map_err(map_js_err)
     }

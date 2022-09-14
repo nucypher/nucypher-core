@@ -158,13 +158,13 @@ describe("MessageKit", () => {
     const capsule = Capsule.fromBytes(messageKit.capsule.toBytes());
     const capsuleFrags = vkfrags.map((kfrag) => reencrypt(capsule, kfrag));
 
-    const messageKitWithCfrags = messageKit.withCFrag(capsuleFrags[0]);
+    const messageKitWithVCfrags = messageKit.withVCFrag(capsuleFrags[0]);
     for (let i = 1; i < capsuleFrags.length; i++) {
-      messageKitWithCfrags.withCFrag(capsuleFrags[i]);
+      messageKitWithVCfrags.withVCFrag(capsuleFrags[i]);
     }
 
     // Decrypt the reencrypted message kit
-    const decrypted = messageKitWithCfrags.decryptReencrypted(
+    const decrypted = messageKitWithVCfrags.decryptReencrypted(
       recipientSk,
       delegatingPk
     );

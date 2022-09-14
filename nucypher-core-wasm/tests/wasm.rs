@@ -163,22 +163,22 @@ fn message_kit_decrypt_reencrypted() {
     );
 
     // Simulate reencryption on the JS side
-    let cfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
+    let vcfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
         .iter()
         .map(|kfrag| {
             let kfrag = verified_key_farg_of_js_value(kfrag.clone()).unwrap();
             reencrypt(&message_kit.capsule(), &kfrag)
         })
         .collect();
-    assert_eq!(cfrags.len(), verified_kfrags.len());
+    assert_eq!(vcfrags.len(), verified_kfrags.len());
 
-    let mut mk_with_cfrags = message_kit.with_cfrag(&cfrags[0]);
-    for cfrag in cfrags.iter().skip(1) {
-        mk_with_cfrags.with_cfrag(cfrag);
+    let mut mk_with_vcfrags = message_kit.with_vcfrag(&vcfrags[0]);
+    for vcfrag in vcfrags.iter().skip(1) {
+        mk_with_vcfrags.with_vcfrag(vcfrag);
     }
 
     // Decrypt on the Rust side
-    let decrypted = mk_with_cfrags
+    let decrypted = mk_with_vcfrags
         .decrypt_reencrypted(&receiving_sk, &delegating_pk)
         .unwrap();
 

@@ -143,13 +143,13 @@ impl MessageKit {
         py: Python,
         sk: &SecretKey,
         policy_encrypting_key: &PublicKey,
-        cfrags: Vec<VerifiedCapsuleFrag>,
+        vcfrags: Vec<VerifiedCapsuleFrag>,
     ) -> PyResult<PyObject> {
-        let backend_cfrags: Vec<umbral_pre::VerifiedCapsuleFrag> =
-            cfrags.into_iter().map(|vcfrag| vcfrag.backend).collect();
+        let backend_vcfrags: Vec<umbral_pre::VerifiedCapsuleFrag> =
+            vcfrags.into_iter().map(|vcfrag| vcfrag.backend).collect();
         let plaintext = self
             .backend
-            .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, backend_cfrags)
+            .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, backend_vcfrags)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
