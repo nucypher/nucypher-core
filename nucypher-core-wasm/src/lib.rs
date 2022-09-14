@@ -77,17 +77,19 @@ pub struct Conditions(nucypher_core::Conditions);
 #[wasm_bindgen]
 impl Conditions {
     #[wasm_bindgen(constructor)]
-    pub fn new(conditions: &[u8]) -> Self {
+    pub fn new(conditions: &str) -> Self {
         Self(nucypher_core::Conditions::new(conditions))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Self {
-        Self::new(data)
+    pub fn from_bytes(data: &str) -> Self {
+        let data_owned: String = data.into();
+        Self(nucypher_core::Conditions::from(data_owned))
     }
 
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
         self.0.as_ref().into()
     }
 }
@@ -98,17 +100,19 @@ pub struct Context(nucypher_core::Context);
 #[wasm_bindgen]
 impl Context {
     #[wasm_bindgen(constructor)]
-    pub fn new(context: &[u8]) -> Self {
+    pub fn new(context: &str) -> Self {
         Self(nucypher_core::Context::new(context))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Self {
-        Self::new(data)
+    pub fn from_bytes(data: &str) -> Self {
+        let data_owned: String = data.into();
+        Self(nucypher_core::Context::from(data_owned))
     }
 
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
         self.0.as_ref().into()
     }
 }

@@ -234,13 +234,13 @@ mod tests {
             &encrypted_kfrag,
             &some_trinket,
             &another_trinket,
-            Some(&Conditions::new(&[47u8])),
-            Some(&Context::new(&[51u8])),
+            Some(&Conditions::new("abcd")),
+            Some(&Context::new("efgh")),
         );
         let conditions = request.conditions.unwrap();
-        assert!(conditions.as_ref()[0].eq(&47u8));
+        assert_eq!(conditions.as_ref(), "abcd");
 
         let context = request.context.unwrap();
-        assert!(context.as_ref()[0].eq(&51u8));
+        assert_eq!(context.as_ref(), "efgh");
     }
 }

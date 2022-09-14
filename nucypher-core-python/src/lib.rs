@@ -78,18 +78,20 @@ pub struct Conditions {
 #[pymethods]
 impl Conditions {
     #[new]
-    pub fn new(conditions: &[u8]) -> Self {
+    pub fn new(conditions: &str) -> Self {
         Self {
             backend: nucypher_core::Conditions::new(conditions),
         }
     }
 
     #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> Self {
-        Self::new(data)
+    pub fn from_string(conditions: String) -> Self {
+        Self {
+            backend: conditions.into(),
+        }
     }
 
-    fn __bytes__(&self) -> &[u8] {
+    fn __str__(&self) -> &str {
         self.backend.as_ref()
     }
 }
@@ -102,18 +104,20 @@ pub struct Context {
 #[pymethods]
 impl Context {
     #[new]
-    pub fn new(context: &[u8]) -> Self {
+    pub fn new(context: &str) -> Self {
         Self {
             backend: nucypher_core::Context::new(context),
         }
     }
 
     #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> Self {
-        Self::new(data)
+    pub fn from_bytes(context: String) -> Self {
+        Self {
+            backend: context.into(),
+        }
     }
 
-    fn __bytes__(&self) -> &[u8] {
+    fn __str__(&self) -> &str {
         self.backend.as_ref()
     }
 }

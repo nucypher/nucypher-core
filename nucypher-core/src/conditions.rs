@@ -1,50 +1,49 @@
-use alloc::boxed::Box;
+use alloc::string::String;
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::serde_bytes;
 
 /// Reencryption conditions.
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
-pub struct Conditions(#[serde(with = "serde_bytes::as_base64")] Box<[u8]>);
+pub struct Conditions(String);
 
 impl Conditions {
     /// Creates a new conditions object.
-    pub fn new(conditions: &[u8]) -> Self {
+    pub fn new(conditions: &str) -> Self {
         Self(conditions.into())
     }
 }
 
-impl AsRef<[u8]> for Conditions {
-    fn as_ref(&self) -> &[u8] {
+impl AsRef<str> for Conditions {
+    fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
 
-impl From<Box<[u8]>> for Conditions {
-    fn from(source: Box<[u8]>) -> Self {
+impl From<String> for Conditions {
+    fn from(source: String) -> Self {
         Self(source)
     }
 }
 
 /// Context for reencryption conditions.
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
-pub struct Context(#[serde(with = "serde_bytes::as_base64")] Box<[u8]>);
+pub struct Context(String);
 
 impl Context {
     /// Creates a new context object.
-    pub fn new(context: &[u8]) -> Self {
+    pub fn new(context: &str) -> Self {
         Self(context.into())
     }
 }
 
-impl AsRef<[u8]> for Context {
-    fn as_ref(&self) -> &[u8] {
+impl AsRef<str> for Context {
+    fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
 
-impl From<Box<[u8]>> for Context {
-    fn from(source: Box<[u8]>) -> Self {
+impl From<String> for Context {
+    fn from(source: String) -> Self {
         Self(source)
     }
 }
