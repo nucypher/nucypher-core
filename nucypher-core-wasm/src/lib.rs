@@ -33,28 +33,24 @@ fn map_js_err<T: fmt::Display>(err: T) -> JsValue {
     Error::new(&format!("{}", err)).into()
 }
 
-trait AsBackend<T> {
-    fn as_backend(&self) -> &T;
-}
-
-trait FromBackend<T> {
-    fn from_backend(backend: T) -> Self;
-}
-
 fn to_bytes<'a, T, U>(obj: &T) -> Box<[u8]>
 where
-    T: AsBackend<U>,
+    T: AsRef<U>,
     U: ProtocolObject<'a>,
 {
-    obj.as_backend().to_bytes()
+    obj.as_ref().to_bytes()
 }
 
+// Since `From` already has a blanket `impl From<T> for T`,
+// we will have to specify `U` explicitly when calling this function.
+// This could be avoided if a more specific "newtype" trait could be derived instead of `From`.
+// See https://github.com/JelteF/derive_more/issues/201
 fn from_bytes<'a, T, U>(data: &'a [u8]) -> Result<T, JsValue>
 where
-    T: FromBackend<U>,
+    T: From<U>,
     U: ProtocolObject<'a>,
 {
-    U::from_bytes(data).map(T::from_backend).map_err(map_js_err)
+    U::from_bytes(data).map(T::from).map_err(map_js_err)
 }
 
 fn try_make_address(address_bytes: &[u8]) -> Result<nucypher_core::Address, JsValue> {
@@ -80,20 +76,8 @@ fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, derive_more::From, derive_more::AsRef)]
 pub struct MessageKit(nucypher_core::MessageKit);
-
-impl AsBackend<nucypher_core::MessageKit> for MessageKit {
-    fn as_backend(&self) -> &nucypher_core::MessageKit {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::MessageKit> for MessageKit {
-    fn from_backend(backend: nucypher_core::MessageKit) -> Self {
-        MessageKit(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl MessageKit {
@@ -134,7 +118,7 @@ impl MessageKit {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<MessageKit, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MessageKit>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -183,18 +167,6 @@ impl MessageKitWithFrags {
 #[derive(PartialEq, Eq)]
 pub struct HRAC(nucypher_core::HRAC);
 
-impl AsBackend<nucypher_core::HRAC> for HRAC {
-    fn as_backend(&self) -> &nucypher_core::HRAC {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::HRAC> for HRAC {
-    fn from_backend(backend: nucypher_core::HRAC) -> Self {
-        HRAC(backend)
-    }
-}
-
 #[wasm_bindgen]
 impl HRAC {
     #[wasm_bindgen(constructor)]
@@ -233,20 +205,8 @@ impl HRAC {
 //
 
 #[wasm_bindgen]
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct EncryptedKeyFrag(nucypher_core::EncryptedKeyFrag);
-
-impl AsBackend<nucypher_core::EncryptedKeyFrag> for EncryptedKeyFrag {
-    fn as_backend(&self) -> &nucypher_core::EncryptedKeyFrag {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::EncryptedKeyFrag> for EncryptedKeyFrag {
-    fn from_backend(backend: nucypher_core::EncryptedKeyFrag) -> Self {
-        EncryptedKeyFrag(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl EncryptedKeyFrag {
@@ -279,7 +239,7 @@ impl EncryptedKeyFrag {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<EncryptedKeyFrag, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::EncryptedKeyFrag>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -336,20 +296,8 @@ impl TreasureMapBuilder {
 }
 
 #[wasm_bindgen]
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct TreasureMap(nucypher_core::TreasureMap);
-
-impl AsBackend<nucypher_core::TreasureMap> for TreasureMap {
-    fn as_backend(&self) -> &nucypher_core::TreasureMap {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::TreasureMap> for TreasureMap {
-    fn from_backend(backend: nucypher_core::TreasureMap) -> Self {
-        TreasureMap(backend)
-    }
-}
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -410,7 +358,7 @@ impl TreasureMap {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<TreasureMap, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::TreasureMap>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -424,20 +372,8 @@ impl TreasureMap {
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct EncryptedTreasureMap(nucypher_core::EncryptedTreasureMap);
-
-impl AsBackend<nucypher_core::EncryptedTreasureMap> for EncryptedTreasureMap {
-    fn as_backend(&self) -> &nucypher_core::EncryptedTreasureMap {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::EncryptedTreasureMap> for EncryptedTreasureMap {
-    fn from_backend(backend: nucypher_core::EncryptedTreasureMap) -> Self {
-        EncryptedTreasureMap(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl EncryptedTreasureMap {
@@ -454,7 +390,7 @@ impl EncryptedTreasureMap {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<EncryptedTreasureMap, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::EncryptedTreasureMap>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -468,20 +404,8 @@ impl EncryptedTreasureMap {
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionRequest(nucypher_core::ReencryptionRequest);
-
-impl AsBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
-    fn as_backend(&self) -> &nucypher_core::ReencryptionRequest {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
-    fn from_backend(backend: nucypher_core::ReencryptionRequest) -> Self {
-        ReencryptionRequest(backend)
-    }
-}
 
 #[wasm_bindgen]
 #[derive(Clone)]
@@ -571,7 +495,7 @@ impl ReencryptionRequest {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<ReencryptionRequest, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::ReencryptionRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -636,19 +560,8 @@ impl ReencryptionResponseBuilder {
 }
 
 #[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionResponse(nucypher_core::ReencryptionResponse);
-
-impl AsBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
-    fn as_backend(&self) -> &nucypher_core::ReencryptionResponse {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
-    fn from_backend(backend: nucypher_core::ReencryptionResponse) -> Self {
-        ReencryptionResponse(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl ReencryptionResponse {
@@ -662,7 +575,7 @@ impl ReencryptionResponse {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<ReencryptionResponse, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::ReencryptionResponse>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -768,19 +681,8 @@ impl RetrievalKitBuilder {
 }
 
 #[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct RetrievalKit(nucypher_core::RetrievalKit);
-
-impl AsBackend<nucypher_core::RetrievalKit> for RetrievalKit {
-    fn as_backend(&self) -> &nucypher_core::RetrievalKit {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::RetrievalKit> for RetrievalKit {
-    fn from_backend(backend: nucypher_core::RetrievalKit) -> Self {
-        RetrievalKit(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl RetrievalKit {
@@ -809,7 +711,7 @@ impl RetrievalKit {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<RetrievalKit, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::RetrievalKit>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -828,20 +730,8 @@ impl RetrievalKit {
 //
 
 #[wasm_bindgen]
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct RevocationOrder(nucypher_core::RevocationOrder);
-
-impl AsBackend<nucypher_core::RevocationOrder> for RevocationOrder {
-    fn as_backend(&self) -> &nucypher_core::RevocationOrder {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::RevocationOrder> for RevocationOrder {
-    fn from_backend(backend: nucypher_core::RevocationOrder) -> Self {
-        RevocationOrder(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl RevocationOrder {
@@ -876,7 +766,7 @@ impl RevocationOrder {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<RevocationOrder, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::RevocationOrder>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1013,21 +903,11 @@ impl NodeMetadataPayload {
 // NodeMetadata
 //
 
-#[wasm_bindgen(method, getter)]
-#[derive(Clone, Serialize, Deserialize, PartialEq, Debug)]
+#[wasm_bindgen]
+#[derive(
+    Clone, Serialize, Deserialize, PartialEq, Debug, derive_more::From, derive_more::AsRef,
+)]
 pub struct NodeMetadata(nucypher_core::NodeMetadata);
-
-impl AsBackend<nucypher_core::NodeMetadata> for NodeMetadata {
-    fn as_backend(&self) -> &nucypher_core::NodeMetadata {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::NodeMetadata> for NodeMetadata {
-    fn from_backend(backend: nucypher_core::NodeMetadata) -> Self {
-        NodeMetadata(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl NodeMetadata {
@@ -1047,7 +927,7 @@ impl NodeMetadata {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<NodeMetadata, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::NodeMetadata>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1103,14 +983,8 @@ impl FleetStateChecksumBuilder {
 }
 
 #[wasm_bindgen]
-#[derive(Clone)]
+#[derive(Clone, derive_more::AsRef)]
 pub struct FleetStateChecksum(nucypher_core::FleetStateChecksum);
-
-impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
-    fn as_backend(&self) -> &nucypher_core::FleetStateChecksum {
-        &self.0
-    }
-}
 
 #[wasm_bindgen]
 impl FleetStateChecksum {
@@ -1175,19 +1049,8 @@ impl MetadataRequestBuilder {
 }
 
 #[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataRequest(nucypher_core::MetadataRequest);
-
-impl AsBackend<nucypher_core::MetadataRequest> for MetadataRequest {
-    fn as_backend(&self) -> &nucypher_core::MetadataRequest {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::MetadataRequest> for MetadataRequest {
-    fn from_backend(backend: nucypher_core::MetadataRequest) -> Self {
-        MetadataRequest(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl MetadataRequest {
@@ -1208,7 +1071,7 @@ impl MetadataRequest {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<MetadataRequest, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MetadataRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1279,19 +1142,8 @@ impl MetadataResponsePayload {
 //
 
 #[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataResponse(nucypher_core::MetadataResponse);
-
-impl AsBackend<nucypher_core::MetadataResponse> for MetadataResponse {
-    fn as_backend(&self) -> &nucypher_core::MetadataResponse {
-        &self.0
-    }
-}
-
-impl FromBackend<nucypher_core::MetadataResponse> for MetadataResponse {
-    fn from_backend(backend: nucypher_core::MetadataResponse) -> Self {
-        MetadataResponse(backend)
-    }
-}
 
 #[wasm_bindgen]
 impl MetadataResponse {
@@ -1314,7 +1166,7 @@ impl MetadataResponse {
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<MetadataResponse, JsValue> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MetadataResponse>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]

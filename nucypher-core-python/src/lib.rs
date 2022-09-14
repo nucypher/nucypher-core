@@ -20,34 +20,26 @@ use umbral_pre::bindings_python::{
     Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
-//
-// Helper traits to generalize implementing various Python protocol functions for our types.
-//
-
-trait AsBackend<T> {
-    fn as_backend(&self) -> &T;
-}
-
-trait FromBackend<T> {
-    fn from_backend(backend: T) -> Self;
-}
-
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
-    T: AsBackend<U>,
+    T: AsRef<U>,
     U: ProtocolObject<'a>,
 {
-    let serialized = obj.as_backend().to_bytes();
+    let serialized = obj.as_ref().to_bytes();
     Python::with_gil(|py| -> PyObject { PyBytes::new(py, &serialized).into() })
 }
 
+// Since `From` already has a blanket `impl From<T> for T`,
+// we will have to specify `U` explicitly when calling this function.
+// This could be avoided if a more specific "newtype" trait could be derived instead of `From`.
+// See https://github.com/JelteF/derive_more/issues/201
 fn from_bytes<'a, T, U>(data: &'a [u8]) -> PyResult<T>
 where
-    T: FromBackend<U>,
+    T: From<U>,
     U: ProtocolObject<'a>,
 {
     U::from_bytes(data)
-        .map(T::from_backend)
+        .map(T::from)
         .map_err(|err| PyValueError::new_err(format!("Failed to deserialize: {}", err)))
 }
 
@@ -64,10 +56,10 @@ where
 
 fn hash<T, U>(type_name: &str, obj: &T) -> PyResult<isize>
 where
-    T: AsBackend<U>,
+    T: AsRef<U>,
     U: AsRef<[u8]>,
 {
-    let serialized = obj.as_backend().as_ref();
+    let serialized = obj.as_ref().as_ref();
 
     // call `hash((class_name, bytes(obj)))`
     Python::with_gil(|py| {
@@ -88,27 +80,16 @@ fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct MessageKit {
     backend: nucypher_core::MessageKit,
-}
-
-impl AsBackend<nucypher_core::MessageKit> for MessageKit {
-    fn as_backend(&self) -> &nucypher_core::MessageKit {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::MessageKit> for MessageKit {
-    fn from_backend(backend: nucypher_core::MessageKit) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
 impl MessageKit {
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MessageKit>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -173,7 +154,7 @@ impl MessageKit {
 
 #[allow(clippy::upper_case_acronyms)]
 #[pyclass(module = "nucypher_core")]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, derive_more::AsRef)]
 pub struct HRAC {
     backend: nucypher_core::HRAC,
 }
@@ -219,31 +200,14 @@ impl HRAC {
     }
 }
 
-impl AsBackend<nucypher_core::HRAC> for HRAC {
-    fn as_backend(&self) -> &nucypher_core::HRAC {
-        &self.backend
-    }
-}
-
 //
 // EncryptedKeyFrag
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct EncryptedKeyFrag {
     backend: nucypher_core::EncryptedKeyFrag,
-}
-
-impl AsBackend<nucypher_core::EncryptedKeyFrag> for EncryptedKeyFrag {
-    fn as_backend(&self) -> &nucypher_core::EncryptedKeyFrag {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::EncryptedKeyFrag> for EncryptedKeyFrag {
-    fn from_backend(backend: nucypher_core::EncryptedKeyFrag) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -279,7 +243,7 @@ impl EncryptedKeyFrag {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::EncryptedKeyFrag>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -292,21 +256,9 @@ impl EncryptedKeyFrag {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, derive_more::From, derive_more::AsRef)]
 pub struct TreasureMap {
     backend: nucypher_core::TreasureMap,
-}
-
-impl AsBackend<nucypher_core::TreasureMap> for TreasureMap {
-    fn as_backend(&self) -> &nucypher_core::TreasureMap {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::TreasureMap> for TreasureMap {
-    fn from_backend(backend: nucypher_core::TreasureMap) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -397,7 +349,7 @@ impl TreasureMap {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::TreasureMap>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -410,20 +362,9 @@ impl TreasureMap {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct EncryptedTreasureMap {
     backend: nucypher_core::EncryptedTreasureMap,
-}
-
-impl AsBackend<nucypher_core::EncryptedTreasureMap> for EncryptedTreasureMap {
-    fn as_backend(&self) -> &nucypher_core::EncryptedTreasureMap {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::EncryptedTreasureMap> for EncryptedTreasureMap {
-    fn from_backend(backend: nucypher_core::EncryptedTreasureMap) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -435,13 +376,13 @@ impl EncryptedTreasureMap {
     ) -> PyResult<TreasureMap> {
         self.backend
             .decrypt(&sk.backend, &publisher_verifying_key.backend)
-            .map(TreasureMap::from_backend)
+            .map(TreasureMap::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::EncryptedTreasureMap>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -454,20 +395,9 @@ impl EncryptedTreasureMap {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionRequest {
     backend: nucypher_core::ReencryptionRequest,
-}
-
-impl AsBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
-    fn as_backend(&self) -> &nucypher_core::ReencryptionRequest {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::ReencryptionRequest> for ReencryptionRequest {
-    fn from_backend(backend: nucypher_core::ReencryptionRequest) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -548,7 +478,7 @@ impl ReencryptionRequest {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::ReencryptionRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -561,20 +491,9 @@ impl ReencryptionRequest {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionResponse {
     backend: nucypher_core::ReencryptionResponse,
-}
-
-impl AsBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
-    fn as_backend(&self) -> &nucypher_core::ReencryptionResponse {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::ReencryptionResponse> for ReencryptionResponse {
-    fn from_backend(backend: nucypher_core::ReencryptionResponse) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -630,7 +549,7 @@ impl ReencryptionResponse {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::ReencryptionResponse>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -643,20 +562,9 @@ impl ReencryptionResponse {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct RetrievalKit {
     backend: nucypher_core::RetrievalKit,
-}
-
-impl AsBackend<nucypher_core::RetrievalKit> for RetrievalKit {
-    fn as_backend(&self) -> &nucypher_core::RetrievalKit {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::RetrievalKit> for RetrievalKit {
-    fn from_backend(backend: nucypher_core::RetrievalKit) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -710,7 +618,7 @@ impl RetrievalKit {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::RetrievalKit>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -723,20 +631,9 @@ impl RetrievalKit {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct RevocationOrder {
     backend: nucypher_core::RevocationOrder,
-}
-
-impl AsBackend<nucypher_core::RevocationOrder> for RevocationOrder {
-    fn as_backend(&self) -> &nucypher_core::RevocationOrder {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::RevocationOrder> for RevocationOrder {
-    fn from_backend(backend: nucypher_core::RevocationOrder) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -770,7 +667,7 @@ impl RevocationOrder {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::RevocationOrder>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -892,21 +789,9 @@ impl NodeMetadataPayload {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(Clone)]
+#[derive(Clone, derive_more::From, derive_more::AsRef)]
 pub struct NodeMetadata {
     backend: nucypher_core::NodeMetadata,
-}
-
-impl AsBackend<nucypher_core::NodeMetadata> for NodeMetadata {
-    fn as_backend(&self) -> &nucypher_core::NodeMetadata {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::NodeMetadata> for NodeMetadata {
-    fn from_backend(backend: nucypher_core::NodeMetadata) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -931,7 +816,7 @@ impl NodeMetadata {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::NodeMetadata>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -944,15 +829,9 @@ impl NodeMetadata {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, derive_more::AsRef)]
 pub struct FleetStateChecksum {
     backend: nucypher_core::FleetStateChecksum,
-}
-
-impl AsBackend<nucypher_core::FleetStateChecksum> for FleetStateChecksum {
-    fn as_backend(&self) -> &nucypher_core::FleetStateChecksum {
-        &self.backend
-    }
 }
 
 #[pymethods]
@@ -993,20 +872,9 @@ impl FleetStateChecksum {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataRequest {
     backend: nucypher_core::MetadataRequest,
-}
-
-impl AsBackend<nucypher_core::MetadataRequest> for MetadataRequest {
-    fn as_backend(&self) -> &nucypher_core::MetadataRequest {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::MetadataRequest> for MetadataRequest {
-    fn from_backend(backend: nucypher_core::MetadataRequest) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -1048,7 +916,7 @@ impl MetadataRequest {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MetadataRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -1100,20 +968,9 @@ impl MetadataResponsePayload {
 //
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataResponse {
     backend: nucypher_core::MetadataResponse,
-}
-
-impl AsBackend<nucypher_core::MetadataResponse> for MetadataResponse {
-    fn as_backend(&self) -> &nucypher_core::MetadataResponse {
-        &self.backend
-    }
-}
-
-impl FromBackend<nucypher_core::MetadataResponse> for MetadataResponse {
-    fn from_backend(backend: nucypher_core::MetadataResponse) -> Self {
-        Self { backend }
-    }
 }
 
 #[pymethods]
@@ -1137,7 +994,7 @@ impl MetadataResponse {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes(data)
+        from_bytes::<_, nucypher_core::MetadataResponse>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
