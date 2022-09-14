@@ -57,13 +57,22 @@ impl ReencryptionRequest {
     }
 }
 
+#[derive(Deserialize)]
+struct ReencryptionRequest0 {
+    capsules: Box<[Capsule]>,
+    hrac: HRAC,
+    encrypted_kfrag: EncryptedKeyFrag,
+    publisher_verifying_key: PublicKey,
+    bob_verifying_key: PublicKey,
+}
+
 impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     fn brand() -> [u8; 4] {
         *b"ReRq"
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (1, 1)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -71,10 +80,23 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
+        match minor_version {
+            0 => {
+                let req = messagepack_deserialize::<ReencryptionRequest0>(bytes).map(|req| {
+                    ReencryptionRequest {
+                        capsules: req.capsules,
+                        hrac: req.hrac,
+                        encrypted_kfrag: req.encrypted_kfrag,
+                        publisher_verifying_key: req.publisher_verifying_key,
+                        bob_verifying_key: req.bob_verifying_key,
+                        conditions: None,
+                        context: None,
+                    }
+                });
+                Some(req)
+            }
+            1 => Some(messagepack_deserialize(bytes)),
+            _ => None,
         }
     }
 }
