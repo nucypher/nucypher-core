@@ -256,7 +256,7 @@ impl EncryptedKeyFrag {
 //
 
 #[pyclass(module = "nucypher_core")]
-#[derive(Clone, PartialEq, derive_more::From, derive_more::AsRef)]
+#[derive(PartialEq, derive_more::From, derive_more::AsRef)]
 pub struct TreasureMap {
     backend: nucypher_core::TreasureMap,
 }

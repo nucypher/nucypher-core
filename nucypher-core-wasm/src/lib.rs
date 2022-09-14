@@ -76,7 +76,7 @@ fn box_ref(source: &Option<Box<[u8]>>) -> Option<&[u8]> {
 //
 
 #[wasm_bindgen]
-#[derive(PartialEq, Debug, Clone, derive_more::From, derive_more::AsRef)]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct MessageKit(nucypher_core::MessageKit);
 
 #[wasm_bindgen]
@@ -97,7 +97,7 @@ impl MessageKit {
     #[wasm_bindgen(js_name = withVCFrag)]
     pub fn with_vcfrag(&self, vcfrag: &VerifiedCapsuleFrag) -> MessageKitWithFrags {
         MessageKitWithFrags {
-            message_kit: self.clone(),
+            message_kit: self.0.clone(),
             vcfrags: vec![vcfrag.inner()],
         }
     }
@@ -130,7 +130,7 @@ impl MessageKit {
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct MessageKitWithFrags {
-    message_kit: MessageKit,
+    message_kit: nucypher_core::MessageKit,
     vcfrags: Vec<umbral_pre::VerifiedCapsuleFrag>,
 }
 
@@ -149,7 +149,6 @@ impl MessageKitWithFrags {
         policy_encrypting_key: &PublicKey,
     ) -> Result<Box<[u8]>, JsValue> {
         self.message_kit
-            .0
             .decrypt_reencrypted(
                 sk.inner(),
                 policy_encrypting_key.inner(),
