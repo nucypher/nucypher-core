@@ -3,13 +3,44 @@ from typing import List, Dict, Iterable, Optional, Mapping, Tuple, Set
 from .umbral import SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag
 
 
+class Conditions:
+
+    def __init__(self, conditions: str):
+        ...
+
+    @classmethod
+    def from_string(cls, conditions: str) -> Conditions:
+        ...
+
+    def __str__(self) -> str:
+        ...
+
+
+class Context:
+
+    def __init__(self, context: str):
+        ...
+
+    @classmethod
+    def from_string(cls, context: str) -> Context:
+        ...
+
+    def __str__(self) -> str:
+        ...
+
+
 class MessageKit:
 
     @staticmethod
     def from_bytes(data: bytes) -> MessageKit:
         ...
 
-    def __init__(self, policy_encrypting_key: PublicKey, plaintext: bytes):
+    def __init__(
+        self,
+        policy_encrypting_key: PublicKey,
+        plaintext: bytes,
+        conditions: Optional[Conditions]
+    ):
         ...
 
     def decrypt(self, sk: SecretKey) -> bytes:
@@ -19,13 +50,13 @@ class MessageKit:
         self,
         sk: SecretKey,
         policy_encrypting_key: PublicKey,
-        cfrags: Iterable[VerifiedCapsuleFrag]
+        vcfrags: Iterable[VerifiedCapsuleFrag]
     ) -> bytes:
         ...
 
     capsule: Capsule
 
-    conditions: Optional[bytes]
+    conditions: Optional[Conditions]
 
 
 class HRAC:
@@ -135,6 +166,8 @@ class ReencryptionRequest:
         encrypted_kfrag: EncryptedKeyFrag,
         publisher_verifying_key: PublicKey,
         bob_verifying_key: PublicKey,
+        conditions: Optional[Conditions],
+        context: Optional[Context],
     ):
         ...
 
@@ -148,9 +181,9 @@ class ReencryptionRequest:
 
     capsules: List[Capsule]
 
-    conditions: Optional[bytes]
+    conditions: Optional[Conditions]
 
-    context: Optioanl[bytes]
+    context: Optional[Context]
 
     @staticmethod
     def from_bytes(data: bytes) -> ReencryptionRequest:
@@ -193,6 +226,7 @@ class RetrievalKit:
         self,
         capsule: Capsule,
         queried_addresses: Set[bytes],
+        conditions: Optional[Conditions],
     ):
         ...
 
@@ -200,7 +234,7 @@ class RetrievalKit:
 
     queried_addresses: Set[bytes]
 
-    conditions: Optional[bytes]
+    conditions: Optional[Conditions]
 
     @staticmethod
     def from_bytes(data: bytes) -> RetrievalKit:

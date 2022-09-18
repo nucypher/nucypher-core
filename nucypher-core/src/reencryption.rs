@@ -7,6 +7,7 @@ use umbral_pre::{
     Capsule, CapsuleFrag, PublicKey, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,
 };
 
+use crate::conditions::{Conditions, Context};
 use crate::hrac::HRAC;
 use crate::key_frag::EncryptedKeyFrag;
 use crate::versioning::{
@@ -28,9 +29,9 @@ pub struct ReencryptionRequest {
     /// Recipient's (Bob's) verifying key.
     pub bob_verifying_key: PublicKey,
     /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    pub conditions: Option<Conditions>,
     /// A blob of bytes containing context required to evaluate conditions.
-    pub context: Option<Box<[u8]>>,
+    pub context: Option<Context>,
 }
 
 impl ReencryptionRequest {
@@ -41,8 +42,8 @@ impl ReencryptionRequest {
         encrypted_kfrag: &EncryptedKeyFrag,
         publisher_verifying_key: &PublicKey,
         bob_verifying_key: &PublicKey,
-        conditions: Option<&[u8]>,
-        context: Option<&[u8]>,
+        conditions: Option<&Conditions>,
+        context: Option<&Context>,
     ) -> Self {
         Self {
             capsules: capsules.into(),
@@ -50,10 +51,19 @@ impl ReencryptionRequest {
             encrypted_kfrag: encrypted_kfrag.clone(),
             publisher_verifying_key: *publisher_verifying_key,
             bob_verifying_key: *bob_verifying_key,
-            conditions: conditions.map(|c| c.into()),
-            context: context.map(|c| c.into()),
+            conditions: conditions.cloned(),
+            context: context.cloned(),
         }
     }
+}
+
+#[derive(Deserialize)]
+struct ReencryptionRequest0 {
+    capsules: Box<[Capsule]>,
+    hrac: HRAC,
+    encrypted_kfrag: EncryptedKeyFrag,
+    publisher_verifying_key: PublicKey,
+    bob_verifying_key: PublicKey,
 }
 
 impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
@@ -62,7 +72,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (1, 1)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -70,10 +80,23 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
+        match minor_version {
+            0 => {
+                let req = messagepack_deserialize::<ReencryptionRequest0>(bytes).map(|req| {
+                    ReencryptionRequest {
+                        capsules: req.capsules,
+                        hrac: req.hrac,
+                        encrypted_kfrag: req.encrypted_kfrag,
+                        publisher_verifying_key: req.publisher_verifying_key,
+                        bob_verifying_key: req.bob_verifying_key,
+                        conditions: None,
+                        context: None,
+                    }
+                });
+                Some(req)
+            }
+            1 => Some(messagepack_deserialize(bytes)),
+            _ => None,
         }
     }
 }
@@ -196,7 +219,7 @@ mod tests {
     use umbral_pre::SecretKey;
     use umbral_pre::{encrypt, generate_kfrags, Signer};
 
-    use crate::{EncryptedKeyFrag, HRAC};
+    use crate::{Conditions, Context, EncryptedKeyFrag, HRAC};
 
     use super::ReencryptionRequest;
 
@@ -233,13 +256,13 @@ mod tests {
             &encrypted_kfrag,
             &some_trinket,
             &another_trinket,
-            Some(&[47u8]),
-            Some(&[51u8]),
+            Some(&Conditions::new("abcd")),
+            Some(&Context::new("efgh")),
         );
         let conditions = request.conditions.unwrap();
-        assert!(conditions[0].eq(&47u8));
+        assert_eq!(conditions.as_ref(), "abcd");
 
         let context = request.context.unwrap();
-        assert!(context[0].eq(&51u8));
+        assert_eq!(context.as_ref(), "efgh");
     }
 }

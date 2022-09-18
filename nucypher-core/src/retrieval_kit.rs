@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use umbral_pre::Capsule;
 
 use crate::address::Address;
+use crate::conditions::Conditions;
 use crate::message_kit::MessageKit;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
@@ -21,7 +22,7 @@ pub struct RetrievalKit {
     /// The addresses that have already been queried for reencryption.
     pub queried_addresses: BTreeSet<Address>,
     /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    pub conditions: Option<Conditions>,
 }
 
 impl RetrievalKit {
@@ -38,15 +39,21 @@ impl RetrievalKit {
     pub fn new(
         capsule: &Capsule,
         queried_addresses: impl IntoIterator<Item = Address>,
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
             capsule: *capsule,
             queried_addresses: queried_addresses.into_iter().collect(),
-            conditions: conditions.map(|c| c.into()),
+            conditions: conditions.cloned(),
         }
     }
+}
+
+#[derive(Deserialize)]
+struct RetrievalKit0 {
+    capsule: Capsule,
+    queried_addresses: BTreeSet<Address>,
 }
 
 impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
@@ -55,7 +62,7 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (1, 1)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -63,10 +70,18 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
+        match minor_version {
+            0 => {
+                let rkit =
+                    messagepack_deserialize::<RetrievalKit0>(bytes).map(|rkit| RetrievalKit {
+                        capsule: rkit.capsule,
+                        queried_addresses: rkit.queried_addresses,
+                        conditions: None,
+                    });
+                Some(rkit)
+            }
+            1 => Some(messagepack_deserialize(bytes)),
+            _ => None,
         }
     }
 }

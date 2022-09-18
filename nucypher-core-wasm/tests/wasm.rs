@@ -41,13 +41,13 @@ pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
 fn make_message_kit(
     sk: &SecretKey,
     plaintext: &[u8],
-    conditions: Option<impl AsRef<[u8]>>,
+    conditions: Option<impl AsRef<str>>,
 ) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
     MessageKit::new(
         &policy_encrypting_key,
         plaintext,
-        conditions.map(|bytes| bytes.as_ref().into()),
+        conditions.map(|s| Conditions::new(s.as_ref())),
     )
 }
 
@@ -130,7 +130,7 @@ fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadat
 fn message_kit_decrypts() {
     let sk = SecretKey::random();
     let plaintext = "Hello, world!".as_bytes();
-    let conditions = Some(b"{'llamas': 'yes'}");
+    let conditions = Some("{'llamas': 'yes'}");
     let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
@@ -146,7 +146,7 @@ fn message_kit_decrypt_reencrypted() {
     let delegating_sk = SecretKey::random();
     let delegating_pk = delegating_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions = Some(&b"{'hello': 'world'}");
+    let conditions = Some(&"{'hello': 'world'}");
     let message_kit = make_message_kit(&delegating_sk, plaintext, conditions);
 
     // Create key fragments for reencryption
@@ -163,22 +163,22 @@ fn message_kit_decrypt_reencrypted() {
     );
 
     // Simulate reencryption on the JS side
-    let cfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
+    let vcfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
         .iter()
         .map(|kfrag| {
             let kfrag = verified_key_farg_of_js_value(kfrag.clone()).unwrap();
             reencrypt(&message_kit.capsule(), &kfrag)
         })
         .collect();
-    assert_eq!(cfrags.len(), verified_kfrags.len());
+    assert_eq!(vcfrags.len(), verified_kfrags.len());
 
-    let mut mk_with_cfrags = message_kit.with_cfrag(&cfrags[0]);
-    for cfrag in cfrags.iter().skip(1) {
-        mk_with_cfrags.with_cfrag(cfrag);
+    let mut mk_with_vcfrags = message_kit.with_vcfrag(&vcfrags[0]);
+    for vcfrag in vcfrags.iter().skip(1) {
+        mk_with_vcfrags.with_vcfrag(vcfrag);
     }
 
     // Decrypt on the Rust side
-    let decrypted = mk_with_cfrags
+    let decrypted = mk_with_vcfrags
         .decrypt_reencrypted(&receiving_sk, &delegating_pk)
         .unwrap();
 
@@ -194,7 +194,7 @@ fn message_kit_to_bytes_from_bytes() {
     let sk = SecretKey::random();
     let plaintext = b"Hello, world!";
 
-    let conditions = Some(&b"{'hello': 'world'}");
+    let conditions = Some(&"{'hello': 'world'}");
     let message_kit = make_message_kit(&sk, plaintext, conditions);
 
     assert_eq!(
@@ -369,7 +369,7 @@ fn reencryption_request_from_bytes_to_bytes() {
     // Make capsules
     let publisher_sk = SecretKey::random();
     let plaintext = b"Hello, world!";
-    let conditions = Some(&b"{'hello': 'world'}");
+    let conditions = Some(&"{'hello': 'world'}");
     let message_kit = make_message_kit(&publisher_sk, plaintext, conditions);
     let capsules = vec![message_kit.capsule()];
 
@@ -381,13 +381,8 @@ fn reencryption_request_from_bytes_to_bytes() {
     let signer = Signer::new(&publisher_sk);
     let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
-    let conditions = Some(
-        "{'some': 'condition'}"
-            .as_bytes()
-            .to_vec()
-            .into_boxed_slice(),
-    );
-    let context = Some("{'user': 'context'}".as_bytes().to_vec().into_boxed_slice());
+    let conditions = Some(Conditions::new("{'some': 'condition'}"));
+    let context = Some(Context::new("{'user': 'context'}"));
 
     // Make reencryption request
     let reencryption_request = ReencryptionRequestBuilder::new(
@@ -427,7 +422,7 @@ fn reencryption_response_verify() {
     // Make capsules
     let policy_encrypting_key = alice_sk.public_key();
     let plaintext = b"Hello, world!";
-    let conditions = Some(b"{'hello': 'world'}");
+    let conditions = Some("{'hello': 'world'}");
 
     let message_kit = make_message_kit(&alice_sk, plaintext, conditions);
     let capsules: Vec<Capsule> = kfrags.iter().map(|_| message_kit.capsule()).collect();
@@ -468,10 +463,11 @@ fn reencryption_response_verify() {
             &policy_encrypting_key,
             &bob_sk.public_key(),
         )
-        .unwrap();
+        .unwrap()
+        .into_vec();
     let verified: Vec<VerifiedCapsuleFrag> = verified_js
-        .iter()
-        .map(|vkfrag| vkfrag.into_serde().unwrap())
+        .into_iter()
+        .map(|vkfrag| serde_wasm_bindgen::from_value(vkfrag).unwrap())
         .collect();
 
     assert_eq!(cfrags, verified, "Capsule fragments do not match");
@@ -493,9 +489,13 @@ fn reencryption_response_verify() {
 #[wasm_bindgen_test]
 fn retrieval_kit() {
     // Make a message kit
-    let condtions_bytes = "{'hello': 'world'}".as_bytes().to_vec();
-    let conditions = Some(condtions_bytes.clone());
-    let message_kit = make_message_kit(&SecretKey::random(), b"Hello, world!", conditions);
+    let conditions_str = "{'hello': 'world'}";
+    let conditions = Some(Conditions::new(conditions_str));
+    let message_kit = make_message_kit(
+        &SecretKey::random(),
+        b"Hello, world!",
+        Some(&conditions_str),
+    );
 
     let retrieval_kit_from_mk = RetrievalKit::from_message_kit(&message_kit);
     assert_eq!(
@@ -509,8 +509,7 @@ fn retrieval_kit() {
         b"00000000000000000002",
         b"00000000000000000003",
     ];
-    let conditions_boxed = Some(condtions_bytes.into_boxed_slice());
-    let mut builder = RetrievalKitBuilder::new(&message_kit.capsule(), conditions_boxed);
+    let mut builder = RetrievalKitBuilder::new(&message_kit.capsule(), conditions.clone());
     for address in queried_addresses {
         builder.add_queried_address(address).unwrap();
     }

@@ -7,6 +7,7 @@ use umbral_pre::{
     EncryptionError, PublicKey, ReencryptionError, SecretKey, VerifiedCapsuleFrag,
 };
 
+use crate::conditions::Conditions;
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
@@ -18,8 +19,8 @@ pub struct MessageKit {
     pub capsule: Capsule,
     #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
-    /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Box<[u8]>>,
+    /// Decryption conditions for this message.
+    pub conditions: Option<Conditions>,
 }
 
 impl MessageKit {
@@ -27,7 +28,7 @@ impl MessageKit {
     pub fn new(
         policy_encrypting_key: &PublicKey,
         plaintext: &[u8],
-        conditions: Option<&[u8]>,
+        conditions: Option<&Conditions>,
     ) -> Self {
         let (capsule, ciphertext) = match encrypt(policy_encrypting_key, plaintext) {
             Ok(result) => result,
@@ -40,7 +41,7 @@ impl MessageKit {
         Self {
             capsule,
             ciphertext,
-            conditions: conditions.map(|c| c.into()),
+            conditions: conditions.cloned(),
         }
     }
 
@@ -54,16 +55,23 @@ impl MessageKit {
         &self,
         sk: &SecretKey,
         policy_encrypting_key: &PublicKey,
-        cfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
+        vcfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
     ) -> Result<Box<[u8]>, ReencryptionError> {
         decrypt_reencrypted(
             sk,
             policy_encrypting_key,
             &self.capsule,
-            cfrags,
+            vcfrags,
             self.ciphertext.clone(),
         )
     }
+}
+
+#[derive(Deserialize)]
+struct MessageKit0 {
+    capsule: Capsule,
+    #[serde(with = "serde_bytes::as_base64")]
+    ciphertext: Box<[u8]>,
 }
 
 impl<'a> ProtocolObjectInner<'a> for MessageKit {
@@ -72,7 +80,7 @@ impl<'a> ProtocolObjectInner<'a> for MessageKit {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (1, 1)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -80,10 +88,17 @@ impl<'a> ProtocolObjectInner<'a> for MessageKit {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
+        match minor_version {
+            0 => {
+                let mkit = messagepack_deserialize::<MessageKit0>(bytes).map(|mkit| MessageKit {
+                    capsule: mkit.capsule,
+                    ciphertext: mkit.ciphertext,
+                    conditions: None,
+                });
+                Some(mkit)
+            }
+            1 => Some(messagepack_deserialize(bytes)),
+            _ => None,
         }
     }
 }

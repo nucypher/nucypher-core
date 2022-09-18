@@ -8,6 +8,7 @@
 extern crate alloc;
 
 mod address;
+mod conditions;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -23,6 +24,7 @@ mod versioning;
 pub struct VerificationError;
 
 pub use address::Address;
+pub use conditions::{Conditions, Context};
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;

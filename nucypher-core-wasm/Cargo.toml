@@ -28,6 +28,7 @@ ethereum-types = "0.12.1"
 serde-wasm-bindgen = "0.3.1"
 serde = { version = "1.0.130", features = ["derive"] }
 console_error_panic_hook = { version = "0.1.6", optional = true }
+derive_more = { version = "0.99", default-features = false, features = ["from", "as_ref"] }
 
 [dev-dependencies]
 console_error_panic_hook = "0.1.7"
