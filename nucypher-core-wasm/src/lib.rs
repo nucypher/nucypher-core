@@ -140,6 +140,9 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "Uint8Array | null")]
     pub type OptionUint8Array;
+
+    #[wasm_bindgen(typescript_type = "[Address, EncryptedKeyFrag]")]
+    pub type VerifiedRevocationOrder;
 }
 
 //
@@ -791,14 +794,15 @@ impl RevocationOrder {
         &self,
         alice_verifying_key: &PublicKey,
     ) -> Result<VerifiedRevocationOrder, Error> {
-        self.0
+        let (address, ekfrag) = self
+            .0
             .clone()
             .verify(alice_verifying_key.as_ref())
-            .map(|(address, encrypted_kfrag)| VerifiedRevocationOrder {
-                address,
-                encrypted_kfrag,
-            })
-            .map_err(|_err| Error::new("Failed to verify RevocationOrder"))
+            .map_err(|_err| Error::new("Failed to verify RevocationOrder"))?;
+        Ok(into_js_array([
+            JsValue::from(Address(address)),
+            JsValue::from(EncryptedKeyFrag(ekfrag)),
+        ]))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -809,26 +813,6 @@ impl RevocationOrder {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
-    }
-}
-
-// wasm-bindgen does not support returning tuples, so have to use a struct.
-#[wasm_bindgen]
-pub struct VerifiedRevocationOrder {
-    address: nucypher_core::Address,
-    encrypted_kfrag: nucypher_core::EncryptedKeyFrag,
-}
-
-#[wasm_bindgen]
-impl VerifiedRevocationOrder {
-    #[wasm_bindgen(getter)]
-    pub fn address(&self) -> Address {
-        Address(self.address)
-    }
-
-    #[wasm_bindgen(getter, js_name = encryptedKFrag)]
-    pub fn encrypted_kfrag(&self) -> EncryptedKeyFrag {
-        EncryptedKeyFrag(self.encrypted_kfrag.clone())
     }
 }
 
