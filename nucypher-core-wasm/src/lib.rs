@@ -94,6 +94,18 @@ where
     Ok(result)
 }
 
+fn into_js_array<T, U>(value: impl IntoIterator<Item = U>) -> T
+where
+    JsValue: From<U>,
+    T: JsCast,
+{
+    value
+        .into_iter()
+        .map(JsValue::from)
+        .collect::<js_sys::Array>()
+        .unchecked_into::<T>()
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(typescript_type = "VerifiedCapsuleFrag[]")]
@@ -441,31 +453,24 @@ impl TreasureMap {
 
     #[wasm_bindgen(getter)]
     pub fn destinations(&self) -> DestinationsArray {
-        self.0
-            .destinations
+        into_js_array(self.0.destinations.iter().map(|(address, ekfrag)| {
+            [
+                JsValue::from(Address(*address)),
+                JsValue::from(EncryptedKeyFrag(ekfrag.clone())),
+            ]
             .iter()
-            .map(|(address, ekfrag)| {
-                [
-                    JsValue::from(Address(*address)),
-                    JsValue::from(EncryptedKeyFrag(ekfrag.clone())),
-                ]
-                .iter()
-                .collect::<js_sys::Array>()
-            })
-            .map(JsValue::from)
             .collect::<js_sys::Array>()
-            .unchecked_into::<DestinationsArray>()
+        }))
     }
 
     #[wasm_bindgen(js_name = makeRevocationOrders)]
     pub fn make_revocation_orders(&self, signer: &Signer) -> RevocationOrderArray {
-        self.0
-            .make_revocation_orders(signer.as_ref())
-            .into_iter()
-            .map(RevocationOrder)
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<RevocationOrderArray>()
+        into_js_array(
+            self.0
+                .make_revocation_orders(signer.as_ref())
+                .into_iter()
+                .map(RevocationOrder),
+        )
     }
 
     #[wasm_bindgen(getter)]
@@ -591,14 +596,7 @@ impl ReencryptionRequest {
 
     #[wasm_bindgen(getter)]
     pub fn capsules(&self) -> CapsuleArray {
-        self.0
-            .capsules
-            .iter()
-            .cloned()
-            .map(Capsule::from)
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<CapsuleArray>()
+        into_js_array(self.0.capsules.iter().cloned().map(Capsule::from))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -694,13 +692,12 @@ impl ReencryptionResponse {
                 JsValue::from(Error::new("ReencryptionResponse verification failed"))
             })?;
 
-        Ok(backend_vcfrags
-            .into_vec()
-            .into_iter()
-            .map(VerifiedCapsuleFrag::from)
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<VerifiedCapsuleFragArray>())
+        Ok(into_js_array(
+            backend_vcfrags
+                .into_vec()
+                .into_iter()
+                .map(VerifiedCapsuleFrag::from),
+        ))
     }
 }
 
@@ -747,14 +744,7 @@ impl RetrievalKit {
 
     #[wasm_bindgen(getter, js_name = queriedAddresses)]
     pub fn queried_addresses(&self) -> AddressArray {
-        self.0
-            .queried_addresses
-            .iter()
-            .cloned()
-            .map(Address::from)
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<AddressArray>()
+        into_js_array(self.0.queried_addresses.iter().cloned().map(Address::from))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -1060,13 +1050,7 @@ impl MetadataRequest {
 
     #[wasm_bindgen(getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> NodeMetadataArray {
-        self.0
-            .announce_nodes
-            .iter()
-            .map(|node| NodeMetadata(node.clone()))
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<NodeMetadataArray>()
+        into_js_array(self.0.announce_nodes.iter().cloned().map(NodeMetadata))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -1112,13 +1096,7 @@ impl MetadataResponsePayload {
 
     #[wasm_bindgen(getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> NodeMetadataArray {
-        self.0
-            .announce_nodes
-            .iter()
-            .map(|node| NodeMetadata(node.clone()))
-            .map(JsValue::from)
-            .collect::<js_sys::Array>()
-            .unchecked_into::<NodeMetadataArray>()
+        into_js_array(self.0.announce_nodes.iter().cloned().map(NodeMetadata))
     }
 }
 
