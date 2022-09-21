@@ -58,15 +58,16 @@ where
 // TODO (rust-umbral#25): This is necessary since wasm-bindgen does not support
 // having a parameter of `Option<&T>`, and using `Option<T>` consumes the argument
 // (see https://github.com/rustwasm/wasm-bindgen/issues/2370).
-fn try_from_js_option<'a, T>(value: &'a JsValue) -> Result<Option<T>, Error>
+fn try_from_js_option<T>(value: impl AsRef<JsValue>) -> Result<Option<T>, Error>
 where
-    T: TryFrom<&'a JsValue>,
-    <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
+    for<'a> T: TryFrom<&'a JsValue>,
+    for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
 {
-    let typed_value = if value.is_null() {
+    let js_value = value.as_ref();
+    let typed_value = if js_value.is_null() {
         None
     } else {
-        Some(T::try_from(value).map_err(map_js_err)?)
+        Some(T::try_from(js_value).map_err(map_js_err)?)
     };
     Ok(typed_value)
 }
@@ -75,12 +76,13 @@ where
 // TODO (rust-umbral#23): This is necessary since wasm-bindgen does not support
 // having a parameter of `Vec<&T>`
 // (see https://github.com/rustwasm/wasm-bindgen/issues/111).
-fn try_from_js_array<T>(value: &JsValue) -> Result<Vec<T>, Error>
+fn try_from_js_array<T>(value: impl AsRef<JsValue>) -> Result<Vec<T>, Error>
 where
     for<'a> T: TryFrom<&'a JsValue>,
     for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
 {
     let array: &js_sys::Array = value
+        .as_ref()
         .dyn_ref()
         .ok_or_else(|| Error::new("Got a non-array argument where an array was expected"))?;
     let length: usize = array.length().try_into().map_err(map_js_err)?;
@@ -233,7 +235,7 @@ impl MessageKit {
         plaintext: &[u8],
         conditions: &OptionConditions,
     ) -> Result<MessageKit, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions.as_ref())?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
         Ok(MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.as_ref(),
             plaintext,
@@ -272,7 +274,7 @@ impl MessageKit {
         policy_encrypting_key: &PublicKey,
         vcfrags: &VerifiedCapsuleFragArray,
     ) -> Result<Box<[u8]>, Error> {
-        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags.as_ref())?;
+        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags)?;
         self.0
             .decrypt_reencrypted(
                 sk.as_ref(),
@@ -444,7 +446,7 @@ impl TreasureMap {
             .iter()
             .map(|(address, ekfrag)| {
                 [
-                    JsValue::from(Address(address.clone())),
+                    JsValue::from(Address(*address)),
                     JsValue::from(EncryptedKeyFrag(ekfrag.clone())),
                 ]
                 .iter()
@@ -549,9 +551,9 @@ impl ReencryptionRequest {
         conditions: &OptionConditions,
         context: &OptionContext,
     ) -> Result<ReencryptionRequest, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions.as_ref())?;
-        let typed_context = try_from_js_option::<Context>(context.as_ref())?;
-        let typed_capsules = try_from_js_array::<Capsule>(capsules.as_ref())?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+        let typed_context = try_from_js_option::<Context>(context)?;
+        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
         let backend_capules = typed_capsules
             .into_iter()
             .map(umbral_pre::Capsule::from)
@@ -636,8 +638,8 @@ impl ReencryptionResponse {
         capsules: &CapsuleArray,
         vcfrags: &VerifiedCapsuleFragArray,
     ) -> Result<ReencryptionResponse, Error> {
-        let typed_capsules = try_from_js_array::<Capsule>(capsules.as_ref())?;
-        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags.as_ref())?;
+        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
+        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags)?;
 
         let backend_capsules = typed_capsules
             .into_iter()
@@ -674,7 +676,7 @@ impl ReencryptionResponse {
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
     ) -> Result<VerifiedCapsuleFragArray, Error> {
-        let typed_capsules = try_from_js_array::<Capsule>(capsules.as_ref())?;
+        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
         let backend_capsules = typed_capsules
             .into_iter()
             .map(|capsule| *capsule.as_ref())
@@ -718,8 +720,8 @@ impl RetrievalKit {
         queried_addresses: &AddressArray,
         conditions: &OptionConditions,
     ) -> Result<RetrievalKit, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions.as_ref())?;
-        let typed_addresses = try_from_js_array::<Address>(queried_addresses.as_ref())?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+        let typed_addresses = try_from_js_array::<Address>(queried_addresses)?;
         let backend_addresses = typed_addresses
             .into_iter()
             .map(|address| address.0)
@@ -1001,8 +1003,8 @@ impl FleetStateChecksum {
         this_node: &OptionNodeMetadata,
         other_nodes: &NodeMetadataArray,
     ) -> Result<FleetStateChecksum, Error> {
-        let typed_this_node = try_from_js_option::<NodeMetadata>(this_node.as_ref())?;
-        let typed_nodes = try_from_js_array::<NodeMetadata>(other_nodes.as_ref())?;
+        let typed_this_node = try_from_js_option::<NodeMetadata>(this_node)?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(other_nodes)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)
@@ -1040,7 +1042,7 @@ impl MetadataRequest {
         fleet_state_checksum: &FleetStateChecksum,
         announce_nodes: &NodeMetadataArray,
     ) -> Result<MetadataRequest, Error> {
-        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes.as_ref())?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)
@@ -1092,7 +1094,7 @@ impl MetadataResponsePayload {
         timestamp_epoch: u32,
         announce_nodes: &NodeMetadataArray,
     ) -> Result<MetadataResponsePayload, Error> {
-        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes.as_ref())?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)
