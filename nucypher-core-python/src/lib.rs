@@ -71,6 +71,34 @@ where
 }
 
 #[pyclass(module = "nucypher_core")]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, derive_more::AsRef)]
+pub struct Address {
+    backend: nucypher_core::Address,
+}
+
+#[pymethods]
+impl Address {
+    #[new]
+    pub fn new(address_bytes: [u8; nucypher_core::Address::SIZE]) -> Self {
+        Self {
+            backend: nucypher_core::Address::new(&address_bytes),
+        }
+    }
+
+    fn __bytes__(&self) -> &[u8] {
+        self.backend.as_ref()
+    }
+
+    fn __richcmp__(&self, other: PyRef<'_, Address>, op: CompareOp) -> PyResult<bool> {
+        richcmp(self, other, op)
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        hash("Address", self)
+    }
+}
+
+#[pyclass(module = "nucypher_core")]
 pub struct Conditions {
     backend: nucypher_core::Conditions,
 }
@@ -151,7 +179,7 @@ impl MessageKit {
     ) -> Self {
         Self {
             backend: nucypher_core::MessageKit::new(
-                &policy_encrypting_key.backend,
+                policy_encrypting_key.as_ref(),
                 plaintext,
                 conditions.map(|conditions| &conditions.backend),
             ),
@@ -161,7 +189,7 @@ impl MessageKit {
     pub fn decrypt(&self, py: Python, sk: &SecretKey) -> PyResult<PyObject> {
         let plaintext = self
             .backend
-            .decrypt(&sk.backend)
+            .decrypt(sk.as_ref())
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
@@ -174,19 +202,17 @@ impl MessageKit {
         vcfrags: Vec<VerifiedCapsuleFrag>,
     ) -> PyResult<PyObject> {
         let backend_vcfrags: Vec<umbral_pre::VerifiedCapsuleFrag> =
-            vcfrags.into_iter().map(|vcfrag| vcfrag.backend).collect();
+            vcfrags.into_iter().map(|vcfrag| vcfrag.into()).collect();
         let plaintext = self
             .backend
-            .decrypt_reencrypted(&sk.backend, &policy_encrypting_key.backend, backend_vcfrags)
+            .decrypt_reencrypted(sk.as_ref(), policy_encrypting_key.as_ref(), backend_vcfrags)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
     #[getter]
     fn capsule(&self) -> Capsule {
-        Capsule {
-            backend: self.backend.capsule,
-        }
+        self.backend.capsule.into()
     }
 
     #[getter]
@@ -221,8 +247,8 @@ impl HRAC {
     ) -> Self {
         Self {
             backend: nucypher_core::HRAC::new(
-                &publisher_verifying_key.backend,
-                &bob_verifying_key.backend,
+                publisher_verifying_key.as_ref(),
+                bob_verifying_key.as_ref(),
                 label,
             ),
         }
@@ -273,10 +299,10 @@ impl EncryptedKeyFrag {
     ) -> Self {
         Self {
             backend: nucypher_core::EncryptedKeyFrag::new(
-                &signer.backend,
-                &recipient_key.backend,
+                signer.as_ref(),
+                recipient_key.as_ref(),
                 &hrac.backend,
-                verified_kfrag.backend.clone(),
+                verified_kfrag.as_ref().clone(),
             ),
         }
     }
@@ -288,8 +314,8 @@ impl EncryptedKeyFrag {
         publisher_verifying_key: &PublicKey,
     ) -> PyResult<VerifiedKeyFrag> {
         self.backend
-            .decrypt(&sk.backend, &hrac.backend, &publisher_verifying_key.backend)
-            .map(|backend| VerifiedKeyFrag { backend })
+            .decrypt(sk.as_ref(), &hrac.backend, publisher_verifying_key.as_ref())
+            .map(VerifiedKeyFrag::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
@@ -320,23 +346,18 @@ impl TreasureMap {
         signer: &Signer,
         hrac: &HRAC,
         policy_encrypting_key: &PublicKey,
-        assigned_kfrags: BTreeMap<[u8; nucypher_core::Address::SIZE], (PublicKey, VerifiedKeyFrag)>,
+        assigned_kfrags: BTreeMap<Address, (PublicKey, VerifiedKeyFrag)>,
         threshold: u8,
     ) -> Self {
         let assigned_kfrags_backend = assigned_kfrags
             .into_iter()
-            .map(|(address_bytes, (key, vkfrag))| {
-                (
-                    nucypher_core::Address::new(&address_bytes),
-                    (key.backend, vkfrag.backend),
-                )
-            })
+            .map(|(address, (key, vkfrag))| (address.backend, (key.into(), vkfrag.into())))
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::TreasureMap::new(
-                &signer.backend,
+                signer.as_ref(),
                 &hrac.backend,
-                &policy_encrypting_key.backend,
+                policy_encrypting_key.as_ref(),
                 assigned_kfrags_backend,
                 threshold,
             ),
@@ -347,13 +368,13 @@ impl TreasureMap {
         EncryptedTreasureMap {
             backend: self
                 .backend
-                .encrypt(&signer.backend, &recipient_key.backend),
+                .encrypt(signer.as_ref(), recipient_key.as_ref()),
         }
     }
 
     pub fn make_revocation_orders(&self, signer: &Signer) -> Vec<RevocationOrder> {
         self.backend
-            .make_revocation_orders(&signer.backend)
+            .make_revocation_orders(signer.as_ref())
             .into_iter()
             .map(|backend| RevocationOrder { backend })
             .collect()
@@ -387,16 +408,12 @@ impl TreasureMap {
 
     #[getter]
     fn policy_encrypting_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.policy_encrypting_key,
-        }
+        self.backend.policy_encrypting_key.into()
     }
 
     #[getter]
     fn publisher_verifying_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.publisher_verifying_key,
-        }
+        self.backend.publisher_verifying_key.into()
     }
 
     #[staticmethod]
@@ -427,7 +444,7 @@ impl EncryptedTreasureMap {
         publisher_verifying_key: &PublicKey,
     ) -> PyResult<TreasureMap> {
         self.backend
-            .decrypt(&sk.backend, &publisher_verifying_key.backend)
+            .decrypt(sk.as_ref(), publisher_verifying_key.as_ref())
             .map(TreasureMap::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
@@ -465,16 +482,16 @@ impl ReencryptionRequest {
         context: Option<&Context>,
     ) -> Self {
         let capsules_backend = capsules
-            .iter()
-            .map(|capsule| capsule.backend)
+            .into_iter()
+            .map(umbral_pre::Capsule::from)
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::ReencryptionRequest::new(
                 &capsules_backend,
                 &hrac.backend,
                 &encrypted_kfrag.backend,
-                &publisher_verifying_key.backend,
-                &bob_verifying_key.backend,
+                publisher_verifying_key.as_ref(),
+                bob_verifying_key.as_ref(),
                 conditions.map(|conditions| &conditions.backend),
                 context.map(|context| &context.backend),
             ),
@@ -490,16 +507,12 @@ impl ReencryptionRequest {
 
     #[getter]
     fn publisher_verifying_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.publisher_verifying_key,
-        }
+        self.backend.publisher_verifying_key.into()
     }
 
     #[getter]
     fn bob_verifying_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.bob_verifying_key,
-        }
+        self.backend.bob_verifying_key.into()
     }
 
     #[getter]
@@ -514,7 +527,8 @@ impl ReencryptionRequest {
         self.backend
             .capsules
             .iter()
-            .map(|capsule| Capsule { backend: *capsule })
+            .cloned()
+            .map(Capsule::from)
             .collect::<Vec<_>>()
     }
 
@@ -562,15 +576,15 @@ impl ReencryptionResponse {
     pub fn new(signer: &Signer, capsules: Vec<Capsule>, vcfrags: Vec<VerifiedCapsuleFrag>) -> Self {
         let capsules_backend = capsules
             .into_iter()
-            .map(|capsule| capsule.backend)
+            .map(umbral_pre::Capsule::from)
             .collect::<Vec<_>>();
         let vcfrags_backend = vcfrags
             .into_iter()
-            .map(|vcfrag| vcfrag.backend)
+            .map(umbral_pre::VerifiedCapsuleFrag::from)
             .collect::<Vec<_>>();
         ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
-                &signer.backend,
+                signer.as_ref(),
                 &capsules_backend,
                 vcfrags_backend,
             ),
@@ -586,24 +600,23 @@ impl ReencryptionResponse {
         bob_encrypting_key: &PublicKey,
     ) -> PyResult<Vec<VerifiedCapsuleFrag>> {
         let capsules_backend = capsules
-            .iter()
-            .map(|capsule| capsule.backend)
+            .into_iter()
+            .map(umbral_pre::Capsule::from)
             .collect::<Vec<_>>();
         let vcfrags_backend = self
             .backend
             .verify(
                 &capsules_backend,
-                &alice_verifying_key.backend,
-                &ursula_verifying_key.backend,
-                &policy_encrypting_key.backend,
-                &bob_encrypting_key.backend,
+                alice_verifying_key.as_ref(),
+                ursula_verifying_key.as_ref(),
+                policy_encrypting_key.as_ref(),
+                bob_encrypting_key.as_ref(),
             )
             .map_err(|_err| PyValueError::new_err("ReencryptionResponse verification failed"))?;
         Ok(vcfrags_backend
             .iter()
-            .map(|vcfrag| VerifiedCapsuleFrag {
-                backend: vcfrag.clone(),
-            })
+            .cloned()
+            .map(VerifiedCapsuleFrag::from)
             .collect::<Vec<_>>())
     }
 
@@ -639,16 +652,16 @@ impl RetrievalKit {
     #[new]
     pub fn new(
         capsule: &Capsule,
-        queried_addresses: BTreeSet<[u8; nucypher_core::Address::SIZE]>,
+        queried_addresses: BTreeSet<Address>,
         conditions: Option<&Conditions>,
     ) -> Self {
         let addresses_backend = queried_addresses
             .iter()
-            .map(nucypher_core::Address::new)
+            .map(|address| address.backend)
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::RetrievalKit::new(
-                &capsule.backend,
+                capsule.as_ref(),
                 addresses_backend,
                 conditions.map(|conditions| &conditions.backend),
             ),
@@ -657,9 +670,7 @@ impl RetrievalKit {
 
     #[getter]
     fn capsule(&self) -> Capsule {
-        Capsule {
-            backend: self.backend.capsule,
-        }
+        self.backend.capsule.into()
     }
 
     #[getter]
@@ -706,27 +717,28 @@ impl RevocationOrder {
     #[new]
     pub fn new(
         signer: &Signer,
-        staking_provider_address: [u8; nucypher_core::Address::SIZE],
+        staking_provider_address: &Address,
         encrypted_kfrag: &EncryptedKeyFrag,
     ) -> Self {
-        let address = nucypher_core::Address::new(&staking_provider_address);
         Self {
             backend: nucypher_core::RevocationOrder::new(
-                &signer.backend,
-                &address,
+                signer.as_ref(),
+                &staking_provider_address.backend,
                 &encrypted_kfrag.backend,
             ),
         }
     }
 
-    pub fn verify(
-        &self,
-        alice_verifying_key: &PublicKey,
-    ) -> PyResult<([u8; nucypher_core::Address::SIZE], EncryptedKeyFrag)> {
+    pub fn verify(&self, alice_verifying_key: &PublicKey) -> PyResult<(Address, EncryptedKeyFrag)> {
         self.backend
             .clone()
-            .verify(&alice_verifying_key.backend)
-            .map(|(address, ekfrag)| (address.into(), EncryptedKeyFrag { backend: ekfrag }))
+            .verify(alice_verifying_key.as_ref())
+            .map(|(address, ekfrag)| {
+                (
+                    Address { backend: address },
+                    EncryptedKeyFrag { backend: ekfrag },
+                )
+            })
             .map_err(|_err| VerificationError::new_err("RevocationOrder verification failed"))
     }
 
@@ -754,7 +766,7 @@ impl NodeMetadataPayload {
     #[allow(clippy::too_many_arguments)]
     #[new]
     pub fn new(
-        staking_provider_address: [u8; nucypher_core::Address::SIZE],
+        staking_provider_address: &Address,
         domain: &str,
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
@@ -773,11 +785,11 @@ impl NodeMetadataPayload {
             .transpose()?;
         Ok(Self {
             backend: nucypher_core::NodeMetadataPayload {
-                staking_provider_address: nucypher_core::Address::new(&staking_provider_address),
+                staking_provider_address: staking_provider_address.backend,
                 domain: domain.to_string(),
                 timestamp_epoch,
-                verifying_key: verifying_key.backend,
-                encrypting_key: encrypting_key.backend,
+                verifying_key: *verifying_key.as_ref(),
+                encrypting_key: *encrypting_key.as_ref(),
                 certificate_der: certificate_der.into(),
                 host: host.to_string(),
                 port,
@@ -793,16 +805,12 @@ impl NodeMetadataPayload {
 
     #[getter]
     fn verifying_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.verifying_key,
-        }
+        self.backend.verifying_key.into()
     }
 
     #[getter]
     fn encrypting_key(&self) -> PublicKey {
-        PublicKey {
-            backend: self.backend.encrypting_key,
-        }
+        self.backend.encrypting_key.into()
     }
 
     #[getter]
@@ -864,7 +872,7 @@ impl NodeMetadata {
     #[new]
     pub fn new(signer: &Signer, payload: &NodeMetadataPayload) -> Self {
         Self {
-            backend: nucypher_core::NodeMetadata::new(&signer.backend, &payload.backend),
+            backend: nucypher_core::NodeMetadata::new(signer.as_ref(), &payload.backend),
         }
     }
 
@@ -1043,14 +1051,14 @@ impl MetadataResponse {
     #[new]
     pub fn new(signer: &Signer, payload: &MetadataResponsePayload) -> Self {
         Self {
-            backend: nucypher_core::MetadataResponse::new(&signer.backend, &payload.backend),
+            backend: nucypher_core::MetadataResponse::new(signer.as_ref(), &payload.backend),
         }
     }
 
     pub fn verify(&self, verifying_pk: &PublicKey) -> PyResult<MetadataResponsePayload> {
         self.backend
             .clone()
-            .verify(&verifying_pk.backend)
+            .verify(verifying_pk.as_ref())
             .map(|backend_payload| MetadataResponsePayload {
                 backend: backend_payload,
             })
@@ -1070,6 +1078,7 @@ impl MetadataResponse {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_class::<Address>()?;
     m.add_class::<Conditions>()?;
     m.add_class::<Context>()?;
     m.add_class::<MessageKit>()?;
