@@ -6,7 +6,7 @@ export function run() {
   const delegatingPk = delegatingSk.publicKey();
   const message = new Uint8Array(Buffer.from("Hello"));
 
-  const messageKit = new MessageKit(delegatingPk, message);
+  const messageKit = new MessageKit(delegatingPk, message, null);
 
   const decrypted = messageKit.decrypt(delegatingSk);
   console.assert(

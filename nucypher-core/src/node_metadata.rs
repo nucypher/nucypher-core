@@ -80,7 +80,7 @@ pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
 
 /// Node metadata.
 #[serde_as]
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadataPayload {
     /// The staking provider's Ethereum address.
     pub staking_provider_address: Address,
@@ -125,7 +125,7 @@ impl NodeMetadataPayload {
 }
 
 /// Signed node metadata.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct NodeMetadata {
     signature: Signature,
     /// Authorized metadata payload.
@@ -185,7 +185,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
 impl<'a> ProtocolObject<'a> for NodeMetadata {}
 
 /// A request for metadata exchange.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataRequest {
     /// The checksum of the requester's fleet state.
     pub fleet_state_checksum: FleetStateChecksum,
@@ -228,7 +228,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
 impl<'a> ProtocolObject<'a> for MetadataRequest {}
 
 /// Payload of the metadata response.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataResponsePayload {
     /// The timestamp of the most recent fleet state
     /// (the one consisting of the nodes that are being sent).
@@ -253,7 +253,7 @@ impl MetadataResponsePayload {
 }
 
 /// A response returned by an Ursula containing known node metadata.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct MetadataResponse {
     signature: Signature,
     payload: MetadataResponsePayload,
