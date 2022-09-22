@@ -43,13 +43,13 @@ where
         .map_err(|err| PyValueError::new_err(format!("Failed to deserialize: {}", err)))
 }
 
-fn richcmp<T>(obj: &T, other: PyRef<'_, T>, op: CompareOp) -> PyResult<bool>
+fn richcmp<T>(obj: &T, other: &T, op: CompareOp) -> PyResult<bool>
 where
     T: PyClass + PartialEq,
 {
     match op {
-        CompareOp::Eq => Ok(obj == &*other),
-        CompareOp::Ne => Ok(obj != &*other),
+        CompareOp::Eq => Ok(obj == other),
+        CompareOp::Ne => Ok(obj != other),
         _ => Err(PyTypeError::new_err("Objects are not ordered")),
     }
 }
@@ -89,7 +89,7 @@ impl Address {
         self.backend.as_ref()
     }
 
-    fn __richcmp__(&self, other: PyRef<'_, Address>, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
     }
 
@@ -265,7 +265,7 @@ impl HRAC {
         self.backend.as_ref()
     }
 
-    fn __richcmp__(&self, other: PyRef<HRAC>, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
     }
 
@@ -927,7 +927,7 @@ impl FleetStateChecksum {
         self.backend.as_ref()
     }
 
-    fn __richcmp__(&self, other: PyRef<FleetStateChecksum>, op: CompareOp) -> PyResult<bool> {
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
         richcmp(self, other, op)
     }
 
