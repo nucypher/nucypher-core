@@ -66,6 +66,36 @@ jobs:
       - run: cargo install wasm-pack
       - run: wasm-pack test --node
 
+  yarn-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        target:
+          - wasm32-unknown-unknown
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+      - run: cargo install wasm-pack
+      - run: make
+        working-directory: nucypher-core-wasm
+      - uses: borales/actions-yarn@v3.0.0
+        with:
+          cmd: --cwd nucypher-core-wasm/examples/node install
+      - uses: borales/actions-yarn@v3.0.0
+        with:
+          cmd: --cwd nucypher-core-wasm/examples/node build
+      - uses: borales/actions-yarn@v3.0.0
+        with:
+          cmd: --cwd nucypher-core-wasm/examples/node test
+
   trigger-wheels:
     runs-on: ubuntu-latest
     needs: test

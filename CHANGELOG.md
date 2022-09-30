@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Conditions and context are now strings instead of bytestrings. (#[33])
 - Methods taking `VerifiedCapsuleFrag` objects use "vcfrag" instead of "cfrag" for their names and the names of the corresponding parameters. (#[33])
+- Use a workaround with `wasm-bindgen-derive` to support `Option<&T>` and `Vec<&T>` arguments, and `Vec<T>` and tuple return values, with correct TypeScript annotations. Removed all the Builder pattern helper classes. (#[34])
+- Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. (#[34])
 
 
 ### Added
@@ -20,8 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `MessageKit`, `RetrievalKit`, and `ReencryptionRequest` protocol versions bumped to v1.1. (#[33])
 
 
+### Fixed
+
+- Removed `serde` dependency for WASM bindings. (#[34])
+
+
 [#32]: https://github.com/nucypher/nucypher-core/pull/32
 [#33]: https://github.com/nucypher/nucypher-core/pull/33
+[#34]: https://github.com/nucypher/nucypher-core/pull/34
 
 
 ## [0.4.0-alpha.0] - 2022-09-07

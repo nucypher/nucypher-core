@@ -1,6 +1,7 @@
 from ._nucypher_core import (
     Conditions,
     Context,
+    Address,
     MessageKit,
     HRAC,
     EncryptedKeyFrag,

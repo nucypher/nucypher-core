@@ -3,6 +3,21 @@ from typing import List, Dict, Iterable, Optional, Mapping, Tuple, Set
 from .umbral import SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag
 
 
+class Address:
+
+    def __init__(self, address_bytes: bytes):
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+    def __hash__(self) -> int:
+        ...
+
+    def __eq__(self, other) -> bool:
+        ...
+
+
 class Conditions:
 
     def __init__(self, conditions: str):
@@ -111,7 +126,7 @@ class TreasureMap:
         signer: Signer,
         hrac: HRAC,
         policy_encrypting_key: PublicKey,
-        assigned_kfrags: Mapping[bytes, Tuple[PublicKey, VerifiedKeyFrag]],
+        assigned_kfrags: Mapping[Address, Tuple[PublicKey, VerifiedKeyFrag]],
         threshold: int,
     ):
         ...
@@ -122,7 +137,7 @@ class TreasureMap:
     def make_revocation_orders(self, signer: Signer) -> List[RevocationOrder]:
         ...
 
-    destinations: Dict[bytes, EncryptedKeyFrag]
+    destinations: Dict[Address, EncryptedKeyFrag]
 
     hrac: HRAC
 
@@ -225,14 +240,14 @@ class RetrievalKit:
     def __init__(
         self,
         capsule: Capsule,
-        queried_addresses: Set[bytes],
+        queried_addresses: Set[Address],
         conditions: Optional[Conditions],
     ):
         ...
 
     capsule: Capsule
 
-    queried_addresses: Set[bytes]
+    queried_addresses: Set[Address]
 
     conditions: Optional[Conditions]
 
@@ -249,7 +264,7 @@ class RevocationOrder:
     def __init__(
         self,
         signer: Signer,
-        staking_provider_address: bytes,
+        staking_provider_address: Address,
         encrypted_kfrag: EncryptedKeyFrag,
     ):
         ...
@@ -257,7 +272,7 @@ class RevocationOrder:
     def verify(
         self,
         alice_verifying_key: PublicKey,
-    ) -> Tuple[bytes, EncryptedKeyFrag]:
+    ) -> Tuple[Address, EncryptedKeyFrag]:
         ...
 
     @staticmethod
@@ -272,7 +287,7 @@ class NodeMetadataPayload:
 
     def __init__(
         self,
-        staking_provider_address: bytes,
+        staking_provider_address: Address,
         domain: str,
         timestamp_epoch: int,
         verifying_key: PublicKey,
@@ -284,7 +299,7 @@ class NodeMetadataPayload:
     ):
         ...
 
-    staking_provider_address: bytes
+    staking_provider_address: Address
 
     verifying_key: PublicKey
 
@@ -302,7 +317,7 @@ class NodeMetadataPayload:
 
     certificate_der: bytes
 
-    def derive_operator_address(self) -> bytes:
+    def derive_operator_address(self) -> Address:
         ...
 
 

@@ -1,41 +1,51 @@
-use nucypher_core::Address;
 use nucypher_core_wasm::*;
 
+use js_sys::Uint8Array;
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
-use wasm_bindgen::convert::FromWasmAbi;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 
 //
 // Test utilities
 //
 
-// Downcast a WASM type to a Rust type
-// Reference: https://github.com/rustwasm/wasm-bindgen/issues/2231
-fn of_js_value_generic<T: FromWasmAbi<Abi = u32>>(
-    js: JsValue,
-    classname: &str,
-) -> Result<T, JsValue> {
-    use js_sys::{Object, Reflect};
-    let ctor_name = Object::get_prototype_of(&js).constructor().name();
-    if ctor_name == classname {
-        let ptr = Reflect::get(&js, &JsValue::from_str("ptr"))?;
-        let ptr_u32: u32 = ptr.as_f64().ok_or(JsValue::NULL)? as u32;
-        let value_of_type = unsafe { T::from_abi(ptr_u32) };
-        Ok(value_of_type)
-    } else {
-        Err(JsValue::NULL)
-    }
+fn into_js_option<T, U>(val: Option<U>) -> T
+where
+    JsValue: From<U>,
+    T: JsCast,
+{
+    let js_val = match val {
+        None => JsValue::NULL,
+        Some(val) => val.into(),
+    };
+    js_val.unchecked_into::<T>()
 }
 
-pub fn verified_key_farg_of_js_value(js_value: JsValue) -> Option<VerifiedKeyFrag> {
-    of_js_value_generic(js_value, "VerifiedKeyFrag").unwrap_or(None)
+fn try_from_js_array<T>(val: impl Into<JsValue>) -> Vec<T>
+where
+    for<'a> T: TryFrom<&'a JsValue>,
+    for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Debug,
+{
+    let js_array: js_sys::Array = val.into().dyn_into().unwrap();
+    js_array
+        .iter()
+        .map(|js| T::try_from(&js).unwrap())
+        .collect::<Vec<_>>()
 }
 
-pub fn node_metadata_of_js_value(js_value: JsValue) -> Option<NodeMetadata> {
-    of_js_value_generic(js_value, "NodeMetadata").unwrap_or(None)
+fn into_js_array<T, U>(value: impl IntoIterator<Item = U>) -> T
+where
+    JsValue: From<U>,
+    T: JsCast,
+{
+    value
+        .into_iter()
+        .map(JsValue::from)
+        .collect::<js_sys::Array>()
+        .unchecked_into::<T>()
 }
 
 fn make_message_kit(
@@ -44,11 +54,8 @@ fn make_message_kit(
     conditions: Option<impl AsRef<str>>,
 ) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
-    MessageKit::new(
-        &policy_encrypting_key,
-        plaintext,
-        conditions.map(|s| Conditions::new(s.as_ref())),
-    )
+    let conditions_js = into_js_option(conditions.map(|s| Conditions::new(s.as_ref().into())));
+    MessageKit::new(&policy_encrypting_key, plaintext, &conditions_js).unwrap()
 }
 
 fn make_hrac() -> HRAC {
@@ -61,22 +68,14 @@ fn make_hrac() -> HRAC {
 fn make_kfrags(delegating_sk: &SecretKey, receiving_sk: &SecretKey) -> Vec<VerifiedKeyFrag> {
     let receiving_pk = receiving_sk.public_key();
     let signer = Signer::new(delegating_sk);
-    let verified_kfrags: Vec<VerifiedKeyFrag> =
-        generate_kfrags(delegating_sk, &receiving_pk, &signer, 2, 3, false, false)
-            .iter()
-            .map(|kfrag| verified_key_farg_of_js_value(kfrag.clone()).unwrap())
-            .collect();
-    verified_kfrags
+    let js_kfrags = generate_kfrags(delegating_sk, &receiving_pk, &signer, 2, 3, false, false);
+    try_from_js_array::<VerifiedKeyFrag>(js_kfrags)
 }
 
 fn make_fleet_state_checksum() -> FleetStateChecksum {
-    let this_node = Some(make_node_metadata());
-    let other_nodes = vec![make_node_metadata(), make_node_metadata()];
-    let mut builder = FleetStateChecksumBuilder::new(this_node);
-    for node in &other_nodes {
-        builder.add_other_node(node);
-    }
-    builder.build()
+    let this_node = into_js_option(Some(make_node_metadata()));
+    let other_nodes = into_js_array([make_node_metadata(), make_node_metadata()]);
+    FleetStateChecksum::new(&this_node, &other_nodes).unwrap()
 }
 
 fn make_node_metadata() -> NodeMetadata {
@@ -84,7 +83,7 @@ fn make_node_metadata() -> NodeMetadata {
     // Need to fix it to check the operator address derivation.
     let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
 
-    let staking_provider_address = b"00000000000000000001";
+    let staking_provider_address = Address::new(b"00000000000000000001").unwrap();
     let domain = "localhost";
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
@@ -92,11 +91,14 @@ fn make_node_metadata() -> NodeMetadata {
     let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
-    let operator_signature =
-        Some(b"0000000000000000000000000000000100000000000000000000000000000001\x00".to_vec());
+    let operator_signature: Option<Uint8Array> = Some(
+        b"0000000000000000000000000000000100000000000000000000000000000001\x00"
+            .as_ref()
+            .into(),
+    );
 
     let node_metadata_payload = NodeMetadataPayload::new(
-        staking_provider_address,
+        &staking_provider_address,
         domain,
         timestamp_epoch,
         &verifying_key,
@@ -104,7 +106,7 @@ fn make_node_metadata() -> NodeMetadata {
         certificate_der,
         host,
         port,
-        operator_signature,
+        into_js_option(operator_signature),
     )
     .unwrap();
 
@@ -114,12 +116,10 @@ fn make_node_metadata() -> NodeMetadata {
 
 fn make_metadata_response_payload() -> (MetadataResponsePayload, Vec<NodeMetadata>) {
     let announce_nodes = vec![make_node_metadata(), make_node_metadata()];
+    let announce_nodes_js = into_js_array(announce_nodes.iter().cloned());
     let timestamp_epoch = 1546300800;
-    let mut payload_builder = MetadataResponsePayloadBuilder::new(timestamp_epoch);
-    for node in &announce_nodes {
-        payload_builder.add_announce_node(node);
-    }
-    (payload_builder.build(), announce_nodes)
+    let payload = MetadataResponsePayload::new(timestamp_epoch, &announce_nodes_js).unwrap();
+    (payload, announce_nodes)
 }
 
 //
@@ -152,7 +152,7 @@ fn message_kit_decrypt_reencrypted() {
     // Create key fragments for reencryption
     let receiving_sk = SecretKey::random();
     let receiving_pk = receiving_sk.public_key();
-    let verified_kfrags = generate_kfrags(
+    let vkfrags_js = generate_kfrags(
         &delegating_sk,
         &receiving_pk,
         &Signer::new(&delegating_sk),
@@ -163,23 +163,15 @@ fn message_kit_decrypt_reencrypted() {
     );
 
     // Simulate reencryption on the JS side
-    let vcfrags: Vec<VerifiedCapsuleFrag> = verified_kfrags
-        .iter()
-        .map(|kfrag| {
-            let kfrag = verified_key_farg_of_js_value(kfrag.clone()).unwrap();
-            reencrypt(&message_kit.capsule(), &kfrag)
-        })
-        .collect();
-    assert_eq!(vcfrags.len(), verified_kfrags.len());
-
-    let mut mk_with_vcfrags = message_kit.with_vcfrag(&vcfrags[0]);
-    for vcfrag in vcfrags.iter().skip(1) {
-        mk_with_vcfrags.with_vcfrag(vcfrag);
-    }
+    let vkfrags = try_from_js_array::<VerifiedKeyFrag>(vkfrags_js);
+    let vcfrags = vkfrags
+        .into_iter()
+        .map(|vkfrag| reencrypt(&message_kit.capsule(), &vkfrag));
 
     // Decrypt on the Rust side
-    let decrypted = mk_with_vcfrags
-        .decrypt_reencrypted(&receiving_sk, &delegating_pk)
+    let vcfrags_js = into_js_array(vcfrags);
+    let decrypted = message_kit
+        .decrypt_reencrypted(&receiving_sk, &delegating_pk, &vcfrags_js)
         .unwrap();
 
     assert_eq!(
@@ -272,37 +264,39 @@ fn encrypted_to_bytes_from_bytes() {
 fn make_treasure_map(publisher_sk: &SecretKey, receiving_sk: &SecretKey) -> TreasureMap {
     let hrac = make_hrac();
     let vkfrags = make_kfrags(publisher_sk, receiving_sk);
+    let assigned_kfrags = [
+        (
+            Address::new(b"00000000000000000001").unwrap(),
+            (SecretKey::random().public_key(), vkfrags[0].clone()),
+        ),
+        (
+            Address::new(b"00000000000000000002").unwrap(),
+            (SecretKey::random().public_key(), vkfrags[1].clone()),
+        ),
+        (
+            Address::new(b"00000000000000000003").unwrap(),
+            (SecretKey::random().public_key(), vkfrags[2].clone()),
+        ),
+    ];
 
-    // Try the non-consuming variant of builder
-    let mut builder = TreasureMapBuilder::new(
+    let assigned_kfrags_js =
+        into_js_array(assigned_kfrags.into_iter().map(|(address, (pk, vkfrag))| {
+            let pair = [JsValue::from(pk), JsValue::from(vkfrag)]
+                .into_iter()
+                .collect::<js_sys::Array>();
+            [JsValue::from(address), JsValue::from(pair)]
+                .into_iter()
+                .collect::<js_sys::Array>()
+        }));
+
+    TreasureMap::new(
         &Signer::new(publisher_sk),
         &hrac,
         &SecretKey::random().public_key(),
+        &assigned_kfrags_js,
         2,
     )
     .unwrap()
-    .add_kfrag(
-        b"00000000000000000001",
-        &SecretKey::random().public_key(),
-        &vkfrags[0].clone(),
-    )
-    .unwrap();
-
-    // Also try using the consuming variant of builder:
-    builder
-        .add_kfrag(
-            b"00000000000000000002",
-            &SecretKey::random().public_key(),
-            &vkfrags[1].clone(),
-        )
-        .unwrap()
-        .add_kfrag(
-            b"00000000000000000003",
-            &SecretKey::random().public_key(),
-            &vkfrags[2].clone(),
-        )
-        .unwrap()
-        .build()
 }
 
 #[wasm_bindgen_test]
@@ -331,15 +325,27 @@ fn treasure_map_destinations() {
     let receiving_sk = SecretKey::random();
 
     let treasure_map = make_treasure_map(&publisher_sk, &receiving_sk);
-    let destinations = treasure_map.destinations().unwrap();
-    let destinations: Vec<(Address, EncryptedKeyFrag)> =
-        serde_wasm_bindgen::from_value(destinations).unwrap();
+    let destinations_pairs = try_from_js_array::<JsValue>(treasure_map.destinations());
+
+    // Need to unpack the tuples further
+    let mut destinations = Vec::new();
+    for entry in destinations_pairs.into_iter() {
+        let key_value = entry.dyn_into::<js_sys::Array>().unwrap();
+        let address = Address::try_from(&key_value.get(0)).unwrap();
+        let ekfrag = EncryptedKeyFrag::try_from(&key_value.get(1)).unwrap();
+        destinations.push((address, ekfrag));
+    }
 
     assert!(destinations.len() == 3, "Destinations does not match");
     (0..destinations.len()).for_each(|i| {
         assert_eq!(
             destinations[i].0.as_ref(),
-            format!("0000000000000000000{}", i + 1).as_bytes(),
+            &nucypher_core::Address::new(
+                format!("0000000000000000000{}", i + 1)
+                    .as_bytes()
+                    .try_into()
+                    .unwrap()
+            ),
             "Destination does not match"
         );
     });
@@ -381,21 +387,22 @@ fn reencryption_request_from_bytes_to_bytes() {
     let signer = Signer::new(&publisher_sk);
     let verified_kfrags = make_kfrags(&publisher_sk, &receiving_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
-    let conditions = Some(Conditions::new("{'some': 'condition'}"));
-    let context = Some(Context::new("{'user': 'context'}"));
+    let conditions: JsValue = Some(Conditions::new("{'some': 'condition'}")).into();
+    let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
+
+    let capsule_array = into_js_array([capsules[0]]);
 
     // Make reencryption request
-    let reencryption_request = ReencryptionRequestBuilder::new(
+    let reencryption_request = ReencryptionRequest::new(
+        &capsule_array,
         &hrac,
         &encrypted_kfrag,
         &publisher_sk.public_key(),
         &receiving_pk,
-        conditions,
-        context,
+        &conditions.unchecked_into::<OptionConditions>(),
+        &context.unchecked_into::<OptionContext>(),
     )
-    .unwrap()
-    .add_capsule(&capsules[0])
-    .build();
+    .unwrap();
 
     assert_eq!(
         reencryption_request,
@@ -432,44 +439,32 @@ fn reencryption_response_verify() {
     // Simulate the reencryption
     let cfrags: Vec<VerifiedCapsuleFrag> = kfrags
         .iter()
-        .map(|kfrag| reencrypt(&capsules[0], kfrag))
+        .map(|kfrag| reencrypt(&capsules[0], &kfrag))
         .collect();
 
     // Make the reencryption response
     let ursula_sk = SecretKey::random();
     let signer = Signer::new(&ursula_sk);
-    let mut builder = ReencryptionResponseBuilder::new(&signer);
-    for cfrag in &cfrags {
-        builder.add_cfrag(cfrag);
-    }
-    for capsule in &capsules {
-        builder.add_capsule(capsule);
-    }
-    let reencryption_response = builder.build();
+
+    let capsules_js = into_js_array(capsules);
+    let cfrags_js = into_js_array(cfrags.iter().cloned());
+    let reencryption_response =
+        ReencryptionResponse::new(&signer, &capsules_js, &cfrags_js).unwrap();
 
     // Now that the response is created, we're going to "send it" to the client and verify it
 
-    // Add capsule to reencryption response
-    let mut resp_with_capsules = reencryption_response.with_capsule(&capsules[0]);
-    for capsule in &capsules[1..] {
-        resp_with_capsules = resp_with_capsules.with_capsule(capsule);
-    }
-
     // Verify reencryption response
-    let verified_js = resp_with_capsules
+    let verified_array = reencryption_response
         .verify(
+            &capsules_js,
             &alice_sk.public_key(),
             &ursula_sk.public_key(),
             &policy_encrypting_key,
             &bob_sk.public_key(),
         )
-        .unwrap()
-        .into_vec();
-    let verified: Vec<VerifiedCapsuleFrag> = verified_js
-        .into_iter()
-        .map(|vkfrag| serde_wasm_bindgen::from_value(vkfrag).unwrap())
-        .collect();
+        .unwrap();
 
+    let verified = try_from_js_array::<VerifiedCapsuleFrag>(verified_array);
     assert_eq!(cfrags, verified, "Capsule fragments do not match");
 
     let as_bytes = reencryption_response.to_bytes();
@@ -498,29 +493,35 @@ fn retrieval_kit() {
     );
 
     let retrieval_kit_from_mk = RetrievalKit::from_message_kit(&message_kit);
+    let addresses_from_rkit =
+        try_from_js_array::<Address>(retrieval_kit_from_mk.queried_addresses());
     assert_eq!(
-        retrieval_kit_from_mk.queried_addresses().unwrap().len(),
+        addresses_from_rkit.len(),
         0,
         "Queried addresses length does not match"
     );
 
     let queried_addresses = [
-        b"00000000000000000001",
-        b"00000000000000000002",
-        b"00000000000000000003",
+        Address::new(b"00000000000000000001").unwrap(),
+        Address::new(b"00000000000000000002").unwrap(),
+        Address::new(b"00000000000000000003").unwrap(),
     ];
-    let mut builder = RetrievalKitBuilder::new(&message_kit.capsule(), conditions.clone());
-    for address in queried_addresses {
-        builder.add_queried_address(address).unwrap();
-    }
-    let retreival_kit = builder.build();
+    let queried_addresses_js = into_js_array(queried_addresses.iter().cloned());
+    let conditions_js = into_js_option(conditions);
+    let retrieval_kit = RetrievalKit::new(
+        &message_kit.capsule(),
+        &queried_addresses_js,
+        &conditions_js,
+    )
+    .unwrap();
+    let addresses_from_rkit = try_from_js_array::<Address>(retrieval_kit.queried_addresses());
     assert_eq!(
-        retreival_kit.queried_addresses().unwrap().len(),
+        addresses_from_rkit.len(),
         queried_addresses.len(),
         "Queried addresses length does not match"
     );
 
-    let as_bytes = retreival_kit.to_bytes();
+    let as_bytes = retrieval_kit.to_bytes();
     assert_eq!(
         as_bytes,
         RetrievalKit::from_bytes(&as_bytes).unwrap().to_bytes(),
@@ -543,8 +544,9 @@ fn revocation_order() {
     let signer = Signer::new(&delegating_sk);
     let encrypted_kfrag = EncryptedKeyFrag::new(&signer, &receiving_pk, &hrac, &verified_kfrags[0]);
 
-    let ursula_address = b"00000000000000000001";
-    let revocation_order = RevocationOrder::new(&signer, ursula_address, &encrypted_kfrag).unwrap();
+    let ursula_address = Address::new(b"00000000000000000001").unwrap();
+    let revocation_order =
+        RevocationOrder::new(&signer, &ursula_address, &encrypted_kfrag).unwrap();
 
     assert!(revocation_order.verify(&delegating_sk.public_key()).is_ok());
 
@@ -583,9 +585,10 @@ fn node_metadata_derive_operator_address() {
     let node_metadata = make_node_metadata();
     let operator_address = node_metadata.payload().derive_operator_address();
 
-    assert_eq!(
-        operator_address.unwrap(),
-        b"\x01l\xac\x82\x9fj\x06/\r8d\xb5bX\xdd\xc75\xa1\xf9;",
+    assert!(
+        operator_address
+            .unwrap()
+            .equals(&Address::new(b"\x01l\xac\x82\x9fj\x06/\r8d\xb5bX\xdd\xc75\xa1\xf9;").unwrap()),
         "Operator address derivation failed"
     );
 }
@@ -611,20 +614,11 @@ fn fleet_state_checksum_to_bytes() {
 #[wasm_bindgen_test]
 fn metadata_request() {
     let fleet_state_checksum = make_fleet_state_checksum();
-    let announce_nodes = vec![make_node_metadata(), make_node_metadata()];
+    let announce_nodes = [make_node_metadata(), make_node_metadata()];
+    let announce_nodes_js = into_js_array(announce_nodes.iter().cloned());
+    let metadata_request = MetadataRequest::new(&fleet_state_checksum, &announce_nodes_js).unwrap();
 
-    let mut builder = MetadataRequestBuilder::new(&fleet_state_checksum);
-    for node in &announce_nodes {
-        builder.add_announce_node(node);
-    }
-    let metadata_request = builder.build();
-
-    let nodes_js = metadata_request.announce_nodes();
-    let nodes: Vec<NodeMetadata> = nodes_js
-        .iter()
-        .cloned()
-        .map(|js_node| node_metadata_of_js_value(js_node).unwrap())
-        .collect::<Vec<_>>();
+    let nodes = try_from_js_array::<NodeMetadata>(metadata_request.announce_nodes());
     assert_eq!(nodes, announce_nodes);
 
     let as_bytes = metadata_request.to_bytes();
@@ -642,13 +636,7 @@ fn metadata_request() {
 #[wasm_bindgen_test]
 fn metadata_response_payload() {
     let (metadata_response_payload, announce_nodes) = make_metadata_response_payload();
-
-    let nodes_js = metadata_response_payload.announce_nodes();
-    let nodes: Vec<NodeMetadata> = nodes_js
-        .iter()
-        .cloned()
-        .map(|js_node| node_metadata_of_js_value(js_node).unwrap())
-        .collect::<Vec<_>>();
+    let nodes = try_from_js_array::<NodeMetadata>(metadata_response_payload.announce_nodes());
     assert_eq!(nodes, announce_nodes, "Announce nodes does not match");
 }
 
