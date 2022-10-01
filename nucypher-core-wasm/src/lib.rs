@@ -3,8 +3,6 @@
 #![allow(clippy::unused_unit)]
 
 extern crate alloc;
-// Use `wee_alloc` as the global allocator.
-extern crate wee_alloc;
 
 use alloc::{
     boxed::Box,
@@ -25,9 +23,6 @@ use wasm_bindgen_derive::TryFromJsValue;
 use nucypher_core::k256::ecdsa::recoverable;
 use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
 use nucypher_core::ProtocolObject;
-
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
     Error::new(&format!("{}", err))

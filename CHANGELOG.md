@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Methods taking `VerifiedCapsuleFrag` objects use "vcfrag" instead of "cfrag" for their names and the names of the corresponding parameters. (#[33])
 - Use a workaround with `wasm-bindgen-derive` to support `Option<&T>` and `Vec<&T>` arguments, and `Vec<T>` and tuple return values, with correct TypeScript annotations. Removed all the Builder pattern helper classes. (#[34])
 - Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. (#[34])
+- `umbral-pre` dependency bumped to 0.7. (#[36])
 
 
 ### Added
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#32]: https://github.com/nucypher/nucypher-core/pull/32
 [#33]: https://github.com/nucypher/nucypher-core/pull/33
 [#34]: https://github.com/nucypher/nucypher-core/pull/34
+[#36]: https://github.com/nucypher/nucypher-core/pull/36
 
 
 ## [0.4.0-alpha.0] - 2022-09-07
