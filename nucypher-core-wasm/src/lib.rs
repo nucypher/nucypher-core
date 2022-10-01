@@ -106,6 +106,9 @@ extern "C" {
     #[wasm_bindgen(typescript_type = "VerifiedCapsuleFrag[]")]
     pub type VerifiedCapsuleFragArray;
 
+    #[wasm_bindgen(typescript_type = "[Capsule, VerifiedCapsuleFrag][]")]
+    pub type CapsuleAndVerifiedCapsuleFragArray;
+
     #[wasm_bindgen(typescript_type = "Conditions | null")]
     pub type OptionConditions;
 
@@ -631,25 +634,38 @@ impl ReencryptionResponse {
     #[wasm_bindgen(constructor)]
     pub fn new(
         signer: &Signer,
-        capsules: &CapsuleArray,
-        vcfrags: &VerifiedCapsuleFragArray,
+        capsules_and_vcfrags: &CapsuleAndVerifiedCapsuleFragArray,
     ) -> Result<ReencryptionResponse, Error> {
-        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
-        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags)?;
+        let js_capsules_and_vcfrags: &JsValue = capsules_and_vcfrags.as_ref();
+        let capsules_and_vcfrags_array: &js_sys::Array = js_capsules_and_vcfrags
+            .dyn_ref()
+            .ok_or_else(|| Error::new("`capsules_and_vcfrags` must be an array"))?;
 
-        let backend_capsules = typed_capsules
-            .into_iter()
-            .map(umbral_pre::Capsule::from)
-            .collect::<Vec<_>>();
-        let backend_vcfrags = typed_vcfrags
-            .into_iter()
-            .map(umbral_pre::VerifiedCapsuleFrag::from)
-            .collect::<Vec<_>>();
+        let mut backend_capsules = Vec::new();
+        let mut backend_vcfrags = Vec::new();
+
+        for entry in capsules_and_vcfrags_array.iter() {
+            let entry_tuple: js_sys::Array = entry.dyn_into()?;
+            if entry_tuple.length() != 2 {
+                return Err(Error::new(
+                    "A tuple of an incorrect size received when iterating through list's entries",
+                ));
+            }
+
+            let capsule = umbral_pre::Capsule::from(
+                Capsule::try_from(&entry_tuple.get(0)).map_err(map_js_err)?,
+            );
+            let vcfrag = umbral_pre::VerifiedCapsuleFrag::from(
+                VerifiedCapsuleFrag::try_from(&entry_tuple.get(1)).map_err(map_js_err)?,
+            );
+
+            backend_capsules.push(capsule);
+            backend_vcfrags.push(vcfrag);
+        }
 
         Ok(Self(nucypher_core::ReencryptionResponse::new(
             signer.as_ref(),
-            &backend_capsules,
-            backend_vcfrags,
+            backend_capsules.iter().zip(backend_vcfrags.into_iter()),
         )))
     }
 

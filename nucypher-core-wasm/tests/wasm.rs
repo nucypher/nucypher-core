@@ -437,7 +437,7 @@ fn reencryption_response_verify() {
     assert_eq!(capsules.len(), kfrags.len());
 
     // Simulate the reencryption
-    let cfrags: Vec<VerifiedCapsuleFrag> = kfrags
+    let vcfrags: Vec<VerifiedCapsuleFrag> = kfrags
         .iter()
         .map(|kfrag| reencrypt(&capsules[0], &kfrag))
         .collect();
@@ -446,14 +446,21 @@ fn reencryption_response_verify() {
     let ursula_sk = SecretKey::random();
     let signer = Signer::new(&ursula_sk);
 
-    let capsules_js = into_js_array(capsules);
-    let cfrags_js = into_js_array(cfrags.iter().cloned());
+    let capsules_and_vcfrags_js =
+        into_js_array(capsules.iter().cloned().zip(vcfrags.iter().cloned()).map(
+            |(capsule, vcfrag)| {
+                [JsValue::from(capsule), JsValue::from(vcfrag)]
+                    .into_iter()
+                    .collect::<js_sys::Array>()
+            },
+        ));
     let reencryption_response =
-        ReencryptionResponse::new(&signer, &capsules_js, &cfrags_js).unwrap();
+        ReencryptionResponse::new(&signer, &capsules_and_vcfrags_js).unwrap();
 
     // Now that the response is created, we're going to "send it" to the client and verify it
 
     // Verify reencryption response
+    let capsules_js = into_js_array(capsules);
     let verified_array = reencryption_response
         .verify(
             &capsules_js,
@@ -465,7 +472,7 @@ fn reencryption_response_verify() {
         .unwrap();
 
     let verified = try_from_js_array::<VerifiedCapsuleFrag>(verified_array);
-    assert_eq!(cfrags, verified, "Capsule fragments do not match");
+    assert_eq!(vcfrags, verified, "Capsule fragments do not match");
 
     let as_bytes = reencryption_response.to_bytes();
     assert_eq!(

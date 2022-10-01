@@ -210,7 +210,7 @@ class ReencryptionRequest:
 
 class ReencryptionResponse:
 
-    def __init__(self, signer: Signer, capsules: Iterable[Capsule], vcfrags: Iterable[VerifiedCapsuleFrag]):
+    def __init__(self, signer: Signer, capsules_and_vcfrags: Iterable[Tuple[Capsule, VerifiedCapsuleFrag]]):
         ...
 
     def verify(

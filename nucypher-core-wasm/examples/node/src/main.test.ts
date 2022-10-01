@@ -4,6 +4,7 @@ import {
   Context,
   Capsule,
   VerifiedKeyFrag,
+  VerifiedCapsuleFrag,
   EncryptedKeyFrag,
   generateKFrags,
   HRAC,
@@ -325,20 +326,24 @@ describe("ReencryptionResponse", () => {
     const policyEncryptingKey = aliceSk.publicKey();
     const message = new Uint8Array(Buffer.from("Hello, world!"));
     const messageKit = new MessageKit(policyEncryptingKey, message, null);
-    const capsules = vkfrags.map((_) => messageKit.capsule);
 
     // Perform the reencryption
-    const cfrags = vkfrags.map((kfrag) => reencrypt(capsules[0], kfrag));
+    const vcfrags = vkfrags.map((vkfrag) => reencrypt(messageKit.capsule, vkfrag));
 
     // Make the reencryption response
     const ursulaSk = SecretKey.random();
-    const reencryptionResponse = new ReencryptionResponse(new Signer(ursulaSk), capsules, cfrags);
+    const capsules_and_vcfrags: [Capsule, VerifiedCapsuleFrag][] =
+      vcfrags.map((vcfrag) => [messageKit.capsule, vcfrag]);
+    const reencryptionResponse = new ReencryptionResponse(
+      new Signer(ursulaSk), capsules_and_vcfrags
+    );
 
     // Test serialization
     const asBytes = reencryptionResponse.toBytes();
     expect(ReencryptionResponse.fromBytes(asBytes).toBytes()).toEqual(asBytes);
 
     // Verify the reencryption response
+    const capsules = vkfrags.map((_) => messageKit.capsule);
     const verified = reencryptionResponse.verify(
       capsules,
       aliceSk.publicKey(),

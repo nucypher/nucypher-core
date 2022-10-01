@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use a workaround with `wasm-bindgen-derive` to support `Option<&T>` and `Vec<&T>` arguments, and `Vec<T>` and tuple return values, with correct TypeScript annotations. Removed all the Builder pattern helper classes. (#[34])
 - Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. (#[34])
 - `umbral-pre` dependency bumped to 0.7. (#[36])
+- `ReencryptionResponse::new()` now takes an iterator of pairs `(Capsule, VerifiedCapsuleFrag)` instead of two separate iterators; bindings changed correspondingly. (#[37])
 
 
 ### Added
@@ -32,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#33]: https://github.com/nucypher/nucypher-core/pull/33
 [#34]: https://github.com/nucypher/nucypher-core/pull/34
 [#36]: https://github.com/nucypher/nucypher-core/pull/36
+[#37]: https://github.com/nucypher/nucypher-core/pull/37
 
 
 ## [0.4.0-alpha.0] - 2022-09-07
