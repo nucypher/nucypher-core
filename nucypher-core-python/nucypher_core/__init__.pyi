@@ -1,4 +1,4 @@
-from typing import List, Dict, Iterable, Optional, Mapping, Tuple, Set
+from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set
 
 from .umbral import SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag
 
@@ -65,7 +65,7 @@ class MessageKit:
         self,
         sk: SecretKey,
         policy_encrypting_key: PublicKey,
-        vcfrags: Iterable[VerifiedCapsuleFrag]
+        vcfrags: Sequence[VerifiedCapsuleFrag]
     ) -> bytes:
         ...
 
@@ -176,7 +176,7 @@ class ReencryptionRequest:
 
     def __init__(
         self,
-        capsules: Iterable[Capsule],
+        capsules: Sequence[Capsule],
         hrac: HRAC,
         encrypted_kfrag: EncryptedKeyFrag,
         publisher_verifying_key: PublicKey,
@@ -210,12 +210,12 @@ class ReencryptionRequest:
 
 class ReencryptionResponse:
 
-    def __init__(self, signer: Signer, capsules_and_vcfrags: Iterable[Tuple[Capsule, VerifiedCapsuleFrag]]):
+    def __init__(self, signer: Signer, capsules_and_vcfrags: Sequence[Tuple[Capsule, VerifiedCapsuleFrag]]):
         ...
 
     def verify(
         self,
-        capsules: Iterable[Capsule],
+        capsules: Sequence[Capsule],
         alice_verifying_key: PublicKey,
         ursula_verifying_key: PublicKey,
         policy_encrypting_key: PublicKey,
@@ -341,7 +341,7 @@ class NodeMetadata:
 
 class FleetStateChecksum:
 
-    def __init__(self, this_node: Optional[NodeMetadata], other_nodes: Iterable[NodeMetadata]):
+    def __init__(self, this_node: Optional[NodeMetadata], other_nodes: Sequence[NodeMetadata]):
         ...
 
 
@@ -350,7 +350,7 @@ class MetadataRequest:
     def __init__(
         self,
         fleet_state_checksum: FleetStateChecksum,
-        announce_nodes: Iterable[NodeMetadata],
+        announce_nodes: Sequence[NodeMetadata],
     ):
         ...
 
@@ -368,7 +368,7 @@ class MetadataRequest:
 
 class MetadataResponsePayload:
 
-    def __init__(self, timestamp_epoch: int, announce_nodes: Iterable[NodeMetadata]):
+    def __init__(self, timestamp_epoch: int, announce_nodes: Sequence[NodeMetadata]):
         ...
 
     timestamp_epoch: int

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. (#[34])
 - `umbral-pre` dependency bumped to 0.7. (#[36])
 - `ReencryptionResponse::new()` now takes an iterator of pairs `(Capsule, VerifiedCapsuleFrag)` instead of two separate iterators; bindings changed correspondingly. (#[37])
+- Change `Iterable` to `Sequence` in Python binding type stubs: bindings cannot actually take just iterables. (#[37])
 
 
 ### Added
