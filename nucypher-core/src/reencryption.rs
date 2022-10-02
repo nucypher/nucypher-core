@@ -148,7 +148,7 @@ impl ReencryptionResponse {
 
     /// Verifies the reencryption response and returns the contained kfrags on success.
     pub fn verify(
-        &self,
+        self,
         capsules: &[Capsule],
         alice_verifying_key: &PublicKey,
         ursula_verifying_key: &PublicKey,
@@ -170,8 +170,8 @@ impl ReencryptionResponse {
 
         let vcfrags = self
             .cfrags
-            .iter()
-            .cloned()
+            .into_vec()
+            .into_iter()
             .zip(capsules.iter())
             .map(|(cfrag, capsule)| {
                 cfrag.verify(

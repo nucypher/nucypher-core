@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `umbral-pre` dependency bumped to 0.7. (#[36])
 - `ReencryptionResponse::new()` now takes an iterator of pairs `(Capsule, VerifiedCapsuleFrag)` instead of two separate iterators; bindings changed correspondingly. (#[37])
 - Change `Iterable` to `Sequence` in Python binding type stubs: bindings cannot actually take just iterables. (#[37])
+- `AuthorizedKeyFrag.verify()`, `ReencryptionResponse.verify()`, and `AuthorizedTreasureMap.verify()` now consume `self`. (#[37])
 
 
 ### Added

@@ -695,6 +695,7 @@ impl ReencryptionResponse {
             .collect::<Vec<_>>();
         let backend_vcfrags = self
             .0
+            .clone()
             .verify(
                 &backend_capsules,
                 alice_verifying_key.as_ref(),

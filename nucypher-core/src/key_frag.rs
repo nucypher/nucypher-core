@@ -39,7 +39,7 @@ impl AuthorizedKeyFrag {
         Self { signature, kfrag }
     }
 
-    fn verify(&self, hrac: &HRAC, publisher_verifying_key: &PublicKey) -> Option<VerifiedKeyFrag> {
+    fn verify(self, hrac: &HRAC, publisher_verifying_key: &PublicKey) -> Option<VerifiedKeyFrag> {
         if !self
             .signature
             .verify(publisher_verifying_key, &signed_message(hrac, &self.kfrag))
@@ -49,7 +49,7 @@ impl AuthorizedKeyFrag {
 
         // Ursula has no side channel to get the KeyFrag author's key,
         // so verifying the keyfrag is useless.
-        Some(self.kfrag.clone().skip_verification())
+        Some(self.kfrag.skip_verification())
     }
 }
 
