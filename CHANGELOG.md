@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Under construction.
+
+
+## [0.4.0] - 2022-10-02
+
 ### Changed
 
 - Conditions and context are now strings instead of bytestrings. (#[33])
@@ -174,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release.
 
 
-[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.4.0...HEAD
 [0.0.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.1
 [0.0.2]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.2
 [0.0.3]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.3
@@ -184,3 +189,4 @@ Initial release.
 [0.2.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.2.0
 [0.3.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.3.0
 [0.4.0-alpha.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.4.0-alpha.0
+[0.4.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.4.0
