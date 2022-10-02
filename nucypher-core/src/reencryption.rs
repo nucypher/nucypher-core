@@ -126,18 +126,19 @@ fn signed_message(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
 
 impl ReencryptionResponse {
     /// Creates and signs a new reencryption response.
-    pub fn new(
+    pub fn new<'a>(
         signer: &Signer,
-        capsules: &[Capsule],
-        vcfrags: impl IntoIterator<Item = VerifiedCapsuleFrag>,
+        capsules_and_vcfrags: impl IntoIterator<Item = (&'a Capsule, VerifiedCapsuleFrag)>,
     ) -> Self {
+        let (capsules, vcfrags): (Vec<_>, Vec<_>) = capsules_and_vcfrags.into_iter().unzip();
+
         // un-verify
         let cfrags: Vec<_> = vcfrags
             .into_iter()
             .map(|vcfrag| vcfrag.unverify())
             .collect();
 
-        let signature = signer.sign(&signed_message(capsules, &cfrags));
+        let signature = signer.sign(&signed_message(&capsules, &cfrags));
 
         ReencryptionResponse {
             cfrags: cfrags.into_boxed_slice(),
@@ -147,7 +148,7 @@ impl ReencryptionResponse {
 
     /// Verifies the reencryption response and returns the contained kfrags on success.
     pub fn verify(
-        &self,
+        self,
         capsules: &[Capsule],
         alice_verifying_key: &PublicKey,
         ursula_verifying_key: &PublicKey,
@@ -169,8 +170,8 @@ impl ReencryptionResponse {
 
         let vcfrags = self
             .cfrags
-            .iter()
-            .cloned()
+            .into_vec()
+            .into_iter()
             .zip(capsules.iter())
             .map(|(cfrag, capsule)| {
                 cfrag.verify(

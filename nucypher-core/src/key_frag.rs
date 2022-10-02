@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,10 @@ struct AuthorizedKeyFrag {
     kfrag: KeyFrag,
 }
 
+fn signed_message(hrac: &HRAC, kfrag: &KeyFrag) -> Vec<u8> {
+    [hrac.as_ref(), kfrag.to_array().as_ref()].concat()
+}
+
 impl AuthorizedKeyFrag {
     fn new(signer: &Signer, hrac: &HRAC, verified_kfrag: VerifiedKeyFrag) -> Self {
         // Alice makes plain to Ursula that, upon decrypting this message,
@@ -29,22 +34,22 @@ impl AuthorizedKeyFrag {
         // TODO (rust-umbral#73): add VerifiedKeyFrag::unverify()?
         let kfrag = verified_kfrag.unverify();
 
-        let signature = signer.sign(&[hrac.as_ref(), kfrag.to_array().as_ref()].concat());
+        let signature = signer.sign(&signed_message(hrac, &kfrag));
 
         Self { signature, kfrag }
     }
 
-    fn verify(&self, hrac: &HRAC, publisher_verifying_key: &PublicKey) -> Option<VerifiedKeyFrag> {
-        if !self.signature.verify(
-            publisher_verifying_key,
-            &[hrac.as_ref(), self.kfrag.to_array().as_ref()].concat(),
-        ) {
+    fn verify(self, hrac: &HRAC, publisher_verifying_key: &PublicKey) -> Option<VerifiedKeyFrag> {
+        if !self
+            .signature
+            .verify(publisher_verifying_key, &signed_message(hrac, &self.kfrag))
+        {
             return None;
         }
 
         // Ursula has no side channel to get the KeyFrag author's key,
         // so verifying the keyfrag is useless.
-        Some(self.kfrag.clone().skip_verification())
+        Some(self.kfrag.skip_verification())
     }
 }
 

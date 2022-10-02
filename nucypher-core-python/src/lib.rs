@@ -573,20 +573,20 @@ pub struct ReencryptionResponse {
 #[pymethods]
 impl ReencryptionResponse {
     #[new]
-    pub fn new(signer: &Signer, capsules: Vec<Capsule>, vcfrags: Vec<VerifiedCapsuleFrag>) -> Self {
-        let capsules_backend = capsules
+    pub fn new(signer: &Signer, capsules_and_vcfrags: Vec<(Capsule, VerifiedCapsuleFrag)>) -> Self {
+        let (capsules_backend, vcfrags_backend): (Vec<_>, Vec<_>) = capsules_and_vcfrags
             .into_iter()
-            .map(umbral_pre::Capsule::from)
-            .collect::<Vec<_>>();
-        let vcfrags_backend = vcfrags
-            .into_iter()
-            .map(umbral_pre::VerifiedCapsuleFrag::from)
-            .collect::<Vec<_>>();
+            .map(|(capsule, vcfrag)| {
+                (
+                    umbral_pre::Capsule::from(capsule),
+                    umbral_pre::VerifiedCapsuleFrag::from(vcfrag),
+                )
+            })
+            .unzip();
         ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
                 signer.as_ref(),
-                &capsules_backend,
-                vcfrags_backend,
+                capsules_backend.iter().zip(vcfrags_backend.into_iter()),
             ),
         }
     }
@@ -605,6 +605,7 @@ impl ReencryptionResponse {
             .collect::<Vec<_>>();
         let vcfrags_backend = self
             .backend
+            .clone()
             .verify(
                 &capsules_backend,
                 alice_verifying_key.as_ref(),

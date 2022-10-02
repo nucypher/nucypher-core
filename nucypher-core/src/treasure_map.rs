@@ -141,7 +141,7 @@ impl AuthorizedTreasureMap {
     }
 
     fn verify(
-        &self,
+        self,
         recipient_key: &PublicKey,
         publisher_verifying_key: &PublicKey,
     ) -> Option<TreasureMap> {
@@ -151,7 +151,7 @@ impl AuthorizedTreasureMap {
         if !self.signature.verify(publisher_verifying_key, &message) {
             return None;
         }
-        Some(self.treasure_map.clone())
+        Some(self.treasure_map)
     }
 }
 
