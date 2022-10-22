@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+### Fixed
+
+- Finish up introducing Address type in the spots forgotten in #[34]. Namely, in Python bindings: in `TreasureMap.destinations()`, in `RetrievalKit.queried_addresses()`, and in `NodeMetadata.staking_provider_address()`. (#[38])
+
+
+[#38]: https://github.com/nucypher/nucypher-core/pull/38
 
 
 ## [0.4.0] - 2022-10-02
