@@ -381,11 +381,11 @@ impl TreasureMap {
     }
 
     #[getter]
-    fn destinations(&self) -> BTreeMap<&[u8], EncryptedKeyFrag> {
+    fn destinations(&self) -> BTreeMap<Address, EncryptedKeyFrag> {
         let mut result = BTreeMap::new();
         for (address, ekfrag) in &self.backend.destinations {
             result.insert(
-                address.as_ref(),
+                Address { backend: *address },
                 EncryptedKeyFrag {
                     backend: ekfrag.clone(),
                 },
@@ -675,11 +675,11 @@ impl RetrievalKit {
     }
 
     #[getter]
-    fn queried_addresses(&self) -> BTreeSet<&[u8]> {
+    fn queried_addresses(&self) -> BTreeSet<Address> {
         self.backend
             .queried_addresses
             .iter()
-            .map(|address| address.as_ref())
+            .map(|address| Address { backend: *address })
             .collect::<BTreeSet<_>>()
     }
 
@@ -800,8 +800,10 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn staking_provider_address(&self) -> &[u8] {
-        self.backend.staking_provider_address.as_ref()
+    fn staking_provider_address(&self) -> Address {
+        Address {
+            backend: self.backend.staking_provider_address,
+        }
     }
 
     #[getter]
