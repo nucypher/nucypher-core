@@ -18,6 +18,9 @@
     "pkg-bundler/*.wasm",
     "pkg-bundler/*.ts",
     "pkg-bundler/*.js",
+    "pkg-web/*.wasm",
+    "pkg-web/*.ts",
+    "pkg-web/*.js",
     "*.ts",
     "*.js"
   ],

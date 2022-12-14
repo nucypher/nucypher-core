@@ -10,14 +10,17 @@ pkg: src
 	# Build for both targets
 	wasm-pack build -t bundler -d pkg/pkg-bundler
 	wasm-pack build -t nodejs -d pkg/pkg-node
+	wasm-pack build -t web -d pkg/pkg-web
 
 	# Clean-up non-essential files
 	(cd pkg/pkg-bundler && rm package.json README.md .gitignore LICENSE)
 	(cd pkg/pkg-node && rm package.json README.md .gitignore LICENSE)
+	(cd pkg/pkg-web && rm package.json README.md .gitignore LICENSE)
 
 	# Types are duplicated, clean them up to avoid confusion
 	mv pkg/pkg-node/nucypher_core_wasm.d.ts pkg/
 	rm pkg/pkg-bundler/nucypher_core_wasm.d.ts
+	rm pkg/pkg-web/nucypher_core_wasm.d.ts
 
 	# Copy template
 	cp package.template.json pkg/package.json
