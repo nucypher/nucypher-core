@@ -32,8 +32,8 @@ impl HRAC {
         label: &[u8],
     ) -> Self {
         let digest = Keccak256::new()
-            .chain(&publisher_verifying_key.to_array())
-            .chain(&bob_verifying_key.to_array())
+            .chain(publisher_verifying_key.to_array())
+            .chain(bob_verifying_key.to_array())
             .chain(label)
             .finalize();
 
