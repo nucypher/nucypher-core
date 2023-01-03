@@ -54,7 +54,7 @@ fn make_message_kit(
     conditions: Option<impl AsRef<str>>,
 ) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
-    let conditions_js = into_js_option(conditions.map(|s| Conditions::new(s.as_ref().into())));
+    let conditions_js = into_js_option(conditions.map(|s| Conditions::new(s.as_ref())));
     MessageKit::new(&policy_encrypting_key, plaintext, &conditions_js).unwrap()
 }
 
@@ -439,7 +439,7 @@ fn reencryption_response_verify() {
     // Simulate the reencryption
     let vcfrags: Vec<VerifiedCapsuleFrag> = kfrags
         .iter()
-        .map(|kfrag| reencrypt(&capsules[0], &kfrag))
+        .map(|kfrag| reencrypt(&capsules[0], kfrag))
         .collect();
 
     // Make the reencryption response

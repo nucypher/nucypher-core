@@ -155,7 +155,7 @@ pub trait ProtocolObject<'a>: ProtocolObjectInner<'a> {
         let unversioned_bytes = Self::unversioned_to_bytes(self);
 
         let mut result = Vec::with_capacity(header_bytes.len() + unversioned_bytes.len());
-        result.extend(&header_bytes);
+        result.extend(header_bytes);
         result.extend(unversioned_bytes.iter());
         result.into_boxed_slice()
     }
