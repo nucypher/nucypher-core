@@ -7,7 +7,7 @@ use alloc::vec::Vec;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
     decrypt_original, encrypt, serde_bytes, Capsule, EncryptionError, PublicKey, SecretKey,
-    SerializableToArray, Signature, Signer, VerifiedKeyFrag,
+    Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::address::Address;
@@ -103,7 +103,7 @@ impl<'a> ProtocolObjectInner<'a> for TreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -128,10 +128,14 @@ struct AuthorizedTreasureMap {
 }
 
 impl AuthorizedTreasureMap {
-    fn new(signer: &Signer, recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Self {
-        let mut message = recipient_key.to_array().to_vec();
+    fn message_to_sign(recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Vec<u8> {
+        let mut message = recipient_key.to_compressed_bytes().to_vec();
         message.extend(treasure_map.to_bytes().iter());
+        message
+    }
 
+    fn new(signer: &Signer, recipient_key: &PublicKey, treasure_map: &TreasureMap) -> Self {
+        let message = Self::message_to_sign(recipient_key, treasure_map);
         let signature = signer.sign(&message);
 
         Self {
@@ -145,9 +149,7 @@ impl AuthorizedTreasureMap {
         recipient_key: &PublicKey,
         publisher_verifying_key: &PublicKey,
     ) -> Option<TreasureMap> {
-        let mut message = recipient_key.to_array().to_vec();
-        message.extend(self.treasure_map.to_bytes().iter());
-
+        let message = Self::message_to_sign(recipient_key, &self.treasure_map);
         if !self.signature.verify(publisher_verifying_key, &message) {
             return None;
         }
@@ -161,7 +163,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedTreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -233,7 +235,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedTreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

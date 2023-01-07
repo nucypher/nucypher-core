@@ -6,8 +6,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use umbral_pre::{
     decrypt_original, encrypt, serde_bytes, Capsule, DecryptionError as UmbralDecryptionError,
-    EncryptionError, KeyFrag, PublicKey, SecretKey, SerializableToArray, Signature, Signer,
-    VerifiedKeyFrag,
+    EncryptionError, KeyFrag, PublicKey, SecretKey, Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::hrac::HRAC;
@@ -23,7 +22,7 @@ struct AuthorizedKeyFrag {
 }
 
 fn signed_message(hrac: &HRAC, kfrag: &KeyFrag) -> Vec<u8> {
-    [hrac.as_ref(), kfrag.to_array().as_ref()].concat()
+    [hrac.as_ref(), messagepack_serialize(kfrag).as_ref()].concat()
 }
 
 impl AuthorizedKeyFrag {
@@ -59,7 +58,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedKeyFrag {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -151,7 +150,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedKeyFrag {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

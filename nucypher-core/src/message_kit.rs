@@ -67,20 +67,13 @@ impl MessageKit {
     }
 }
 
-#[derive(Deserialize)]
-struct MessageKit0 {
-    capsule: Capsule,
-    #[serde(with = "serde_bytes::as_base64")]
-    ciphertext: Box<[u8]>,
-}
-
 impl<'a> ProtocolObjectInner<'a> for MessageKit {
     fn brand() -> [u8; 4] {
         *b"MKit"
     }
 
     fn version() -> (u16, u16) {
-        (1, 1)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -88,17 +81,10 @@ impl<'a> ProtocolObjectInner<'a> for MessageKit {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        match minor_version {
-            0 => {
-                let mkit = messagepack_deserialize::<MessageKit0>(bytes).map(|mkit| MessageKit {
-                    capsule: mkit.capsule,
-                    ciphertext: mkit.ciphertext,
-                    conditions: None,
-                });
-                Some(mkit)
-            }
-            1 => Some(messagepack_deserialize(bytes)),
-            _ => None,
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
         }
     }
 }

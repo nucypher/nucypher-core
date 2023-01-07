@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            rust: 1.57 # MSRV
+            rust: 1.63 # MSRV
           - target: x86_64-unknown-linux-gnu
             rust: stable
 
@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.57 # MSRV
+          - 1.63 # MSRV
           - stable
         target:
           - wasm32-unknown-unknown
@@ -64,7 +64,7 @@ jobs:
           target: ${{ matrix.target }}
           override: true
       - run: cargo install wasm-pack
-      - run: wasm-pack test --node
+      - run: cd ../nucypher-core-wasm && wasm-pack test --node
 
   yarn-test:
     runs-on: ubuntu-latest

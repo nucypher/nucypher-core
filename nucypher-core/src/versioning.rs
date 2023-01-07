@@ -27,7 +27,7 @@ pub(crate) fn messagepack_deserialize<'a, T>(bytes: &'a [u8]) -> Result<T, Strin
 where
     T: Deserialize<'a>,
 {
-    rmp_serde::from_read_ref(bytes).map_err(|err| format!("{}", err))
+    rmp_serde::from_slice(bytes).map_err(|err| format!("{}", err))
 }
 
 struct ProtocolObjectHeader {

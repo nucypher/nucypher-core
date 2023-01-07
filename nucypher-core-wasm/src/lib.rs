@@ -262,7 +262,7 @@ impl MessageKit {
 
     #[wasm_bindgen(getter)]
     pub fn capsule(&self) -> Capsule {
-        Capsule::from(self.0.capsule)
+        Capsule::from(self.0.capsule.clone())
     }
 
     #[wasm_bindgen(getter)]
@@ -691,7 +691,7 @@ impl ReencryptionResponse {
         let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
         let backend_capsules = typed_capsules
             .into_iter()
-            .map(|capsule| *capsule.as_ref())
+            .map(|capsule| capsule.as_ref().clone())
             .collect::<Vec<_>>();
         let backend_vcfrags = self
             .0
@@ -754,7 +754,7 @@ impl RetrievalKit {
 
     #[wasm_bindgen(getter)]
     pub fn capsule(&self) -> Capsule {
-        Capsule::from(self.0.capsule)
+        Capsule::from(self.0.capsule.clone())
     }
 
     #[wasm_bindgen(getter, js_name = queriedAddresses)]

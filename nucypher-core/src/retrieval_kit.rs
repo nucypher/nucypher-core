@@ -29,7 +29,7 @@ impl RetrievalKit {
     /// Creates a new retrival kit from a message kit.
     pub fn from_message_kit(message_kit: &MessageKit) -> Self {
         Self {
-            capsule: message_kit.capsule,
+            capsule: message_kit.capsule.clone(),
             queried_addresses: BTreeSet::<Address>::new(),
             conditions: message_kit.conditions.clone(),
         }
@@ -43,17 +43,11 @@ impl RetrievalKit {
     ) -> Self {
         // Can store cfrags too, if we're worried about Ursulas supplying duplicate ones.
         Self {
-            capsule: *capsule,
+            capsule: capsule.clone(),
             queried_addresses: queried_addresses.into_iter().collect(),
             conditions: conditions.cloned(),
         }
     }
-}
-
-#[derive(Deserialize)]
-struct RetrievalKit0 {
-    capsule: Capsule,
-    queried_addresses: BTreeSet<Address>,
 }
 
 impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
@@ -62,7 +56,7 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 
     fn version() -> (u16, u16) {
-        (1, 1)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -70,18 +64,10 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        match minor_version {
-            0 => {
-                let rkit =
-                    messagepack_deserialize::<RetrievalKit0>(bytes).map(|rkit| RetrievalKit {
-                        capsule: rkit.capsule,
-                        queried_addresses: rkit.queried_addresses,
-                        conditions: None,
-                    });
-                Some(rkit)
-            }
-            1 => Some(messagepack_deserialize(bytes)),
-            _ => None,
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
         }
     }
 }

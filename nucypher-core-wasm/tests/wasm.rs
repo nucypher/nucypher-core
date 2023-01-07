@@ -81,7 +81,7 @@ fn make_fleet_state_checksum() -> FleetStateChecksum {
 fn make_node_metadata() -> NodeMetadata {
     // Just a random valid key.
     // Need to fix it to check the operator address derivation.
-    let signing_key = SecretKey::from_bytes(b"01234567890123456789012345678901").unwrap();
+    let signing_key = SecretKey::from_be_bytes(b"01234567890123456789012345678901").unwrap();
 
     let staking_provider_address = Address::new(b"00000000000000000001").unwrap();
     let domain = "localhost";
@@ -390,7 +390,7 @@ fn reencryption_request_from_bytes_to_bytes() {
     let conditions: JsValue = Some(Conditions::new("{'some': 'condition'}")).into();
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
-    let capsule_array = into_js_array([capsules[0]]);
+    let capsule_array = into_js_array([capsules[0].clone()]);
 
     // Make reencryption request
     let reencryption_request = ReencryptionRequest::new(

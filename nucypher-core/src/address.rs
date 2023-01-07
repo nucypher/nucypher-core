@@ -1,11 +1,11 @@
-use generic_array::sequence::Split;
-use generic_array::GenericArray;
-use k256::elliptic_curve::sec1::ToEncodedPoint;
-use k256::Secp256k1;
+use generic_array::{
+    sequence::Split,
+    typenum::{U12, U20},
+    GenericArray,
+};
+use k256::{elliptic_curve::sec1::ToEncodedPoint, Secp256k1};
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Keccak256};
-use signature::digest::Update;
-use typenum::{U12, U20};
+use sha3::{digest::Update, Digest, Keccak256};
 use umbral_pre::serde_bytes;
 
 // We could use the third-party `ethereum_types::Address` here,
