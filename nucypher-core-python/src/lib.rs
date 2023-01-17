@@ -212,7 +212,7 @@ impl MessageKit {
 
     #[getter]
     fn capsule(&self) -> Capsule {
-        self.backend.capsule.into()
+        self.backend.capsule.clone().into()
     }
 
     #[getter]
@@ -671,7 +671,7 @@ impl RetrievalKit {
 
     #[getter]
     fn capsule(&self) -> Capsule {
-        self.backend.capsule.into()
+        self.backend.capsule.clone().into()
     }
 
     #[getter]

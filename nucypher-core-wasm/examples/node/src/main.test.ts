@@ -296,11 +296,11 @@ describe("ReencryptionRequest", () => {
 
     expect(reencryptionRequest).toBeTruthy();
     expect(reencryptionRequest.hrac.toBytes()).toEqual(hrac.toBytes());
-    expect(reencryptionRequest.publisherVerifyingKey.toBytes()).toEqual(
-      delegatingPk.toBytes()
+    expect(reencryptionRequest.publisherVerifyingKey.toCompressedBytes()).toEqual(
+      delegatingPk.toCompressedBytes()
     );
-    expect(reencryptionRequest.bobVerifyingKey.toBytes()).toEqual(
-      recipientPk.toBytes()
+    expect(reencryptionRequest.bobVerifyingKey.toCompressedBytes()).toEqual(
+      recipientPk.toCompressedBytes()
     );
     expect(reencryptionRequest.encryptedKfrag.toBytes()).toEqual(
       encryptedKeyFrag.toBytes()

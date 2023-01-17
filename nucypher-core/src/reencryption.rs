@@ -3,9 +3,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::{
-    Capsule, CapsuleFrag, PublicKey, SerializableToArray, Signature, Signer, VerifiedCapsuleFrag,
-};
+use umbral_pre::{Capsule, CapsuleFrag, PublicKey, Signature, Signer, VerifiedCapsuleFrag};
 
 use crate::conditions::{Conditions, Context};
 use crate::hrac::HRAC;
@@ -46,7 +44,7 @@ impl ReencryptionRequest {
         context: Option<&Context>,
     ) -> Self {
         Self {
-            capsules: capsules.into(),
+            capsules: capsules.to_vec().into(),
             hrac: *hrac,
             encrypted_kfrag: encrypted_kfrag.clone(),
             publisher_verifying_key: *publisher_verifying_key,
@@ -57,22 +55,13 @@ impl ReencryptionRequest {
     }
 }
 
-#[derive(Deserialize)]
-struct ReencryptionRequest0 {
-    capsules: Box<[Capsule]>,
-    hrac: HRAC,
-    encrypted_kfrag: EncryptedKeyFrag,
-    publisher_verifying_key: PublicKey,
-    bob_verifying_key: PublicKey,
-}
-
 impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     fn brand() -> [u8; 4] {
         *b"ReRq"
     }
 
     fn version() -> (u16, u16) {
-        (1, 1)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -80,23 +69,10 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        match minor_version {
-            0 => {
-                let req = messagepack_deserialize::<ReencryptionRequest0>(bytes).map(|req| {
-                    ReencryptionRequest {
-                        capsules: req.capsules,
-                        hrac: req.hrac,
-                        encrypted_kfrag: req.encrypted_kfrag,
-                        publisher_verifying_key: req.publisher_verifying_key,
-                        bob_verifying_key: req.bob_verifying_key,
-                        conditions: None,
-                        context: None,
-                    }
-                });
-                Some(req)
-            }
-            1 => Some(messagepack_deserialize(bytes)),
-            _ => None,
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
         }
     }
 }
@@ -110,14 +86,14 @@ pub struct ReencryptionResponse {
     signature: Signature,
 }
 
-fn signed_message(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
+fn message_to_sign(capsules: &[Capsule], cfrags: &[CapsuleFrag]) -> Vec<u8> {
     let capsule_bytes = capsules.iter().fold(Vec::<u8>::new(), |mut acc, capsule| {
-        acc.extend(capsule.to_array().as_ref());
+        acc.extend(messagepack_serialize(capsule).as_ref());
         acc
     });
 
     let cfrag_bytes = cfrags.iter().fold(Vec::<u8>::new(), |mut acc, cfrag| {
-        acc.extend(cfrag.to_array().as_ref());
+        acc.extend(messagepack_serialize(cfrag).as_ref());
         acc
     });
 
@@ -138,7 +114,9 @@ impl ReencryptionResponse {
             .map(|vcfrag| vcfrag.unverify())
             .collect();
 
-        let signature = signer.sign(&signed_message(&capsules, &cfrags));
+        let capsules: Vec<_> = capsules.into_iter().cloned().collect();
+
+        let signature = signer.sign(&message_to_sign(&capsules, &cfrags));
 
         ReencryptionResponse {
             cfrags: cfrags.into_boxed_slice(),
@@ -163,7 +141,7 @@ impl ReencryptionResponse {
         // Validate re-encryption signature
         if !self.signature.verify(
             ursula_verifying_key,
-            &signed_message(capsules, &self.cfrags),
+            &message_to_sign(capsules, &self.cfrags),
         ) {
             return Err(VerificationError);
         }
@@ -197,7 +175,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

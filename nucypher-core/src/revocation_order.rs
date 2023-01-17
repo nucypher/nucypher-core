@@ -65,7 +65,7 @@ impl<'a> ProtocolObjectInner<'a> for RevocationOrder {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

@@ -8,7 +8,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::serde_as;
 use sha3::{Digest, Keccak256};
 use signature::digest::Update;
-use umbral_pre::{serde_bytes, PublicKey, SerializableToArray, Signature, Signer};
+use umbral_pre::{serde_bytes, PublicKey, Signature, Signer};
 
 use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
@@ -116,7 +116,7 @@ impl NodeMetadataPayload {
         let signature = self
             .operator_signature
             .ok_or(AddressDerivationError::NoSignatureInPayload)?;
-        let message = encode_defunct(&self.verifying_key.to_array());
+        let message = encode_defunct(&self.verifying_key.to_compressed_bytes());
         let key = signature
             .recover_verifying_key_from_digest(message)
             .map_err(AddressDerivationError::RecoveryFailed)?;
@@ -166,7 +166,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -209,7 +209,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
     }
 
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -295,7 +295,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (1, 0)
+        (2, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

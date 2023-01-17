@@ -1,12 +1,9 @@
 use core::fmt;
 
-use generic_array::sequence::Split;
-use generic_array::GenericArray;
+use generic_array::{sequence::Split, typenum::U16, GenericArray};
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Keccak256};
-use signature::digest::Update;
-use typenum::U16;
-use umbral_pre::{serde_bytes, PublicKey, SerializableToArray};
+use sha3::{digest::Update, Digest, Keccak256};
+use umbral_pre::{serde_bytes, PublicKey};
 
 /// "hashed resource access code".
 ///
@@ -32,8 +29,8 @@ impl HRAC {
         label: &[u8],
     ) -> Self {
         let digest = Keccak256::new()
-            .chain(publisher_verifying_key.to_array())
-            .chain(bob_verifying_key.to_array())
+            .chain(publisher_verifying_key.to_compressed_bytes())
+            .chain(bob_verifying_key.to_compressed_bytes())
             .chain(label)
             .finalize();
 
