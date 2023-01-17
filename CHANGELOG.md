@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Under construction.
+### Added
+
+- Add `wasm-pack build -t web` to the `Makefile` for use in web pages without a wasm aware bundler.
 
 
 ## [0.5.0] - 2023-01-16
