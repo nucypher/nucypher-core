@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Under construction.
+
+
+## [0.5.1] - 2023-01-17
+
 ### Added
 
 - Add `wasm-pack build -t web` to the `Makefile` for use in web pages without a wasm aware bundler. ([#42])
@@ -208,7 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release.
 
 
-[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.5.1...HEAD
 [0.0.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.1
 [0.0.2]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.2
 [0.0.3]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.3
@@ -221,3 +226,4 @@ Initial release.
 [0.4.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.4.0
 [0.4.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.4.1
 [0.5.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.5.0
+[0.5.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.5.1
