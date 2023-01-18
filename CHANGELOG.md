@@ -8,7 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `wasm-pack build -t web` to the `Makefile` for use in web pages without a wasm aware bundler.
+- Add `wasm-pack build -t web` to the `Makefile` for use in web pages without a wasm aware bundler. ([#42])
+- Re-exported `umbral-pre` bumped to 0.8.1. ([#43])
+
+
+[#42]: https://github.com/nucypher/nucypher-core/pull/42
+[#43]: https://github.com/nucypher/nucypher-core/pull/43
 
 
 ## [0.5.0] - 2023-01-16
