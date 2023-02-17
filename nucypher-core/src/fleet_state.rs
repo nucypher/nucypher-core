@@ -1,8 +1,7 @@
 use core::fmt;
 
 use serde::{Deserialize, Serialize};
-use sha3::{Digest, Keccak256};
-use signature::digest::Update;
+use sha3::{digest::Update, Digest, Keccak256};
 use umbral_pre::serde_bytes;
 
 use crate::node_metadata::NodeMetadata;
@@ -15,7 +14,7 @@ pub struct FleetStateChecksum(#[serde(with = "serde_bytes::as_hex")] [u8; 32]);
 impl FleetStateChecksum {
     /// Creates a checksum from the given list of node metadata, and, possibly,
     /// also the metadata of the requesting node.
-    pub fn from_nodes(this_node: Option<&NodeMetadata>, other_nodes: &[NodeMetadata]) -> Self {
+    pub fn from_nodes(other_nodes: &[NodeMetadata], this_node: Option<&NodeMetadata>) -> Self {
         let mut nodes = other_nodes.to_vec();
         match this_node {
             None => {}

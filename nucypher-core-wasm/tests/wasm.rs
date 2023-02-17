@@ -1,8 +1,8 @@
 use nucypher_core_wasm::*;
 
-use js_sys::Uint8Array;
 use umbral_pre::bindings_wasm::{
-    generate_kfrags, reencrypt, Capsule, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+    generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
+    VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -75,7 +75,7 @@ fn make_kfrags(delegating_sk: &SecretKey, receiving_sk: &SecretKey) -> Vec<Verif
 fn make_fleet_state_checksum() -> FleetStateChecksum {
     let this_node = into_js_option(Some(make_node_metadata()));
     let other_nodes = into_js_array([make_node_metadata(), make_node_metadata()]);
-    FleetStateChecksum::new(&this_node, &other_nodes).unwrap()
+    FleetStateChecksum::new(&other_nodes, &this_node).unwrap()
 }
 
 fn make_node_metadata() -> NodeMetadata {
@@ -91,11 +91,10 @@ fn make_node_metadata() -> NodeMetadata {
     let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
-    let operator_signature: Option<Uint8Array> = Some(
-        b"0000000000000000000000000000000100000000000000000000000000000001\x00"
-            .as_ref()
-            .into(),
-    );
+    let operator_signature = RecoverableSignature::from_be_bytes(
+        b"0000000000000000000000000000000100000000000000000000000000000001\x00",
+    )
+    .unwrap();
 
     let node_metadata_payload = NodeMetadataPayload::new(
         &staking_provider_address,
@@ -106,7 +105,7 @@ fn make_node_metadata() -> NodeMetadata {
         certificate_der,
         host,
         port,
-        into_js_option(operator_signature),
+        &operator_signature,
     )
     .unwrap();
 
