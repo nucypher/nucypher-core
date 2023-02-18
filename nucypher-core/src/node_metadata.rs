@@ -129,7 +129,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -172,7 +172,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -258,7 +258,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
