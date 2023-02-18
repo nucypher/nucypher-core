@@ -4,9 +4,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## 0.6.0 - under development
 
-Under construction.
+### Changed
+
+- Bumped `umbral-pre` version to 0.9.1 and `PyO3` to 0.18. ([#44])
+- `NodeMetadataPayload::operator_signature` now has the type `umbral_pre::RecoverableSignature`. ([#44])
+- Major protocol versions bumped to 3 - ABI has changed (because of the changes in how `Signature` is serialized). ([#44])
+- `FleetStateChecksum` argument order changed (because `PyO3` wants the optional argument to be the last). ([#44])
+- `RECOVERABLE_SIGNATURE_SIZE` and `k256` removed from the exports. ([#44])
+
+
+[#44]: https://github.com/nucypher/nucypher-core/pull/44
 
 
 ## [0.5.1] - 2023-01-17
