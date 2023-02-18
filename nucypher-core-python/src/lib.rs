@@ -13,11 +13,10 @@ use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 
-use nucypher_core::k256::ecdsa::recoverable;
-use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
-use nucypher_core::{ProtocolObject, RECOVERABLE_SIGNATURE_SIZE};
+use nucypher_core::ProtocolObject;
 use umbral_pre::bindings_python::{
-    Capsule, PublicKey, SecretKey, Signer, VerificationError, VerifiedCapsuleFrag, VerifiedKeyFrag,
+    Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
+    VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
@@ -775,15 +774,8 @@ impl NodeMetadataPayload {
         certificate_der: &[u8],
         host: &str,
         port: u16,
-        operator_signature: Option<[u8; RECOVERABLE_SIGNATURE_SIZE]>,
+        operator_signature: &RecoverableSignature,
     ) -> PyResult<Self> {
-        let signature = operator_signature
-            .map(|signature_bytes| {
-                recoverable::Signature::from_bytes(&signature_bytes).map_err(|err| {
-                    PyValueError::new_err(format!("Invalid operator signature format: {}", err))
-                })
-            })
-            .transpose()?;
         Ok(Self {
             backend: nucypher_core::NodeMetadataPayload {
                 staking_provider_address: staking_provider_address.backend,
@@ -794,7 +786,7 @@ impl NodeMetadataPayload {
                 certificate_der: certificate_der.into(),
                 host: host.to_string(),
                 port,
-                operator_signature: signature,
+                operator_signature: operator_signature.as_ref().clone(),
             },
         })
     }
@@ -817,11 +809,8 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn operator_signature(&self) -> Option<&[u8]> {
-        self.backend
-            .operator_signature
-            .as_ref()
-            .map(|boxed_signature| boxed_signature.as_ref())
+    fn operator_signature(&self) -> RecoverableSignature {
+        self.backend.operator_signature.clone().into()
     }
 
     #[getter]
@@ -913,15 +902,15 @@ pub struct FleetStateChecksum {
 #[pymethods]
 impl FleetStateChecksum {
     #[new]
-    pub fn new(this_node: Option<&NodeMetadata>, other_nodes: Vec<NodeMetadata>) -> Self {
+    pub fn new(other_nodes: Vec<NodeMetadata>, this_node: Option<&NodeMetadata>) -> Self {
         let other_nodes_backend = other_nodes
             .iter()
             .map(|node| node.backend.clone())
             .collect::<Vec<_>>();
         Self {
             backend: nucypher_core::FleetStateChecksum::from_nodes(
-                this_node.map(|node| node.backend.clone()).as_ref(),
                 &other_nodes_backend,
+                this_node.map(|node| node.backend.clone()).as_ref(),
             ),
         }
     }
@@ -1113,8 +1102,12 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
 
     umbral_module.add_class::<umbral_pre::bindings_python::Signer>()?;
     umbral_module.add_class::<umbral_pre::bindings_python::Signature>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::RecoverableSignature>()?;
     umbral_module.add_class::<umbral_pre::bindings_python::KeyFrag>()?;
     umbral_module.add_class::<umbral_pre::bindings_python::CapsuleFrag>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::ReencryptionEvidence>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::CurvePoint>()?;
+    umbral_module.add_class::<umbral_pre::bindings_python::Parameters>()?;
     umbral_module.add(
         "VerificationError",
         py.get_type::<umbral_pre::bindings_python::VerificationError>(),

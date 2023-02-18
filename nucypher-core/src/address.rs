@@ -3,10 +3,9 @@ use generic_array::{
     typenum::{U12, U20},
     GenericArray,
 };
-use k256::{elliptic_curve::sec1::ToEncodedPoint, Secp256k1};
 use serde::{Deserialize, Serialize};
 use sha3::{digest::Update, Digest, Keccak256};
-use umbral_pre::serde_bytes;
+use umbral_pre::{serde_bytes, PublicKey};
 
 // We could use the third-party `ethereum_types::Address` here,
 // but it has an inefficient `serde` implementation (serializes as hex instead of bytes).
@@ -26,11 +25,10 @@ impl Address {
         Self(*bytes)
     }
 
-    pub(crate) fn from_k256_public_key(pk: &impl ToEncodedPoint<Secp256k1>) -> Self {
+    pub(crate) fn from_public_key(pk: &PublicKey) -> Self {
         // Canonical address is the last 20 bytes of keccak256 hash
         // of the uncompressed public key (without the header, so 64 bytes in total).
-        let ep = pk.to_encoded_point(false);
-        let pk_bytes = ep.as_bytes();
+        let pk_bytes = pk.to_uncompressed_bytes();
         let digest = Keccak256::new().chain(&pk_bytes[1..]).finalize();
 
         let (_prefix, address): (GenericArray<u8, U12>, GenericArray<u8, U20>) = digest.split();

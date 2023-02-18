@@ -4,9 +4,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## 0.6.0 - under development
 
-Under construction.
+### Changed
+
+- Bumped `umbral-pre` version to 0.9.1 and `PyO3` to 0.18. ([#44])
+- `NodeMetadataPayload::operator_signature` now has the type `umbral_pre::RecoverableSignature`. ([#44])
+- Major protocol versions bumped to 3 - ABI has changed (because of the changes in how `Signature` is serialized). ([#44])
+- `FleetStateChecksum` argument order changed (because `PyO3` wants the optional argument to be the last). ([#44])
+- `RECOVERABLE_SIGNATURE_SIZE` and `k256` removed from the exports. ([#44])
+
+
+[#44]: https://github.com/nucypher/nucypher-core/pull/44
 
 
 ## [0.5.1] - 2023-01-17
@@ -25,9 +34,9 @@ Under construction.
 
 ### Changed
 
-- Bumped MSRV to 1.63. (#[41])
-- Bumped `umbral-pre` to 0.8 (with consequent API changes to the re-exported `umbral_pre` crate), `rmp-serde` to 1.x, `pyo3` to 0.17. (#[41])
-- Major protocol versions bumped to 2 - ABI has changed. (#[41])
+- Bumped MSRV to 1.63. ([#41])
+- Bumped `umbral-pre` to 0.8 (with consequent API changes to the re-exported `umbral_pre` crate), `rmp-serde` to 1.x, `pyo3` to 0.17. ([#41])
+- Major protocol versions bumped to 2 - ABI has changed. ([#41])
 
 
 [#41]: https://github.com/nucypher/nucypher-core/pull/41
@@ -37,7 +46,7 @@ Under construction.
 
 ### Fixed
 
-- Finish up introducing the `Address` type in the spots forgotten in #[34]. Namely, in Python bindings: in `TreasureMap.destinations()`, in `RetrievalKit.queried_addresses()`, and in `NodeMetadata.staking_provider_address()`. (#[38])
+- Finish up introducing the `Address` type in the spots forgotten in [#34]. Namely, in Python bindings: in `TreasureMap.destinations()`, in `RetrievalKit.queried_addresses()`, and in `NodeMetadata.staking_provider_address()`. ([#38])
 
 
 [#38]: https://github.com/nucypher/nucypher-core/pull/38
@@ -47,27 +56,27 @@ Under construction.
 
 ### Changed
 
-- Conditions and context are now strings instead of bytestrings. (#[33])
-- Methods taking `VerifiedCapsuleFrag` objects use "vcfrag" instead of "cfrag" for their names and the names of the corresponding parameters. (#[33])
-- Use a workaround with `wasm-bindgen-derive` to support `Option<&T>` and `Vec<&T>` arguments, and `Vec<T>` and tuple return values, with correct TypeScript annotations. Removed all the Builder pattern helper classes. (#[34])
-- Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. (#[34])
-- `umbral-pre` dependency bumped to 0.7. (#[36])
-- `ReencryptionResponse::new()` now takes an iterator of pairs `(Capsule, VerifiedCapsuleFrag)` instead of two separate iterators; bindings changed correspondingly. (#[37])
-- Change `Iterable` to `Sequence` in Python binding type stubs: bindings cannot actually take just iterables. (#[37])
-- `AuthorizedKeyFrag.verify()`, `ReencryptionResponse.verify()`, and `AuthorizedTreasureMap.verify()` now consume `self`. (#[37])
+- Conditions and context are now strings instead of bytestrings. ([#33])
+- Methods taking `VerifiedCapsuleFrag` objects use "vcfrag" instead of "cfrag" for their names and the names of the corresponding parameters. ([#33])
+- Use a workaround with `wasm-bindgen-derive` to support `Option<&T>` and `Vec<&T>` arguments, and `Vec<T>` and tuple return values, with correct TypeScript annotations. Removed all the Builder pattern helper classes. ([#34])
+- Use `Address` instead of plain bytes in arguments and return values (both in WASM and Python bindgins). Export the `Address` type. ([#34])
+- `umbral-pre` dependency bumped to 0.7. ([#36])
+- `ReencryptionResponse::new()` now takes an iterator of pairs `(Capsule, VerifiedCapsuleFrag)` instead of two separate iterators; bindings changed correspondingly. ([#37])
+- Change `Iterable` to `Sequence` in Python binding type stubs: bindings cannot actually take just iterables. ([#37])
+- `AuthorizedKeyFrag.verify()`, `ReencryptionResponse.verify()`, and `AuthorizedTreasureMap.verify()` now consume `self`. ([#37])
 
 
 ### Added
 
-- `conditions` getters in `MessageKit` and `RetrievalKit` in WASM bindings. (#[32])
+- `conditions` getters in `MessageKit` and `RetrievalKit` in WASM bindings. ([#32])
 - Attributes `MessageKit.conditions`, `ReencryptionRequest.conditions`, and `ReencryptionRequest.context` in Python typing stubs. ([#32])
-- `Conditions` and `Context` newtypes, to be used instead of raw objects. (#[33])
-- `MessageKit`, `RetrievalKit`, and `ReencryptionRequest` protocol versions bumped to v1.1. (#[33])
+- `Conditions` and `Context` newtypes, to be used instead of raw objects. ([#33])
+- `MessageKit`, `RetrievalKit`, and `ReencryptionRequest` protocol versions bumped to v1.1. ([#33])
 
 
 ### Fixed
 
-- Removed `serde` dependency for WASM bindings. (#[34])
+- Removed `serde` dependency for WASM bindings. ([#34])
 
 
 [#32]: https://github.com/nucypher/nucypher-core/pull/32

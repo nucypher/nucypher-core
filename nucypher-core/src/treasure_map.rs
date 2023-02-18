@@ -103,7 +103,7 @@ impl<'a> ProtocolObjectInner<'a> for TreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -163,7 +163,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedTreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -235,7 +235,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedTreasureMap {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

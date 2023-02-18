@@ -58,7 +58,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedKeyFrag {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -150,7 +150,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedKeyFrag {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

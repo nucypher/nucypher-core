@@ -12,16 +12,15 @@ use alloc::{
 };
 use core::fmt;
 
-use js_sys::{Error, Uint8Array};
+use js_sys::Error;
 use umbral_pre::bindings_wasm::{
-    Capsule, PublicKey, SecretKey, Signer, VerifiedCapsuleFrag, VerifiedKeyFrag,
+    Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
+    VerifiedKeyFrag,
 };
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
-use nucypher_core::k256::ecdsa::recoverable;
-use nucypher_core::k256::ecdsa::signature::Signature as SignatureTrait;
 use nucypher_core::ProtocolObject;
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
@@ -848,24 +847,8 @@ impl NodeMetadataPayload {
         certificate_der: &[u8],
         host: &str,
         port: u16,
-        operator_signature: OptionUint8Array,
+        operator_signature: &RecoverableSignature,
     ) -> Result<NodeMetadataPayload, Error> {
-        let js_sig: JsValue = operator_signature.into();
-        let typed_signature = if js_sig.is_null() {
-            None
-        } else {
-            let sig: Uint8Array = js_sig.dyn_into()?;
-            Some(sig)
-        };
-
-        let signature = typed_signature
-            .map(|signature_bytes| {
-                recoverable::Signature::from_bytes(&signature_bytes.to_vec()).map_err(|err| {
-                    Error::new(&format!("Incorrect operator signature format: {}", err))
-                })
-            })
-            .transpose()?;
-
         Ok(Self(nucypher_core::NodeMetadataPayload {
             staking_provider_address: staking_provider_address.0,
             domain: domain.to_string(),
@@ -875,7 +858,7 @@ impl NodeMetadataPayload {
             certificate_der: certificate_der.into(),
             host: host.to_string(),
             port,
-            operator_signature: signature,
+            operator_signature: operator_signature.as_ref().clone(),
         }))
     }
 
@@ -895,10 +878,8 @@ impl NodeMetadataPayload {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn operator_signature(&self) -> Option<Box<[u8]>> {
-        self.0
-            .operator_signature
-            .map(|signature| signature.as_ref().into())
+    pub fn operator_signature(&self) -> RecoverableSignature {
+        self.0.operator_signature.clone().into()
     }
 
     #[wasm_bindgen(getter)]
@@ -986,8 +967,8 @@ pub struct FleetStateChecksum(nucypher_core::FleetStateChecksum);
 impl FleetStateChecksum {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        this_node: &OptionNodeMetadata,
         other_nodes: &NodeMetadataArray,
+        this_node: &OptionNodeMetadata,
     ) -> Result<FleetStateChecksum, Error> {
         let typed_this_node = try_from_js_option::<NodeMetadata>(this_node)?;
         let typed_nodes = try_from_js_array::<NodeMetadata>(other_nodes)?;
@@ -996,8 +977,8 @@ impl FleetStateChecksum {
             .map(|node| node.0)
             .collect::<Vec<_>>();
         Ok(Self(nucypher_core::FleetStateChecksum::from_nodes(
-            typed_this_node.as_ref().map(|node| &node.0),
             &backend_nodes,
+            typed_this_node.as_ref().map(|node| &node.0),
         )))
     }
 

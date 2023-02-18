@@ -3,12 +3,10 @@ use alloc::string::String;
 use alloc::string::ToString;
 use core::fmt;
 
-use k256::ecdsa::recoverable;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use sha3::{Digest, Keccak256};
-use signature::digest::Update;
-use umbral_pre::{serde_bytes, PublicKey, Signature, Signer};
+use sha3::{digest::Update, Digest, Keccak256};
+use umbral_pre::{serde_bytes, PublicKey, RecoverableSignature, Signature, Signer};
 
 use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
@@ -17,39 +15,12 @@ use crate::versioning::{
 };
 use crate::VerificationError;
 
-// Since we cannot implement `TryFromBytes` for `recoverable::Signature`
-// (foreign trait & foreign type), and the custom deserializer does not work with `TryFrom<&[u8]>`
-// (https://github.com/serde-rs/serde/issues/2241),
-// we have to deserialize into `Box` and then convert it to the signature.
-// A little inefficient (one unnecessary allocation), but can't be helped.
-#[derive(Serialize, Deserialize)]
-struct SerializableSignature(#[serde(with = "serde_bytes::as_base64")] Box<[u8]>);
-
-impl serde_with::SerializeAs<recoverable::Signature> for SerializableSignature {
-    fn serialize_as<S>(source: &recoverable::Signature, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        SerializableSignature(source.as_ref().into()).serialize(serializer)
-    }
-}
-
-impl<'de> serde_with::DeserializeAs<'de, recoverable::Signature> for SerializableSignature {
-    fn deserialize_as<D>(deserializer: D) -> Result<recoverable::Signature, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let sig_bytes = SerializableSignature::deserialize(deserializer)?;
-        recoverable::Signature::try_from(sig_bytes.0.as_ref()).map_err(de::Error::custom)
-    }
-}
-
 /// Indicates an error during canonical address derivation from a signature.
 pub enum AddressDerivationError {
     /// Signature is missing from the payload.
     NoSignatureInPayload,
     /// Failed to recover the public key from the signature.
-    RecoveryFailed(signature::Error),
+    RecoveryFailed(String),
 }
 
 impl fmt::Display for AddressDerivationError {
@@ -75,9 +46,6 @@ fn encode_defunct(message: &[u8]) -> Keccak256 {
         .chain(message)
 }
 
-/// The size of the Ethereum signature with the recovery byte
-pub const RECOVERABLE_SIGNATURE_SIZE: usize = recoverable::SIZE;
-
 /// Node metadata.
 #[serde_as]
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
@@ -100,8 +68,7 @@ pub struct NodeMetadataPayload {
     /// The port of the node's REST service.
     pub port: u16,
     /// The node's verifying key signed by the private key corresponding to the operator address.
-    #[serde_as(as = "Option<SerializableSignature>")]
-    pub operator_signature: Option<recoverable::Signature>,
+    pub operator_signature: RecoverableSignature,
 }
 
 impl NodeMetadataPayload {
@@ -113,14 +80,10 @@ impl NodeMetadataPayload {
     /// Derives the address corresponding to the public key that was used
     /// to create `operator_signature`.
     pub fn derive_operator_address(&self) -> Result<Address, AddressDerivationError> {
-        let signature = self
-            .operator_signature
-            .ok_or(AddressDerivationError::NoSignatureInPayload)?;
-        let message = encode_defunct(&self.verifying_key.to_compressed_bytes());
-        let key = signature
-            .recover_verifying_key_from_digest(message)
+        let digest = encode_defunct(&self.verifying_key.to_compressed_bytes());
+        let key = PublicKey::recover_from_prehash(&digest.finalize(), &self.operator_signature)
             .map_err(AddressDerivationError::RecoveryFailed)?;
-        Ok(Address::from_k256_public_key(&key))
+        Ok(Address::from_public_key(&key))
     }
 }
 
@@ -166,7 +129,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -209,7 +172,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -295,7 +258,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

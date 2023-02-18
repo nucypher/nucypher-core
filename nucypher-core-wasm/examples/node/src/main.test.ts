@@ -23,6 +23,7 @@ import {
   MetadataResponse,
   MetadataResponsePayload,
   FleetStateChecksum,
+  RecoverableSignature,
 } from "nucypher-core";
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
@@ -89,7 +90,8 @@ const makeNodeMetadata = (sk: SecretKey) => {
     Buffer.from("fake-certificate-bytes"),
     "example.com",
     8080,
-    null
+    RecoverableSignature.fromBEBytes(
+      Buffer.from("0000000000000000000000000000000100000000000000000000000000000001\x00"))
   );
   const signer = new Signer(sk);
   return new NodeMetadata(signer, payload);
@@ -103,7 +105,7 @@ const makefleetStateChecksum = () => {
     makeNodeMetadata(sk),
     makeNodeMetadata(sk),
   ];
-  const state = new FleetStateChecksum(thisNode, otherNodes);
+  const state = new FleetStateChecksum(otherNodes, thisNode);
   return { fleetStateChecksum: state, otherNodes };
 };
 

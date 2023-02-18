@@ -1,6 +1,8 @@
 from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set
 
-from .umbral import SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag
+from .umbral import (
+    SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag,
+    RecoverableSignature)
 
 
 class Address:
@@ -295,7 +297,7 @@ class NodeMetadataPayload:
         certificate_der: bytes,
         host: str,
         port: int,
-        operator_signature: Optional[bytes],
+        operator_signature: RecoverableSignature,
     ):
         ...
 
@@ -305,7 +307,7 @@ class NodeMetadataPayload:
 
     encrypting_key: PublicKey
 
-    operator_signature: Optional[bytes]
+    operator_signature: RecoverableSignature
 
     domain: str
 
@@ -341,7 +343,7 @@ class NodeMetadata:
 
 class FleetStateChecksum:
 
-    def __init__(self, this_node: Optional[NodeMetadata], other_nodes: Sequence[NodeMetadata]):
+    def __init__(self, other_nodes: Sequence[NodeMetadata], this_node: Optional[NodeMetadata]):
         ...
 
 

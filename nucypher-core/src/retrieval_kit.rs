@@ -56,7 +56,7 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 
     fn version() -> (u16, u16) {
-        (2, 0)
+        (3, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {
