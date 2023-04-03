@@ -60,6 +60,8 @@ pub struct NodeMetadataPayload {
     pub verifying_key: PublicKey,
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
+    // Ferveo public key
+    pub ferveo_public_key: Box<[u8]>,
     /// The node's SSL certificate (serialized in DER format).
     #[serde(with = "serde_bytes::as_base64")]
     pub certificate_der: Box<[u8]>,
@@ -129,7 +131,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
         // since the whole payload is signed (so we can't just substitute the default).
         // Alternatively, one can add new fields to `NodeMetadata` itself
         // (but then they won't be signed).
-        (3, 0)
+        (4, 0)
     }
 
     fn unversioned_to_bytes(&self) -> Box<[u8]> {

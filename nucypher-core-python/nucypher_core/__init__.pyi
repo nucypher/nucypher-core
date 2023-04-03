@@ -294,6 +294,7 @@ class NodeMetadataPayload:
         timestamp_epoch: int,
         verifying_key: PublicKey,
         encrypting_key: PublicKey,
+        ferveo_public_key: bytes,
         certificate_der: bytes,
         host: str,
         port: int,
@@ -306,6 +307,8 @@ class NodeMetadataPayload:
     verifying_key: PublicKey
 
     encrypting_key: PublicKey
+
+    ferveo_public_key: bytes
 
     operator_signature: RecoverableSignature
 
