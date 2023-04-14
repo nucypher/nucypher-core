@@ -34,7 +34,7 @@ pub use node_metadata::{
     MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
 };
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
-pub use dkg::{ThresholdDecryptionRequest, ThresholdDecryptionResponse};
+pub use dkg::{ThresholdDecryptionRequest, ThresholdDecryptionResponse , FerveoVariant};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
@@ -42,3 +42,6 @@ pub use versioning::ProtocolObject;
 
 // Re-export umbral_pre so that the users don't have to version-match.
 pub use umbral_pre;
+
+// Re-export ferveo so that the users don't have to version-match.
+// pub use ferveo;  // TODO: Uncomment when ferveo bindings are published.

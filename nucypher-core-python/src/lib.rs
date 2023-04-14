@@ -13,12 +13,12 @@ use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
 
+use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
-
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
@@ -631,11 +631,9 @@ impl ReencryptionResponse {
     }
 }
 
-
 //
 // Threshold Decryption Request
 //
-
 
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
@@ -648,17 +646,28 @@ impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
         id: u16,
-        ciphertext: &[u8],  // TODO use ferveo Ciphertext type
+        variant: u8,
+        ciphertext: &[u8], // TODO use ferveo Ciphertext type
         conditions: Option<&Conditions>,
         context: Option<&Context>,
     ) -> Self {
+        let ferveo_variant: FerveoVariant;
+        match variant {
+            0 => ferveo_variant = FerveoVariant::SIMPLE,
+            1 => ferveo_variant = FerveoVariant::PRECOMPUTED,
+            _ => panic!("Invalid variant"),
+        }
+
         Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 id,
                 ciphertext,
-                conditions.map(|conditions| conditions.backend.clone()).as_ref(),
-                context.map(|context| context.backend.clone()).as_ref()
-            )
+                conditions
+                    .map(|conditions| conditions.backend.clone())
+                    .as_ref(),
+                context.map(|context| context.backend.clone()).as_ref(),
+                &ferveo_variant,
+            ),
         }
     }
 
@@ -690,6 +699,14 @@ impl ThresholdDecryptionRequest {
         self.backend.ciphertext.as_ref()
     }
 
+    #[getter]
+    pub fn variant(&self) -> u8 {
+        match self.backend.variant {
+            FerveoVariant::SIMPLE => 0,
+            FerveoVariant::PRECOMPUTED => 1,
+        }
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
@@ -699,7 +716,6 @@ impl ThresholdDecryptionRequest {
         to_bytes(self)
     }
 }
-
 
 //
 // Threshold Decryption Response
@@ -716,9 +732,7 @@ impl ThresholdDecryptionResponse {
     #[new]
     pub fn new(decryption_share: &[u8]) -> Self {
         ThresholdDecryptionResponse {
-            backend: nucypher_core::ThresholdDecryptionResponse::new(
-                decryption_share.into(),
-            ),
+            backend: nucypher_core::ThresholdDecryptionResponse::new(decryption_share.into()),
         }
     }
 
@@ -878,7 +892,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        ferveo_public_key: &[u8],  // TODO use ferveo PublicKey type
+        ferveo_public_key: &[u8], // TODO use ferveo PublicKey type
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -1202,6 +1216,8 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<MetadataRequest>()?;
     m.add_class::<MetadataResponsePayload>()?;
     m.add_class::<MetadataResponse>()?;
+    m.add_class::<ThresholdDecryptionRequest>()?;
+    m.add_class::<ThresholdDecryptionResponse>()?;
 
     let umbral_module = PyModule::new(py, "umbral")?;
 

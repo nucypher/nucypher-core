@@ -1,22 +1,27 @@
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
+
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::{Capsule, CapsuleFrag, PublicKey, Signature, Signer, VerifiedCapsuleFrag};
+
 
 use crate::conditions::{Conditions, Context};
-use crate::hrac::HRAC;
-use crate::key_frag::EncryptedKeyFrag;
+
+
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
-use crate::VerificationError;
 
+
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+pub enum FerveoVariant {
+    SIMPLE,
+    PRECOMPUTED,
+}
 
 
 /// A request for an Ursula to reencrypt for several capsules.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u16,
@@ -26,22 +31,26 @@ pub struct ThresholdDecryptionRequest {
     pub conditions: Option<Conditions>,
     /// A blob of bytes containing context required to evaluate conditions.
     pub context: Option<Context>,
-
+    /// The ferveo variant to use for the decryption share derivation.
+    pub variant: FerveoVariant
 }
 
 impl ThresholdDecryptionRequest {
+
     /// Creates a new reencryption request.
     pub fn new(
         ritual_id: u16,
         ciphertext: &[u8],
         conditions: Option<&Conditions>,
         context: Option<&Context>,
+        variant: &FerveoVariant
     ) -> Self {
         Self {
             ritual_id,
             ciphertext: ciphertext.to_vec().into(),
             conditions: conditions.cloned(),
             context: context.cloned(),
+            variant: variant.clone()
         }
     }
 }
@@ -71,7 +80,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
 impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 
 /// A response from Ursula with reencrypted capsule frags.
-#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdDecryptionResponse {
     pub decryption_share: Box<[u8]>,
 }
@@ -82,7 +91,7 @@ impl ThresholdDecryptionResponse {
         decryption_share: Box<[u8]>,
     ) -> Self {
         ThresholdDecryptionResponse {
-            decryption_share: decryption_share,
+            decryption_share,
         }
     }
 }
