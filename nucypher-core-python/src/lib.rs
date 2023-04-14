@@ -19,6 +19,7 @@ use umbral_pre::bindings_python::{
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
+
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
     T: AsRef<U>,
@@ -630,6 +631,112 @@ impl ReencryptionResponse {
     }
 }
 
+
+//
+// Threshold Decryption Request
+//
+
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionRequest {
+    backend: nucypher_core::ThresholdDecryptionRequest,
+}
+
+#[pymethods]
+impl ThresholdDecryptionRequest {
+    #[new]
+    pub fn new(
+        id: u16,
+        ciphertext: &[u8],  // TODO use ferveo Ciphertext type
+        conditions: Option<&Conditions>,
+        context: Option<&Context>,
+    ) -> Self {
+        Self {
+            backend: nucypher_core::ThresholdDecryptionRequest::new(
+                id,
+                ciphertext,
+                conditions.map(|conditions| conditions.backend.clone()).as_ref(),
+                context.map(|context| context.backend.clone()).as_ref()
+            )
+        }
+    }
+
+    #[getter]
+    pub fn id(&self) -> u16 {
+        self.backend.ritual_id
+    }
+
+    #[getter]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
+    }
+
+    #[getter]
+    pub fn context(&self) -> Option<Context> {
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    pub fn ciphertext(&self) -> &[u8] {
+        self.backend.ciphertext.as_ref()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+
+//
+// Threshold Decryption Response
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionResponse {
+    backend: nucypher_core::ThresholdDecryptionResponse,
+}
+
+#[pymethods]
+impl ThresholdDecryptionResponse {
+    #[new]
+    pub fn new(decryption_share: &[u8]) -> Self {
+        ThresholdDecryptionResponse {
+            backend: nucypher_core::ThresholdDecryptionResponse::new(
+                decryption_share.into(),
+            ),
+        }
+    }
+
+    #[getter]
+    pub fn decryption_share(&self) -> &[u8] {
+        self.backend.decryption_share.as_ref()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionResponse>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
 //
 // RetrievalKit
 //
@@ -771,7 +878,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        ferveo_public_key: &[u8],
+        ferveo_public_key: &[u8],  // TODO use ferveo PublicKey type
         certificate_der: &[u8],
         host: &str,
         port: u16,

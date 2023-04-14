@@ -1,8 +1,14 @@
 from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set
 
 from .umbral import (
-    SecretKey, PublicKey, Signer, Capsule, VerifiedKeyFrag, VerifiedCapsuleFrag,
-    RecoverableSignature)
+    SecretKey,
+    PublicKey,
+    Signer,
+    Capsule,
+    VerifiedKeyFrag,
+    VerifiedCapsuleFrag,
+    RecoverableSignature
+)
 
 
 class Address:

@@ -17,4 +17,6 @@ from ._nucypher_core import (
     MetadataRequest,
     MetadataResponse,
     MetadataResponsePayload,
-    )
+    ThresholdDecryptionRequest,
+    ThresholdDecryptionResponse,
+)

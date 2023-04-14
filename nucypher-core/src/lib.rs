@@ -9,6 +9,7 @@ extern crate alloc;
 
 mod address;
 mod conditions;
+mod dkg;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -33,6 +34,7 @@ pub use node_metadata::{
     MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
 };
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
+pub use dkg::{ThresholdDecryptionRequest, ThresholdDecryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
