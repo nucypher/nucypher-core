@@ -9,13 +9,17 @@ use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
 
+
+/// The ferveo variant to use for the decryption share derivation.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub enum FerveoVariant {
+    /// the simple variant requires n/n shares to decrypt
     SIMPLE,
+    /// the precomputed variant requires m/n shares to decrypt
     PRECOMPUTED,
 }
 
-/// A request for an Ursula to reencrypt for several capsules.
+/// A request for an Ursula to derive a decryption share.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
@@ -31,7 +35,7 @@ pub struct ThresholdDecryptionRequest {
 }
 
 impl ThresholdDecryptionRequest {
-    /// Creates a new reencryption request.
+    /// Creates a new decryption request.
     pub fn new(
         ritual_id: u16,
         ciphertext: &[u8],
@@ -73,14 +77,15 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
 
 impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 
-/// A response from Ursula with reencrypted capsule frags.
+/// A response from Ursula with a derived decryption share.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdDecryptionResponse {
+    /// The decryption share to include in the response.
     pub decryption_share: Box<[u8]>,
 }
 
 impl ThresholdDecryptionResponse {
-    /// Creates and signs a new reencryption response.
+    /// Creates and a new decryption response.
     pub fn new<'a>(decryption_share: Box<[u8]>) -> Self {
         ThresholdDecryptionResponse { decryption_share }
     }
