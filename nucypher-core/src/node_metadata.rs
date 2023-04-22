@@ -61,7 +61,7 @@ pub struct NodeMetadataPayload {
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
     // Ferveo public key
-    pub ferveo_public_key: Box<[u8]>,  // TODO use ferveo PublicKey?
+    pub ferveo_public_key: Box<[u8]>, // TODO use ferveo PublicKey?
     /// The node's SSL certificate (serialized in DER format).
     #[serde(with = "serde_bytes::as_base64")]
     pub certificate_der: Box<[u8]>,

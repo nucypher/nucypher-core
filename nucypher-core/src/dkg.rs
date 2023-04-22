@@ -1,24 +1,19 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 
-
 use serde::{Deserialize, Serialize};
 
-
 use crate::conditions::{Conditions, Context};
-
 
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
-
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub enum FerveoVariant {
     SIMPLE,
     PRECOMPUTED,
 }
-
 
 /// A request for an Ursula to reencrypt for several capsules.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
@@ -32,25 +27,24 @@ pub struct ThresholdDecryptionRequest {
     /// A blob of bytes containing context required to evaluate conditions.
     pub context: Option<Context>,
     /// The ferveo variant to use for the decryption share derivation.
-    pub variant: FerveoVariant
+    pub variant: FerveoVariant,
 }
 
 impl ThresholdDecryptionRequest {
-
     /// Creates a new reencryption request.
     pub fn new(
         ritual_id: u16,
         ciphertext: &[u8],
         conditions: Option<&Conditions>,
         context: Option<&Context>,
-        variant: &FerveoVariant
+        variant: &FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
             ciphertext: ciphertext.to_vec().into(),
             conditions: conditions.cloned(),
             context: context.cloned(),
-            variant: variant.clone()
+            variant: variant.clone(),
         }
     }
 }
@@ -87,15 +81,10 @@ pub struct ThresholdDecryptionResponse {
 
 impl ThresholdDecryptionResponse {
     /// Creates and signs a new reencryption response.
-    pub fn new<'a>(
-        decryption_share: Box<[u8]>,
-    ) -> Self {
-        ThresholdDecryptionResponse {
-            decryption_share,
-        }
+    pub fn new<'a>(decryption_share: Box<[u8]>) -> Self {
+        ThresholdDecryptionResponse { decryption_share }
     }
 }
-
 
 impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
     fn version() -> (u16, u16) {

@@ -26,6 +26,7 @@ pub struct VerificationError;
 
 pub use address::Address;
 pub use conditions::{Conditions, Context};
+pub use dkg::{FerveoVariant, ThresholdDecryptionRequest, ThresholdDecryptionResponse};
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;
@@ -34,7 +35,6 @@ pub use node_metadata::{
     MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
 };
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
-pub use dkg::{ThresholdDecryptionRequest, ThresholdDecryptionResponse , FerveoVariant};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
