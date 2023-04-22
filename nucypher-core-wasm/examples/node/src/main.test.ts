@@ -87,6 +87,7 @@ const makeNodeMetadata = (sk: SecretKey) => {
     (Date.now() / 1000) | 0,
     sk.publicKey(),
     SecretKey.random().publicKey(),
+    Buffer.from("fake-ferveo-public-key-bytes"), // TODO: use real ferveo public key
     Buffer.from("fake-certificate-bytes"),
     "example.com",
     8080,

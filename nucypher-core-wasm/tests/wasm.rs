@@ -88,6 +88,7 @@ fn make_node_metadata() -> NodeMetadata {
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
+    let ferveo_public_key = SecretKey::random().public_key(); // TODO: use ferveo PublicKey
     let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
@@ -102,6 +103,7 @@ fn make_node_metadata() -> NodeMetadata {
         timestamp_epoch,
         &verifying_key,
         &encrypting_key,
+        &ferveo_public_key.to_compressed_bytes(),
         certificate_der,
         host,
         port,
