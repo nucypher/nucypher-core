@@ -9,7 +9,6 @@ use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
 
-
 /// The ferveo variant to use for the decryption share derivation.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub enum FerveoVariant {
@@ -86,7 +85,7 @@ pub struct ThresholdDecryptionResponse {
 
 impl ThresholdDecryptionResponse {
     /// Creates and a new decryption response.
-    pub fn new<'a>(decryption_share: Box<[u8]>) -> Self {
+    pub fn new(decryption_share: Box<[u8]>) -> Self {
         ThresholdDecryptionResponse { decryption_share }
     }
 }

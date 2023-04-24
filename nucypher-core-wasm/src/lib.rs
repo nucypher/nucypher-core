@@ -557,12 +557,11 @@ impl ThresholdDecryptionRequest {
         let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
         let typed_context = try_from_js_option::<Context>(context)?;
 
-        let ferveo_variant: FerveoVariant;
-        match variant {
-            0 => ferveo_variant = FerveoVariant::SIMPLE,
-            1 => ferveo_variant = FerveoVariant::PRECOMPUTED,
+        let ferveo_variant = match variant {
+            0 => FerveoVariant::SIMPLE,
+            1 => FerveoVariant::PRECOMPUTED,
             _ => return Err(Error::new("Invalid variant")),
-        }
+        };
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             id,
