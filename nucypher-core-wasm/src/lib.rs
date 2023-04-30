@@ -614,11 +614,11 @@ impl ThresholdDecryptionResponse {
     #[wasm_bindgen(constructor)]
     pub fn new(decryption_share: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
         Ok(Self(nucypher_core::ThresholdDecryptionResponse::new(
-            decryption_share.into(),
+            decryption_share,
         )))
     }
 
-    #[wasm_bindgen(getter)]
+    #[wasm_bindgen(getter, js_name = decryptionShare)]
     pub fn decryption_share(&self) -> Box<[u8]> {
         self.0.decryption_share.clone()
     }

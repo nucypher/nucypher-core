@@ -12,13 +12,13 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
-
-use nucypher_core::FerveoVariant;
-use nucypher_core::ProtocolObject;
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
+
+use nucypher_core::FerveoVariant;
+use nucypher_core::ProtocolObject;
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
@@ -650,15 +650,18 @@ impl ThresholdDecryptionRequest {
         ciphertext: &[u8], // TODO use ferveo Ciphertext type
         conditions: Option<&Conditions>,
         context: Option<&Context>,
-    ) -> Self {
-        let ferveo_variant: FerveoVariant;
-        match variant {
-            0 => ferveo_variant = FerveoVariant::SIMPLE,
-            1 => ferveo_variant = FerveoVariant::PRECOMPUTED,
-            _ => panic!("Invalid variant"),
-        }
+    ) -> PyResult<Self> {
+        let ferveo_variant = match variant {
+            0 => FerveoVariant::SIMPLE,
+            1 => FerveoVariant::PRECOMPUTED,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "Invalid ThresholdDecryptionRequest variant",
+                ))
+            }
+        };
 
-        Self {
+        Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 id,
                 ciphertext,
@@ -668,7 +671,7 @@ impl ThresholdDecryptionRequest {
                 context.map(|context| context.backend.clone()).as_ref(),
                 &ferveo_variant,
             ),
-        }
+        })
     }
 
     #[getter]
@@ -732,7 +735,7 @@ impl ThresholdDecryptionResponse {
     #[new]
     pub fn new(decryption_share: &[u8]) -> Self {
         ThresholdDecryptionResponse {
-            backend: nucypher_core::ThresholdDecryptionResponse::new(decryption_share.into()),
+            backend: nucypher_core::ThresholdDecryptionResponse::new(decryption_share),
         }
     }
 

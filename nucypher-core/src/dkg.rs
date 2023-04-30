@@ -2,6 +2,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 
 use serde::{Deserialize, Serialize};
+use umbral_pre::serde_bytes;
 
 use crate::conditions::{Conditions, Context};
 
@@ -10,7 +11,7 @@ use crate::versioning::{
 };
 
 /// The ferveo variant to use for the decryption share derivation.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum FerveoVariant {
     /// the simple variant requires n/n shares to decrypt
     SIMPLE,
@@ -24,6 +25,7 @@ pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u16,
     /// The ciphertext to generate a decryption share for.
+    #[serde(with = "serde_bytes::as_base64")]
     pub ciphertext: Box<[u8]>,
     /// A blob of bytes containing decryption conditions for this message.
     pub conditions: Option<Conditions>,
@@ -47,7 +49,7 @@ impl ThresholdDecryptionRequest {
             ciphertext: ciphertext.to_vec().into(),
             conditions: conditions.cloned(),
             context: context.cloned(),
-            variant: variant.clone(),
+            variant: *variant,
         }
     }
 }
@@ -80,13 +82,16 @@ impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdDecryptionResponse {
     /// The decryption share to include in the response.
+    #[serde(with = "serde_bytes::as_base64")]
     pub decryption_share: Box<[u8]>,
 }
 
 impl ThresholdDecryptionResponse {
     /// Creates and a new decryption response.
-    pub fn new(decryption_share: Box<[u8]>) -> Self {
-        ThresholdDecryptionResponse { decryption_share }
+    pub fn new(decryption_share: &[u8]) -> Self {
+        ThresholdDecryptionResponse {
+            decryption_share: decryption_share.to_vec().into(),
+        }
     }
 }
 
