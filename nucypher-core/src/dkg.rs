@@ -42,14 +42,14 @@ impl ThresholdDecryptionRequest {
         ciphertext: &[u8],
         conditions: Option<&Conditions>,
         context: Option<&Context>,
-        variant: &FerveoVariant,
+        variant: FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
             ciphertext: ciphertext.to_vec().into(),
             conditions: conditions.cloned(),
             context: context.cloned(),
-            variant: *variant,
+            variant,
         }
     }
 }

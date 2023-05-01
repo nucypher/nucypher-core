@@ -568,7 +568,7 @@ impl ThresholdDecryptionRequest {
             ciphertext,
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
-            &ferveo_variant,
+            ferveo_variant,
         )))
     }
 

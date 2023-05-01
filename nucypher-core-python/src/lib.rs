@@ -669,7 +669,7 @@ impl ThresholdDecryptionRequest {
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
-                &ferveo_variant,
+                ferveo_variant,
             ),
         })
     }
