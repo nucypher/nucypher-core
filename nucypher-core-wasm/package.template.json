@@ -9,7 +9,7 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-wasm"
+    "url": "https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-wasm"
   },
   "files": [
     "pkg-node/*.wasm",

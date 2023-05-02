@@ -13,7 +13,7 @@ setup(
     version="0.6.1",
     author="Bogdan Opanchuk",
     author_email="bogdan@opanchuk.net",
-    url="https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python",
+    url="https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-python",
     rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3, debug=False)],
     packages=["nucypher_core"],
     package_data = {

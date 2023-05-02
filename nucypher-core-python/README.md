@@ -15,4 +15,4 @@ You will need to have `setuptools-rust` installed. Then, for development you can
 [pypi-license-image]: https://img.shields.io/pypi/l/nucypher-core
 [rtd-image]: https://readthedocs.org/projects/nucypher-core/badge/?version=latest
 [rtd-link]: https://nucypher-core.readthedocs.io/en/latest/
-[nucypher-core]: https://github.com/nucypher/nucypher-core/tree/master/nucypher-core
+[nucypher-core]: https://github.com/nucypher/nucypher-core/tree/main/nucypher-core
