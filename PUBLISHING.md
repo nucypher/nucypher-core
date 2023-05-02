@@ -17,7 +17,7 @@ The version number part (major/minor/patch) that is bumped should correspond to 
 - Use Python [Bumpversion](https://github.com/c4urself/bump2version/) to autmoatically update relevant version strings throughout the repo.
   - `bump2version <major/minor/patch> --new-version <major>.<minor>.<patch>`
 - git push the commit and tag
-  - `git push upstream master --tags`
+  - `git push upstream main --tags`
 
 
 

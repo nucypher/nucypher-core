@@ -8,7 +8,7 @@ authors = [
 edition = "2021"
 license = "GPL-3.0-only"
 description = "NuCypher network core data structures"
-repository = "https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-wasm"
+repository = "https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-wasm"
 readme = "README.md"
 categories = ["cryptography", "no-std"]
 

@@ -14,15 +14,15 @@
 
 Bindings for several languages are available:
 
-* [JavaScript](https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-wasm) (WASM-based)
-* [Python](https://github.com/nucypher/nucypher-core/tree/master/nucypher-core-python)
+* [JavaScript](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-wasm) (WASM-based)
+* [Python](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-python)
 
 [crate-image]: https://img.shields.io/crates/v/nucypher-core.svg
 [crate-link]: https://crates.io/crates/nucypher-core
 [docs-image]: https://docs.rs/nucypher-core/badge.svg
 [docs-link]: https://docs.rs/nucypher-core/
 [license-image]: https://img.shields.io/crates/l/nucypher-core
-[build-image]: https://github.com/nucypher/nucypher-core/workflows/nucypher-core/badge.svg?branch=master&event=push
+[build-image]: https://github.com/nucypher/nucypher-core/workflows/nucypher-core/badge.svg?branch=main&event=push
 [build-link]: https://github.com/nucypher/nucypher-core/actions?query=workflow%3Anucypher-core
-[coverage-image]: https://codecov.io/gh/nucypher/nucypher-core/branch/master/graph/badge.svg
+[coverage-image]: https://codecov.io/gh/nucypher/nucypher-core/branch/main/graph/badge.svg
 [coverage-link]: https://codecov.io/gh/nucypher/nucypher-core
