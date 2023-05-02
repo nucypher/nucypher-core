@@ -401,3 +401,47 @@ class MetadataResponse:
 
     def __bytes__(self) -> bytes:
         ...
+
+
+class ThresholdDecryptionRequest:
+
+    def __init__(self, ritual_id: int, variant: int, ciphertext: bytes, conditions: Optional[Conditions], context: Optional[Context]):
+        ...
+
+    def id(self) -> int:
+        ...
+
+    def conditions(self) -> Optional[Conditions]:
+        ...
+
+    def context(self) -> Optional[Context]:
+        ...
+
+    def variant(self) -> int:
+        ...
+
+    def ciphertext(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> ThresholdDecryptionRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class ThresholdDecryptionResponse:
+
+    def __init__(self, decryption_share: bytes):
+        ...
+
+    def decryption_share(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> ThresholdDecryptionResponse:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
