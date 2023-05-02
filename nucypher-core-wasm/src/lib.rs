@@ -21,7 +21,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
-use nucypher_core::ProtocolObject;
+use nucypher_core::{FerveoVariant, ProtocolObject};
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
     Error::new(&format!("{}", err))
@@ -537,6 +537,104 @@ impl EncryptedTreasureMap {
 }
 
 //
+// Threshold Decryption Request
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest);
+
+#[wasm_bindgen]
+impl ThresholdDecryptionRequest {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        id: u16,
+        variant: u8,
+        ciphertext: &[u8],
+        conditions: &OptionConditions,
+        context: &OptionContext,
+    ) -> Result<ThresholdDecryptionRequest, Error> {
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+        let typed_context = try_from_js_option::<Context>(context)?;
+
+        let ferveo_variant = match variant {
+            0 => FerveoVariant::SIMPLE,
+            1 => FerveoVariant::PRECOMPUTED,
+            _ => return Err(Error::new("Invalid variant")),
+        };
+
+        Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
+            id,
+            ciphertext,
+            typed_conditions.as_ref().map(|conditions| &conditions.0),
+            typed_context.as_ref().map(|context| &context.0),
+            ferveo_variant,
+        )))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn id(&self) -> u16 {
+        self.0.ritual_id
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn variant(&self) -> u8 {
+        match self.0.variant {
+            FerveoVariant::SIMPLE => 0,
+            FerveoVariant::PRECOMPUTED => 1,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn ciphertext(&self) -> Box<[u8]> {
+        self.0.ciphertext.clone()
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
+// Threshold Decryption Response
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionResponse);
+
+#[wasm_bindgen]
+impl ThresholdDecryptionResponse {
+    #[wasm_bindgen(constructor)]
+    pub fn new(decryption_share: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
+        Ok(Self(nucypher_core::ThresholdDecryptionResponse::new(
+            decryption_share,
+        )))
+    }
+
+    #[wasm_bindgen(getter, js_name = decryptionShare)]
+    pub fn decryption_share(&self) -> Box<[u8]> {
+        self.0.decryption_share.clone()
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionResponse>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
 // ReencryptionRequest
 //
 
@@ -844,6 +942,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
+        ferveo_public_key: &[u8],
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -855,6 +954,7 @@ impl NodeMetadataPayload {
             timestamp_epoch,
             verifying_key: *verifying_key.as_ref(),
             encrypting_key: *encrypting_key.as_ref(),
+            ferveo_public_key: ferveo_public_key.into(),
             certificate_der: certificate_der.into(),
             host: host.to_string(),
             port,

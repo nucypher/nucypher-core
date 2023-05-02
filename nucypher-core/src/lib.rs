@@ -9,6 +9,7 @@ extern crate alloc;
 
 mod address;
 mod conditions;
+mod dkg;
 mod fleet_state;
 mod hrac;
 mod key_frag;
@@ -25,6 +26,7 @@ pub struct VerificationError;
 
 pub use address::Address;
 pub use conditions::{Conditions, Context};
+pub use dkg::{FerveoVariant, ThresholdDecryptionRequest, ThresholdDecryptionResponse};
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
 pub use key_frag::EncryptedKeyFrag;
@@ -40,3 +42,6 @@ pub use versioning::ProtocolObject;
 
 // Re-export umbral_pre so that the users don't have to version-match.
 pub use umbral_pre;
+
+// Re-export ferveo so that the users don't have to version-match.
+// pub use ferveo;  // TODO: Uncomment when ferveo bindings are published.

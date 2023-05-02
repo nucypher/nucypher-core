@@ -4,6 +4,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0] - Unreleased
+
+### Added
+
+- Add `ThresholdDecryptionRequest`/`ThresholdDecryptionResponse` types and bindings. ([#48])`
+- Add `ferveo_public_key` field to `NodeMetadataPayload`. ([#48])
+
+
+### Changed
+
+- Bumped MSRV to 1.64. ([#48])
+
+
+[#48]: https://github.com/nucypher/nucypher-core/pull/48
+
+
 ## [0.6.1] - 2023-02-18
 
 ### Fixed

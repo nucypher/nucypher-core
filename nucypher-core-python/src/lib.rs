@@ -12,12 +12,13 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
 use pyo3::types::{PyBytes, PyUnicode};
-
-use nucypher_core::ProtocolObject;
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
+
+use nucypher_core::FerveoVariant;
+use nucypher_core::ProtocolObject;
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
@@ -631,6 +632,129 @@ impl ReencryptionResponse {
 }
 
 //
+// Threshold Decryption Request
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionRequest {
+    backend: nucypher_core::ThresholdDecryptionRequest,
+}
+
+#[pymethods]
+impl ThresholdDecryptionRequest {
+    #[new]
+    pub fn new(
+        id: u16,
+        variant: u8,
+        ciphertext: &[u8], // TODO use ferveo Ciphertext type
+        conditions: Option<&Conditions>,
+        context: Option<&Context>,
+    ) -> PyResult<Self> {
+        let ferveo_variant = match variant {
+            0 => FerveoVariant::SIMPLE,
+            1 => FerveoVariant::PRECOMPUTED,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "Invalid ThresholdDecryptionRequest variant",
+                ))
+            }
+        };
+
+        Ok(Self {
+            backend: nucypher_core::ThresholdDecryptionRequest::new(
+                id,
+                ciphertext,
+                conditions
+                    .map(|conditions| conditions.backend.clone())
+                    .as_ref(),
+                context.map(|context| context.backend.clone()).as_ref(),
+                ferveo_variant,
+            ),
+        })
+    }
+
+    #[getter]
+    pub fn id(&self) -> u16 {
+        self.backend.ritual_id
+    }
+
+    #[getter]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
+    }
+
+    #[getter]
+    pub fn context(&self) -> Option<Context> {
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    pub fn ciphertext(&self) -> &[u8] {
+        self.backend.ciphertext.as_ref()
+    }
+
+    #[getter]
+    pub fn variant(&self) -> u8 {
+        match self.backend.variant {
+            FerveoVariant::SIMPLE => 0,
+            FerveoVariant::PRECOMPUTED => 1,
+        }
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// Threshold Decryption Response
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdDecryptionResponse {
+    backend: nucypher_core::ThresholdDecryptionResponse,
+}
+
+#[pymethods]
+impl ThresholdDecryptionResponse {
+    #[new]
+    pub fn new(decryption_share: &[u8]) -> Self {
+        ThresholdDecryptionResponse {
+            backend: nucypher_core::ThresholdDecryptionResponse::new(decryption_share),
+        }
+    }
+
+    #[getter]
+    pub fn decryption_share(&self) -> &[u8] {
+        self.backend.decryption_share.as_ref()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdDecryptionResponse>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
 // RetrievalKit
 //
 
@@ -771,6 +895,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
+        ferveo_public_key: &[u8], // TODO use ferveo PublicKey type
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -783,6 +908,7 @@ impl NodeMetadataPayload {
                 timestamp_epoch,
                 verifying_key: *verifying_key.as_ref(),
                 encrypting_key: *encrypting_key.as_ref(),
+                ferveo_public_key: ferveo_public_key.into(),
                 certificate_der: certificate_der.into(),
                 host: host.to_string(),
                 port,
@@ -806,6 +932,11 @@ impl NodeMetadataPayload {
     #[getter]
     fn encrypting_key(&self) -> PublicKey {
         self.backend.encrypting_key.into()
+    }
+
+    #[getter]
+    fn ferveo_public_key(&self) -> &[u8] {
+        self.backend.ferveo_public_key.as_ref()
     }
 
     #[getter]
@@ -1088,6 +1219,8 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<MetadataRequest>()?;
     m.add_class::<MetadataResponsePayload>()?;
     m.add_class::<MetadataResponse>()?;
+    m.add_class::<ThresholdDecryptionRequest>()?;
+    m.add_class::<ThresholdDecryptionResponse>()?;
 
     let umbral_module = PyModule::new(py, "umbral")?;
 
