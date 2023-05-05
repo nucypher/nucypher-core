@@ -13,9 +13,9 @@ use crate::versioning::{
 /// The ferveo variant to use for the decryption share derivation.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Copy, Clone)]
 pub enum FerveoVariant {
-    /// the simple variant requires n/n shares to decrypt
+    /// The simple variant requires m of n shares to decrypt
     SIMPLE,
-    /// the precomputed variant requires m/n shares to decrypt
+    /// The precomputed variant requires n of n shares to decrypt
     PRECOMPUTED,
 }
 
