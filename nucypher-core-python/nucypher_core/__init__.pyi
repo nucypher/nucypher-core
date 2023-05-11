@@ -423,8 +423,27 @@ class ThresholdDecryptionRequest:
     def ciphertext(self) -> bytes:
         ...
 
+    def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> ThresholdDecryptionRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class EncryptedThresholdDecryptionRequest:
+
+    def decrypt(
+        self,
+        sk: SecretKey
+    ) -> ThresholdDecryptionRequest:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdDecryptionRequest:
         ...
 
     def __bytes__(self) -> bytes:
@@ -439,8 +458,28 @@ class ThresholdDecryptionResponse:
     def decryption_share(self) -> bytes:
         ...
 
+    def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionResponse:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> ThresholdDecryptionResponse:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+
+class EncryptedThresholdDecryptionResponse:
+
+    def decrypt(
+        self,
+        sk: SecretKey
+    ) -> ThresholdDecryptionResponse:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdDecryptionResponse:
         ...
 
     def __bytes__(self) -> bytes:
