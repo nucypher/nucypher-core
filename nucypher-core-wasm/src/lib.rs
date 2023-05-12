@@ -631,6 +631,16 @@ impl E2EThresholdDecryptionRequest {
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
     }
+
+    #[wasm_bindgen(getter, js_name=decryption_request)]
+    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
+        ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
+    }
+
+    #[wasm_bindgen(getter, js_name=responseEncryptingKey)]
+    pub fn response_encrypting_key(&self) -> PublicKey {
+        PublicKey::from(self.0.response_encrypting_key)
+    }
 }
 
 //

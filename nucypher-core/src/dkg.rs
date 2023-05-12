@@ -97,13 +97,15 @@ impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 /// A request for an Ursula to derive a decryption share that specifies the key to encrypt Ursula's response.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct E2EThresholdDecryptionRequest {
-    decryption_request: ThresholdDecryptionRequest,
-    response_encrypting_key: PublicKey,
+    /// The decryption request.
+    pub decryption_request: ThresholdDecryptionRequest,
+    /// The key to encrypt the corresponding decryption response.
+    pub response_encrypting_key: PublicKey,
 }
 
 impl E2EThresholdDecryptionRequest {
     /// Create E2E decryption request.
-    fn new(
+    pub fn new(
         decryption_request: &ThresholdDecryptionRequest,
         response_encrypting_key: &PublicKey,
     ) -> Self {
@@ -323,3 +325,92 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
 }
 
 impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
+
+#[cfg(test)]
+mod tests {
+    use umbral_pre::encrypt;
+    use umbral_pre::SecretKey;
+
+    use crate::{
+        Conditions, Context, EncryptedThresholdDecryptionRequest,
+        EncryptedThresholdDecryptionResponse, FerveoVariant, ProtocolObject,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    };
+
+    #[test]
+    fn threshold_decryption_request() {
+        let ritual_id = 0;
+
+        let request_secret = SecretKey::random();
+        let request_encrypting_key = request_secret.public_key();
+
+        let response_secret = SecretKey::random();
+        let response_encrypting_key = response_secret.public_key();
+
+        let random_secret_key = SecretKey::random();
+
+        let encryption_result = encrypt(&random_secret_key.public_key(), b"The Tyranny of Merit");
+
+        let (_capsule, _ciphertext) = encryption_result.unwrap();
+
+        let request = ThresholdDecryptionRequest::new(
+            ritual_id,
+            &_ciphertext,
+            Some(&Conditions::new("abcd")),
+            Some(&Context::new("efgh")),
+            FerveoVariant::SIMPLE,
+        );
+
+        let encrypted_request = request.encrypt(&request_encrypting_key, &response_encrypting_key);
+
+        let encrypted_request_bytes = encrypted_request.to_bytes();
+        let encrypted_request_from_bytes =
+            EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
+
+        let e2e_request = encrypted_request_from_bytes
+            .decrypt(&request_secret)
+            .unwrap();
+        assert_eq!(response_encrypting_key, e2e_request.response_encrypting_key);
+        assert_eq!(request, e2e_request.decryption_request);
+
+        // wrong secret key used
+        assert!(encrypted_request_from_bytes
+            .decrypt(&response_secret)
+            .is_err());
+
+        assert!(encrypted_request_from_bytes
+            .decrypt(&random_secret_key)
+            .is_err());
+    }
+
+    #[test]
+    fn threshold_decryption_response() {
+        let response_secret = SecretKey::random();
+        let response_encrypting_key = response_secret.public_key();
+
+        let decryption_share = b"The Tyranny of Merit";
+
+        let response = ThresholdDecryptionResponse::new(decryption_share);
+
+        let encrypted_response = response.encrypt(&response_encrypting_key);
+
+        let encrypted_response_bytes = encrypted_response.to_bytes();
+        let encrypted_response_from_bytes =
+            EncryptedThresholdDecryptionResponse::from_bytes(&encrypted_response_bytes).unwrap();
+
+        let decrypted_response = encrypted_response_from_bytes
+            .decrypt(&response_secret)
+            .unwrap();
+        assert_eq!(response, decrypted_response);
+        assert_eq!(
+            response.decryption_share,
+            decrypted_response.decryption_share
+        );
+
+        // wrong secret key used
+        let random_secret_key = SecretKey::random();
+        assert!(encrypted_response_from_bytes
+            .decrypt(&random_secret_key)
+            .is_err());
+    }
+}

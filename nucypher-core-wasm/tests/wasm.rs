@@ -663,3 +663,84 @@ fn metadata_response() {
         "MetadataResponse does not roundtrip"
     );
 }
+
+//
+// ThresholdDecryptionRequestResponse
+//
+
+#[wasm_bindgen_test]
+fn threshold_decryption_request() {
+    let request_secret = SecretKey::random();
+    let request_encrypting_key = request_secret.public_key();
+
+    let response_secret = SecretKey::random();
+    let response_encrypting_key = response_secret.public_key();
+
+    let conditions: JsValue = Some(Conditions::new("{'some': 'condition'}")).into();
+    let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
+
+    let request = ThresholdDecryptionRequest::new(
+        0,
+        0,
+        b"fake ciphertext",
+        &conditions.unchecked_into::<OptionConditions>(),
+        &context.unchecked_into::<OptionContext>(),
+    )
+    .unwrap();
+
+    let encrypted_request = request.encrypt(&request_encrypting_key, &response_encrypting_key);
+
+    let encrypted_request_bytes = encrypted_request.to_bytes();
+    let encrypted_request_from_bytes =
+        EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
+
+    let e2e_request = encrypted_request_from_bytes
+        .decrypt(&request_secret)
+        .unwrap();
+    assert_eq!(
+        response_encrypting_key.to_compressed_bytes(),
+        e2e_request.response_encrypting_key().to_compressed_bytes()
+    );
+    assert_eq!(request, e2e_request.decryption_request());
+
+    // wrong secret key used
+    assert!(encrypted_request_from_bytes
+        .decrypt(&response_secret)
+        .is_err());
+
+    let random_secret_key = SecretKey::random();
+    assert!(encrypted_request_from_bytes
+        .decrypt(&random_secret_key)
+        .is_err());
+}
+
+#[wasm_bindgen_test]
+fn threshold_decryption_response() {
+    let response_secret = SecretKey::random();
+    let response_encrypting_key = response_secret.public_key();
+
+    let decryption_share = b"The Tyranny of Merit";
+
+    let response = ThresholdDecryptionResponse::new(decryption_share).unwrap();
+
+    let encrypted_response = response.encrypt(&response_encrypting_key);
+    let encrypted_response_bytes = encrypted_response.to_bytes();
+
+    let encrypted_response_from_bytes =
+        EncryptedThresholdDecryptionResponse::from_bytes(&encrypted_response_bytes).unwrap();
+
+    let decrypted_response = encrypted_response_from_bytes
+        .decrypt(&response_secret)
+        .unwrap();
+    assert_eq!(response, decrypted_response);
+    assert_eq!(
+        response.decryption_share(),
+        decrypted_response.decryption_share()
+    );
+
+    // wrong secret key used
+    let random_secret_key = SecretKey::random();
+    assert!(encrypted_response_from_bytes
+        .decrypt(&random_secret_key)
+        .is_err());
+}
