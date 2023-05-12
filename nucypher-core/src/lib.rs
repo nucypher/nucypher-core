@@ -27,8 +27,9 @@ pub struct VerificationError;
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
-    EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, FerveoVariant,
-    ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    E2EThresholdDecryptionRequest, EncryptedThresholdDecryptionRequest,
+    EncryptedThresholdDecryptionResponse, FerveoVariant, ThresholdDecryptionRequest,
+    ThresholdDecryptionResponse,
 };
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;

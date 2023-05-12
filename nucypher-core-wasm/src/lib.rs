@@ -590,13 +590,41 @@ impl ThresholdDecryptionRequest {
         self.0.ciphertext.clone()
     }
 
-    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionRequest {
-        EncryptedThresholdDecryptionRequest(self.0.encrypt(encrypting_key.as_ref()))
+    pub fn encrypt(
+        &self,
+        request_encrypting_key: &PublicKey,
+        response_encrypting_key: &PublicKey,
+    ) -> EncryptedThresholdDecryptionRequest {
+        EncryptedThresholdDecryptionRequest(self.0.encrypt(
+            request_encrypting_key.as_ref(),
+            response_encrypting_key.as_ref(),
+        ))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionRequest, Error> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
+// E2EThresholdDecryptionRequest
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
+
+#[wasm_bindgen]
+impl E2EThresholdDecryptionRequest {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -615,11 +643,11 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<ThresholdDecryptionRequest, Error> {
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(sk.as_ref())
             .map_err(map_js_err)
-            .map(ThresholdDecryptionRequest)
+            .map(E2EThresholdDecryptionRequest)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]

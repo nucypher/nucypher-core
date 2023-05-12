@@ -434,12 +434,22 @@ class ThresholdDecryptionRequest:
         ...
 
 
+class E2EThresholdDecryptionRequest:
+
+    @staticmethod
+    def from_bytes(data: bytes) -> E2EThresholdDecryptionRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
 class EncryptedThresholdDecryptionRequest:
 
     def decrypt(
         self,
         sk: SecretKey
-    ) -> ThresholdDecryptionRequest:
+    ) -> E2EThresholdDecryptionRequest:
         ...
 
     @staticmethod
