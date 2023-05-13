@@ -83,7 +83,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-      - run: cargo install wasm-pack
+      - run: cargo install wasm-opt wasm-pack
       - run: make
         working-directory: nucypher-core-wasm
       - uses: borales/actions-yarn@v3.0.0
