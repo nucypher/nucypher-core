@@ -613,18 +613,18 @@ impl ThresholdDecryptionRequest {
 }
 
 //
-// E2EThresholdDecryptionRequest
+// E2EEThresholdDecryptionRequest
 //
 
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
+pub struct E2EEThresholdDecryptionRequest(nucypher_core::E2EEThresholdDecryptionRequest);
 
 #[wasm_bindgen]
-impl E2EThresholdDecryptionRequest {
+impl E2EEThresholdDecryptionRequest {
     #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
+    pub fn from_bytes(data: &[u8]) -> Result<E2EEThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::E2EEThresholdDecryptionRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -653,11 +653,11 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EEThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(sk.as_ref())
             .map_err(map_js_err)
-            .map(E2EThresholdDecryptionRequest)
+            .map(E2EEThresholdDecryptionRequest)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]

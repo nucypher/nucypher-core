@@ -27,7 +27,7 @@ pub struct VerificationError;
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
-    E2EThresholdDecryptionRequest, EncryptedThresholdDecryptionRequest,
+    E2EEThresholdDecryptionRequest, EncryptedThresholdDecryptionRequest,
     EncryptedThresholdDecryptionResponse, FerveoVariant, ThresholdDecryptionRequest,
     ThresholdDecryptionResponse,
 };

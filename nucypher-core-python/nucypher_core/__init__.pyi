@@ -423,7 +423,7 @@ class ThresholdDecryptionRequest:
     def ciphertext(self) -> bytes:
         ...
 
-    def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
+    def encrypt(self, request_encrypting_key: PublicKey, response_encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -434,10 +434,16 @@ class ThresholdDecryptionRequest:
         ...
 
 
-class E2EThresholdDecryptionRequest:
+class E2EEThresholdDecryptionRequest:
+
+    def decryption_request(self) -> ThresholdDecryptionRequest:
+        ...
+
+    def response_encrypting_key(self) -> PublicKey:
+        ...
 
     @staticmethod
-    def from_bytes(data: bytes) -> E2EThresholdDecryptionRequest:
+    def from_bytes(data: bytes) -> E2EEThresholdDecryptionRequest:
         ...
 
     def __bytes__(self) -> bytes:
@@ -449,7 +455,7 @@ class EncryptedThresholdDecryptionRequest:
     def decrypt(
         self,
         sk: SecretKey
-    ) -> E2EThresholdDecryptionRequest:
+    ) -> E2EEThresholdDecryptionRequest:
         ...
 
     @staticmethod

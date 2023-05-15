@@ -734,19 +734,29 @@ impl ThresholdDecryptionRequest {
 }
 
 //
-// E2EThresholdDecryptionRequest
+// E2EEThresholdDecryptionRequest
 //
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest {
-    backend: nucypher_core::E2EThresholdDecryptionRequest,
+pub struct E2EEThresholdDecryptionRequest {
+    backend: nucypher_core::E2EEThresholdDecryptionRequest,
 }
 
 #[pymethods]
-impl E2EThresholdDecryptionRequest {
+impl E2EEThresholdDecryptionRequest {
+    #[getter]
+    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
+        self.backend.decryption_request.clone().into()
+    }
+
+    #[getter]
+    pub fn response_encrypting_key(&self) -> PublicKey {
+        self.backend.response_encrypting_key.into()
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
+        from_bytes::<_, nucypher_core::E2EEThresholdDecryptionRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -766,10 +776,10 @@ pub struct EncryptedThresholdDecryptionRequest {
 
 #[pymethods]
 impl EncryptedThresholdDecryptionRequest {
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EThresholdDecryptionRequest> {
+    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EEThresholdDecryptionRequest> {
         self.backend
             .decrypt(sk.as_ref())
-            .map(E2EThresholdDecryptionRequest::from)
+            .map(E2EEThresholdDecryptionRequest::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
@@ -1318,7 +1328,7 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<MetadataResponsePayload>()?;
     m.add_class::<MetadataResponse>()?;
     m.add_class::<ThresholdDecryptionRequest>()?;
-    m.add_class::<E2EThresholdDecryptionRequest>()?;
+    m.add_class::<E2EEThresholdDecryptionRequest>()?;
     m.add_class::<ThresholdDecryptionResponse>()?;
     m.add_class::<EncryptedThresholdDecryptionRequest>()?;
     m.add_class::<EncryptedThresholdDecryptionResponse>()?;
