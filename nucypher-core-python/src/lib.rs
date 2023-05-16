@@ -776,6 +776,11 @@ pub struct EncryptedThresholdDecryptionRequest {
 
 #[pymethods]
 impl EncryptedThresholdDecryptionRequest {
+    #[getter]
+    pub fn id(&self) -> u16 {
+        self.backend.ritual_id
+    }
+
     pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EEThresholdDecryptionRequest> {
         self.backend
             .decrypt(sk.as_ref())

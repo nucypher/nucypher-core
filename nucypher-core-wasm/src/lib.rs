@@ -653,6 +653,11 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
+    #[wasm_bindgen(getter)]
+    pub fn id(&self) -> u16 {
+        self.0.ritual_id
+    }
+
     pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EEThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(sk.as_ref())

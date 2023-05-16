@@ -670,6 +670,7 @@ fn metadata_response() {
 
 #[wasm_bindgen_test]
 fn threshold_decryption_request() {
+    let ritual_id: u16 = 5;
     let request_secret = SecretKey::random();
     let request_encrypting_key = request_secret.public_key();
 
@@ -680,7 +681,7 @@ fn threshold_decryption_request() {
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
     let request = ThresholdDecryptionRequest::new(
-        0,
+        ritual_id,
         0,
         b"fake ciphertext",
         &conditions.unchecked_into::<OptionConditions>(),
@@ -693,6 +694,8 @@ fn threshold_decryption_request() {
     let encrypted_request_bytes = encrypted_request.to_bytes();
     let encrypted_request_from_bytes =
         EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
+
+    assert_eq!(encrypted_request_from_bytes.id(), ritual_id);
 
     let e2e_request = encrypted_request_from_bytes
         .decrypt(&request_secret)

@@ -451,6 +451,8 @@ class E2EEThresholdDecryptionRequest:
 
 
 class EncryptedThresholdDecryptionRequest:
+    def id(self) -> int:
+        ...
 
     def decrypt(
         self,

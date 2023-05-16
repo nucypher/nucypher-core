@@ -143,6 +143,8 @@ impl<'a> ProtocolObject<'a> for E2EEThresholdDecryptionRequest {}
 /// An encrypted request for an Ursula to derive a decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedThresholdDecryptionRequest {
+    /// ID of the ritual
+    pub ritual_id: u16,
     /// TODO Umbral for now - but change
     capsule: Capsule,
     #[serde(with = "serde_bytes::as_base64")]
@@ -169,7 +171,9 @@ impl EncryptedThresholdDecryptionRequest {
                     }
                 },
             };
+        let ritual_id = request.ritual_id;
         Self {
+            ritual_id,
             capsule,
             ciphertext,
         }
@@ -366,6 +370,8 @@ mod tests {
         let encrypted_request_bytes = encrypted_request.to_bytes();
         let encrypted_request_from_bytes =
             EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
+
+        assert_eq!(encrypted_request_from_bytes.ritual_id, ritual_id);
 
         let e2e_request = encrypted_request_from_bytes
             .decrypt(&request_secret)
