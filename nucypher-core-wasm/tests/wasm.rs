@@ -691,10 +691,12 @@ fn threshold_decryption_request() {
 
     let encrypted_request = request.encrypt(&request_encrypting_key, &response_encrypting_key);
 
+    // mimic encrypted request going over the wire
     let encrypted_request_bytes = encrypted_request.to_bytes();
     let encrypted_request_from_bytes =
         EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
 
+    assert_eq!(encrypted_request_from_bytes, encrypted_request);
     assert_eq!(encrypted_request_from_bytes.id(), ritual_id);
 
     let e2e_request = encrypted_request_from_bytes

@@ -2,9 +2,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 
 use serde::{Deserialize, Serialize};
-use umbral_pre::{
-    decrypt_original, encrypt, serde_bytes, Capsule, EncryptionError, PublicKey, SecretKey,
-};
+use umbral_pre::{decrypt_original, encrypt, serde_bytes, Capsule, PublicKey, SecretKey};
 
 use crate::conditions::{Conditions, Context};
 use crate::key_frag::DecryptionError;
@@ -161,16 +159,8 @@ impl EncryptedThresholdDecryptionRequest {
             E2EEThresholdDecryptionRequest::new(request, response_encrypting_key);
         // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         let (capsule, ciphertext) =
-            match encrypt(request_encrypting_key, &e2e_decryption_request.to_bytes()) {
-                Ok(result) => result,
-                Err(err) => match err {
-                    // For now this is the only error that can happen during encryption,
-                    // and there's really no point in propagating it.
-                    EncryptionError::PlaintextTooLarge => {
-                        panic!("encryption failed - out of memory?")
-                    }
-                },
-            };
+            encrypt(request_encrypting_key, &e2e_decryption_request.to_bytes())
+                .expect("encryption failed - out of memory?");
         let ritual_id = request.ritual_id;
         Self {
             ritual_id,
@@ -279,16 +269,8 @@ impl EncryptedThresholdDecryptionResponse {
     ) -> Self {
         // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         let (capsule, ciphertext) =
-            match encrypt(encrypting_key, &threshold_decryption_response.to_bytes()) {
-                Ok(result) => result,
-                Err(err) => match err {
-                    // For now this is the only error that can happen during encryption,
-                    // and there's really no point in propagating it.
-                    EncryptionError::PlaintextTooLarge => {
-                        panic!("encryption failed - out of memory?")
-                    }
-                },
-            };
+            encrypt(encrypting_key, &threshold_decryption_response.to_bytes())
+                .expect("encryption failed - out of memory?");
         Self {
             capsule,
             ciphertext,
