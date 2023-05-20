@@ -94,14 +94,14 @@ impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 
 /// A request for an Ursula to derive a decryption share that specifies the key to encrypt Ursula's response.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct E2EEThresholdDecryptionRequest {
+pub struct E2EThresholdDecryptionRequest {
     /// The decryption request.
     pub decryption_request: ThresholdDecryptionRequest,
     /// The key to encrypt the corresponding decryption response.
     pub response_encrypting_key: PublicKey,
 }
 
-impl E2EEThresholdDecryptionRequest {
+impl E2EThresholdDecryptionRequest {
     /// Create E2E decryption request.
     pub fn new(
         decryption_request: &ThresholdDecryptionRequest,
@@ -114,7 +114,7 @@ impl E2EEThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for E2EEThresholdDecryptionRequest {
+impl<'a> ProtocolObjectInner<'a> for E2EThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
         (1, 0)
     }
@@ -136,7 +136,7 @@ impl<'a> ProtocolObjectInner<'a> for E2EEThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for E2EEThresholdDecryptionRequest {}
+impl<'a> ProtocolObject<'a> for E2EThresholdDecryptionRequest {}
 
 /// An encrypted request for an Ursula to derive a decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -156,7 +156,7 @@ impl EncryptedThresholdDecryptionRequest {
         response_encrypting_key: &PublicKey,
     ) -> Self {
         let e2e_decryption_request =
-            E2EEThresholdDecryptionRequest::new(request, response_encrypting_key);
+            E2EThresholdDecryptionRequest::new(request, response_encrypting_key);
         // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         let (capsule, ciphertext) =
             encrypt(request_encrypting_key, &e2e_decryption_request.to_bytes())
@@ -173,11 +173,11 @@ impl EncryptedThresholdDecryptionRequest {
     pub fn decrypt(
         &self,
         sk: &SecretKey,
-    ) -> Result<E2EEThresholdDecryptionRequest, DecryptionError> {
+    ) -> Result<E2EThresholdDecryptionRequest, DecryptionError> {
         let decryption_request_bytes = decrypt_original(sk, &self.capsule, &self.ciphertext)
             .map_err(DecryptionError::DecryptionFailed)?;
         let decryption_request =
-            E2EEThresholdDecryptionRequest::from_bytes(&decryption_request_bytes)
+            E2EThresholdDecryptionRequest::from_bytes(&decryption_request_bytes)
                 .map_err(DecryptionError::DeserializationFailed)?;
         Ok(decryption_request)
     }

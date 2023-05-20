@@ -408,20 +408,15 @@ class ThresholdDecryptionRequest:
     def __init__(self, ritual_id: int, variant: int, ciphertext: bytes, conditions: Optional[Conditions], context: Optional[Context]):
         ...
 
-    def id(self) -> int:
-        ...
+    ritual_id: int
 
-    def conditions(self) -> Optional[Conditions]:
-        ...
+    conditions: Optional[Conditions]
 
-    def context(self) -> Optional[Context]:
-        ...
+    context: Optional[Context]
 
-    def variant(self) -> int:
-        ...
+    variant: int
 
-    def ciphertext(self) -> bytes:
-        ...
+    ciphertext: bytes
 
     def encrypt(self, request_encrypting_key: PublicKey, response_encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
         ...
@@ -434,16 +429,14 @@ class ThresholdDecryptionRequest:
         ...
 
 
-class E2EEThresholdDecryptionRequest:
+class E2EThresholdDecryptionRequest:
 
-    def decryption_request(self) -> ThresholdDecryptionRequest:
-        ...
+    decryption_request: ThresholdDecryptionRequest
 
-    def response_encrypting_key(self) -> PublicKey:
-        ...
+    response_encrypting_key: PublicKey
 
     @staticmethod
-    def from_bytes(data: bytes) -> E2EEThresholdDecryptionRequest:
+    def from_bytes(data: bytes) -> E2EThresholdDecryptionRequest:
         ...
 
     def __bytes__(self) -> bytes:
@@ -451,13 +444,12 @@ class E2EEThresholdDecryptionRequest:
 
 
 class EncryptedThresholdDecryptionRequest:
-    def id(self) -> int:
-        ...
+    ritual_id: int
 
     def decrypt(
         self,
         sk: SecretKey
-    ) -> E2EEThresholdDecryptionRequest:
+    ) -> E2EThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -473,8 +465,7 @@ class ThresholdDecryptionResponse:
     def __init__(self, decryption_share: bytes):
         ...
 
-    def decryption_share(self) -> bytes:
-        ...
+    decryption_share: bytes
 
     def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionResponse:
         ...
@@ -485,7 +476,6 @@ class ThresholdDecryptionResponse:
 
     def __bytes__(self) -> bytes:
         ...
-
 
 
 class EncryptedThresholdDecryptionResponse:

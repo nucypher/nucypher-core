@@ -645,7 +645,7 @@ pub struct ThresholdDecryptionRequest {
 impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
-        id: u16,
+        ritual_id: u16,
         variant: u8,
         ciphertext: &[u8], // TODO use ferveo Ciphertext type
         conditions: Option<&Conditions>,
@@ -663,7 +663,7 @@ impl ThresholdDecryptionRequest {
 
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
-                id,
+                ritual_id,
                 ciphertext,
                 conditions
                     .map(|conditions| conditions.backend.clone())
@@ -675,7 +675,7 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u16 {
         self.backend.ritual_id
     }
 
@@ -734,16 +734,16 @@ impl ThresholdDecryptionRequest {
 }
 
 //
-// E2EEThresholdDecryptionRequest
+// E2EThresholdDecryptionRequest
 //
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct E2EEThresholdDecryptionRequest {
-    backend: nucypher_core::E2EEThresholdDecryptionRequest,
+pub struct E2EThresholdDecryptionRequest {
+    backend: nucypher_core::E2EThresholdDecryptionRequest,
 }
 
 #[pymethods]
-impl E2EEThresholdDecryptionRequest {
+impl E2EThresholdDecryptionRequest {
     #[getter]
     pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
         self.backend.decryption_request.clone().into()
@@ -756,7 +756,7 @@ impl E2EEThresholdDecryptionRequest {
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::E2EEThresholdDecryptionRequest>(data)
+        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -777,14 +777,14 @@ pub struct EncryptedThresholdDecryptionRequest {
 #[pymethods]
 impl EncryptedThresholdDecryptionRequest {
     #[getter]
-    pub fn id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u16 {
         self.backend.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EEThresholdDecryptionRequest> {
+    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EThresholdDecryptionRequest> {
         self.backend
             .decrypt(sk.as_ref())
-            .map(E2EEThresholdDecryptionRequest::from)
+            .map(E2EThresholdDecryptionRequest::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
@@ -1333,7 +1333,7 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<MetadataResponsePayload>()?;
     m.add_class::<MetadataResponse>()?;
     m.add_class::<ThresholdDecryptionRequest>()?;
-    m.add_class::<E2EEThresholdDecryptionRequest>()?;
+    m.add_class::<E2EThresholdDecryptionRequest>()?;
     m.add_class::<ThresholdDecryptionResponse>()?;
     m.add_class::<EncryptedThresholdDecryptionRequest>()?;
     m.add_class::<EncryptedThresholdDecryptionResponse>()?;

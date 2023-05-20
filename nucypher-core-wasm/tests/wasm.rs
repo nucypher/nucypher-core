@@ -697,7 +697,7 @@ fn threshold_decryption_request() {
         EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
 
     assert_eq!(encrypted_request_from_bytes, encrypted_request);
-    assert_eq!(encrypted_request_from_bytes.id(), ritual_id);
+    assert_eq!(encrypted_request_from_bytes.ritual_id(), ritual_id);
 
     let e2e_request = encrypted_request_from_bytes
         .decrypt(&request_secret)

@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` types and bindings. ([#52])`
 
 
+### Changed
+
+- Bumped MSRV to 1.65. ([#52])
+
+
 [#52]: https://github.com/nucypher/nucypher-core/pull/52
 
 

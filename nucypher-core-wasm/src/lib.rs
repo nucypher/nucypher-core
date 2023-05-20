@@ -572,8 +572,8 @@ impl ThresholdDecryptionRequest {
         )))
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn id(&self) -> u16 {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
         self.0.ritual_id
     }
 
@@ -613,18 +613,18 @@ impl ThresholdDecryptionRequest {
 }
 
 //
-// E2EEThresholdDecryptionRequest
+// E2EThresholdDecryptionRequest
 //
 
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct E2EEThresholdDecryptionRequest(nucypher_core::E2EEThresholdDecryptionRequest);
+pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
 
 #[wasm_bindgen]
-impl E2EEThresholdDecryptionRequest {
+impl E2EThresholdDecryptionRequest {
     #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<E2EEThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::E2EEThresholdDecryptionRequest>(data)
+    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -632,7 +632,7 @@ impl E2EEThresholdDecryptionRequest {
         to_bytes(self)
     }
 
-    #[wasm_bindgen(getter, js_name=decryption_request)]
+    #[wasm_bindgen(getter, js_name=decryptionRequest)]
     pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
         ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
     }
@@ -653,16 +653,16 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
-    #[wasm_bindgen(getter)]
-    pub fn id(&self) -> u16 {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
         self.0.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EEThresholdDecryptionRequest, Error> {
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(sk.as_ref())
             .map_err(map_js_err)
-            .map(E2EEThresholdDecryptionRequest)
+            .map(E2EThresholdDecryptionRequest)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
