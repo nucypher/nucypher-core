@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use ferveo::api::Ciphertext;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{decrypt_original, encrypt, serde_bytes, Capsule, PublicKey, SecretKey};
@@ -26,8 +27,7 @@ pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u16,
     /// The ciphertext to generate a decryption share for.
-    #[serde(with = "serde_bytes::as_base64")]
-    pub ciphertext: Box<[u8]>,
+    pub ciphertext: Ciphertext,
     /// A blob of bytes containing decryption conditions for this message.
     pub conditions: Option<Conditions>,
     /// A blob of bytes containing context required to evaluate conditions.
@@ -40,14 +40,14 @@ impl ThresholdDecryptionRequest {
     /// Creates a new decryption request.
     pub fn new(
         ritual_id: u16,
-        ciphertext: &[u8],
+        ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
         variant: FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
-            ciphertext: ciphertext.to_vec().into(),
+            ciphertext: ciphertext.clone(),
             conditions: conditions.cloned(),
             context: context.cloned(),
             variant,

@@ -17,6 +17,8 @@ use umbral_pre::bindings_python::{
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
+use ferveo::bindings_python::{Ciphertext, PublicKey as FerveoPublicKey};
+
 use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
 
@@ -647,7 +649,7 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         ritual_id: u16,
         variant: u8,
-        ciphertext: &[u8], // TODO use ferveo Ciphertext type
+        ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
     ) -> PyResult<Self> {
@@ -664,7 +666,7 @@ impl ThresholdDecryptionRequest {
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 ritual_id,
-                ciphertext,
+                ciphertext.as_ref(),
                 conditions
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
@@ -698,8 +700,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn ciphertext(&self) -> &[u8] {
-        self.backend.ciphertext.as_ref()
+    pub fn ciphertext(&self) -> Ciphertext {
+        self.backend.ciphertext.clone().into()
     }
 
     #[getter]
@@ -1008,7 +1010,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        ferveo_public_key: &[u8], // TODO use ferveo PublicKey type
+        ferveo_public_key: &FerveoPublicKey,
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -1021,7 +1023,7 @@ impl NodeMetadataPayload {
                 timestamp_epoch,
                 verifying_key: *verifying_key.as_ref(),
                 encrypting_key: *encrypting_key.as_ref(),
-                ferveo_public_key: ferveo_public_key.into(),
+                ferveo_public_key: *ferveo_public_key.as_ref(),
                 certificate_der: certificate_der.into(),
                 host: host.to_string(),
                 port,
@@ -1048,8 +1050,8 @@ impl NodeMetadataPayload {
     }
 
     #[getter]
-    fn ferveo_public_key(&self) -> &[u8] {
-        self.backend.ferveo_public_key.as_ref()
+    fn ferveo_public_key(&self) -> FerveoPublicKey {
+        self.backend.ferveo_public_key.into()
     }
 
     #[getter]
@@ -1338,6 +1340,7 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<EncryptedThresholdDecryptionRequest>()?;
     m.add_class::<EncryptedThresholdDecryptionResponse>()?;
 
+    // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
 
     umbral_module.add_class::<umbral_pre::bindings_python::SecretKey>()?;
@@ -1362,6 +1365,12 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
         py.get_type::<umbral_pre::bindings_python::VerificationError>(),
     )?; // depends on what `reencryption_response.verify()` returns
     m.add_submodule(umbral_module)?;
+
+    // Build the ferveo module
+    let ferveo_module = PyModule::new(py, "ferveo")?;
+
+    umbral_module.add_class::<ferveo::bindings_python::PublicKey>()?;
+    m.add_submodule(ferveo_module)?;
 
     Ok(())
 }

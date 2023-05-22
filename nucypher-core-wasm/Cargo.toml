@@ -20,6 +20,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 umbral-pre = { version = "0.9.1", features = ["bindings-wasm"] }
+ferveo = { path = "../../ferveo/ferveo", features = ["bindings-wasm"] }
 nucypher-core = { path = "../nucypher-core" }
 wasm-bindgen = "0.2.74"
 js-sys = "0.3.51"

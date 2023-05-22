@@ -12,6 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
+use ferveo::bindings_wasm::{Ciphertext, PublicKey as FerveoPublicKey};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -550,7 +551,7 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         id: u16,
         variant: u8,
-        ciphertext: &[u8],
+        ciphertext: &Ciphertext,
         conditions: &OptionConditions,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
@@ -565,7 +566,7 @@ impl ThresholdDecryptionRequest {
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             id,
-            ciphertext,
+            ciphertext.as_ref(),
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
             ferveo_variant,
@@ -586,8 +587,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn ciphertext(&self) -> Box<[u8]> {
-        self.0.ciphertext.clone()
+    pub fn ciphertext(&self) -> Ciphertext {
+        self.0.ciphertext.clone().into()
     }
 
     pub fn encrypt(
@@ -1051,7 +1052,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        ferveo_public_key: &[u8],
+        ferveo_public_key: &FerveoPublicKey,
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -1063,7 +1064,7 @@ impl NodeMetadataPayload {
             timestamp_epoch,
             verifying_key: *verifying_key.as_ref(),
             encrypting_key: *encrypting_key.as_ref(),
-            ferveo_public_key: ferveo_public_key.into(),
+            ferveo_public_key: *ferveo_public_key.as_ref(),
             certificate_der: certificate_der.into(),
             host: host.to_string(),
             port,

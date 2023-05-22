@@ -1,5 +1,6 @@
 use nucypher_core_wasm::*;
 
+use ferveo::bindings_wasm::Keypair;
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -88,7 +89,7 @@ fn make_node_metadata() -> NodeMetadata {
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
-    let ferveo_public_key = SecretKey::random().public_key(); // TODO: use ferveo PublicKey
+    let ferveo_public_key = Keypair::random().public_key();
     let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
@@ -103,7 +104,7 @@ fn make_node_metadata() -> NodeMetadata {
         timestamp_epoch,
         &verifying_key,
         &encrypting_key,
-        &ferveo_public_key.to_compressed_bytes(),
+        &ferveo_public_key,
         certificate_der,
         host,
         port,

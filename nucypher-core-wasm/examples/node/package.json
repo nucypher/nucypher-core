@@ -22,7 +22,8 @@
   ],
   "license": "GPL-3.0-only",
   "dependencies": {
-    "nucypher-core": "file:../../pkg"
+    "nucypher-core": "file:../../pkg",
+    "ferveo": "file:../../../../ferveo/ferveo-wasm/pkg"
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.16.5",

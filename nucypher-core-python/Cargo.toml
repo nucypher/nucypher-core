@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 pyo3 = "0.18"
 nucypher-core = { path = "../nucypher-core" }
 umbral-pre = { version = "0.9.1", features = ["bindings-python"] }
+ferveo = { path = "../../ferveo/ferveo", features = ["bindings-python"] }
 derive_more = { version = "0.99", default-features = false, features = ["from", "as_ref"] }
 
 [build-dependencies]

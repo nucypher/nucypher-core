@@ -3,6 +3,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use core::fmt;
 
+use ferveo::api::PublicKey as FerveoPublicKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use sha3::{digest::Update, Digest, Keccak256};
@@ -61,8 +62,7 @@ pub struct NodeMetadataPayload {
     /// The node's encrypting key.
     pub encrypting_key: PublicKey,
     /// Ferveo public key to use for DKG participation.
-    #[serde(with = "serde_bytes::as_base64")]
-    pub ferveo_public_key: Box<[u8]>, // TODO use ferveo PublicKey?
+    pub ferveo_public_key: FerveoPublicKey,
     /// The node's SSL certificate (serialized in DER format).
     #[serde(with = "serde_bytes::as_base64")]
     pub certificate_der: Box<[u8]>,
