@@ -404,7 +404,7 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "generic-array",
  "hex",
@@ -417,7 +417,7 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "nucypher-core",
@@ -428,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "console_error_panic_hook",
  "derive_more",
