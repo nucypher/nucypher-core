@@ -25,7 +25,7 @@ import {
   FleetStateChecksum,
   RecoverableSignature,
 } from "nucypher-core";
-import {Keypair} from "ferveo";
+import {Keypair} from "ferveo-wasm";
 
 
 
