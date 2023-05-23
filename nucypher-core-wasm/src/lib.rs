@@ -572,8 +572,8 @@ impl ThresholdDecryptionRequest {
         )))
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn id(&self) -> u16 {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
         self.0.ritual_id
     }
 
@@ -590,9 +590,84 @@ impl ThresholdDecryptionRequest {
         self.0.ciphertext.clone()
     }
 
+    pub fn encrypt(
+        &self,
+        request_encrypting_key: &PublicKey,
+        response_encrypting_key: &PublicKey,
+    ) -> EncryptedThresholdDecryptionRequest {
+        EncryptedThresholdDecryptionRequest(self.0.encrypt(
+            request_encrypting_key.as_ref(),
+            response_encrypting_key.as_ref(),
+        ))
+    }
+
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionRequest, Error> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
+// E2EThresholdDecryptionRequest
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
+
+#[wasm_bindgen]
+impl E2EThresholdDecryptionRequest {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+
+    #[wasm_bindgen(getter, js_name=decryptionRequest)]
+    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
+        ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
+    }
+
+    #[wasm_bindgen(getter, js_name=responseEncryptingKey)]
+    pub fn response_encrypting_key(&self) -> PublicKey {
+        PublicKey::from(self.0.response_encrypting_key)
+    }
+}
+
+//
+// EncryptedThresholdDecryptionRequest
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThresholdDecryptionRequest);
+
+#[wasm_bindgen]
+impl EncryptedThresholdDecryptionRequest {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
+        self.0.ritual_id
+    }
+
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
+        self.0
+            .decrypt(sk.as_ref())
+            .map_err(map_js_err)
+            .map(E2EThresholdDecryptionRequest)
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<EncryptedThresholdDecryptionRequest, Error> {
+        from_bytes::<_, nucypher_core::EncryptedThresholdDecryptionRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -623,9 +698,43 @@ impl ThresholdDecryptionResponse {
         self.0.decryption_share.clone()
     }
 
+    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionResponse {
+        EncryptedThresholdDecryptionResponse(self.0.encrypt(encrypting_key.as_ref()))
+    }
+
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionResponse>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
+// EncryptedThresholdDecryptionResponse
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdDecryptionResponse(
+    nucypher_core::EncryptedThresholdDecryptionResponse,
+);
+
+#[wasm_bindgen]
+impl EncryptedThresholdDecryptionResponse {
+    pub fn decrypt(&self, sk: &SecretKey) -> Result<ThresholdDecryptionResponse, Error> {
+        self.0
+            .decrypt(sk.as_ref())
+            .map_err(map_js_err)
+            .map(ThresholdDecryptionResponse)
+    }
+
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<EncryptedThresholdDecryptionResponse, Error> {
+        from_bytes::<_, nucypher_core::EncryptedThresholdDecryptionResponse>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]

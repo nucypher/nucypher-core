@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            rust: 1.64 # MSRV
+            rust: 1.65 # MSRV
           - target: x86_64-unknown-linux-gnu
             rust: stable
 
@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.64 # MSRV
+          - 1.65 # MSRV
           - stable
         target:
           - wasm32-unknown-unknown
@@ -83,7 +83,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-      - run: cargo install wasm-pack
+      - run: cargo install wasm-opt wasm-pack
       - run: make
         working-directory: nucypher-core-wasm
       - uses: borales/actions-yarn@v3.0.0

@@ -408,23 +408,52 @@ class ThresholdDecryptionRequest:
     def __init__(self, ritual_id: int, variant: int, ciphertext: bytes, conditions: Optional[Conditions], context: Optional[Context]):
         ...
 
-    def id(self) -> int:
-        ...
+    ritual_id: int
 
-    def conditions(self) -> Optional[Conditions]:
-        ...
+    conditions: Optional[Conditions]
 
-    def context(self) -> Optional[Context]:
-        ...
+    context: Optional[Context]
 
-    def variant(self) -> int:
-        ...
+    variant: int
 
-    def ciphertext(self) -> bytes:
+    ciphertext: bytes
+
+    def encrypt(self, request_encrypting_key: PublicKey, response_encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
         ...
 
     @staticmethod
     def from_bytes(data: bytes) -> ThresholdDecryptionRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class E2EThresholdDecryptionRequest:
+
+    decryption_request: ThresholdDecryptionRequest
+
+    response_encrypting_key: PublicKey
+
+    @staticmethod
+    def from_bytes(data: bytes) -> E2EThresholdDecryptionRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class EncryptedThresholdDecryptionRequest:
+    ritual_id: int
+
+    def decrypt(
+        self,
+        sk: SecretKey
+    ) -> E2EThresholdDecryptionRequest:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdDecryptionRequest:
         ...
 
     def __bytes__(self) -> bytes:
@@ -436,11 +465,29 @@ class ThresholdDecryptionResponse:
     def __init__(self, decryption_share: bytes):
         ...
 
-    def decryption_share(self) -> bytes:
+    decryption_share: bytes
+
+    def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionResponse:
         ...
 
     @staticmethod
     def from_bytes(data: bytes) -> ThresholdDecryptionResponse:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class EncryptedThresholdDecryptionResponse:
+
+    def decrypt(
+        self,
+        sk: SecretKey
+    ) -> ThresholdDecryptionResponse:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdDecryptionResponse:
         ...
 
     def __bytes__(self) -> bytes:

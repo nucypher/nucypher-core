@@ -3,6 +3,20 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - Unreleased
+
+### Added
+
+- Add `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` types and bindings. ([#52])`
+
+
+### Changed
+
+- Bumped MSRV to 1.65. ([#52])
+
+
+[#52]: https://github.com/nucypher/nucypher-core/pull/52
+
 
 ## [0.7.0] - 2023-05-01
 
