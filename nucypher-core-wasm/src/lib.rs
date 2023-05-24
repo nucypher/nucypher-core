@@ -21,10 +21,12 @@ use umbral_pre::bindings_wasm::{
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
+use wasm_bindgen_test::console_log;
 
 use nucypher_core::{FerveoVariant, ProtocolObject};
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
+    console_log!("Error: {}", err);
     Error::new(&format!("{}", err))
 }
 
@@ -59,9 +61,15 @@ where
     for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
 {
     let js_value = value.as_ref();
+
+    let type_of = js_value.js_typeof();
+    console_log!("JsValue type: {:?}", type_of);
+
     let typed_value = if js_value.is_null() {
+        console_log!("JsValue argument is null");
         None
     } else {
+        console_log!("JsValue argument is not null");
         Some(T::try_from(js_value).map_err(map_js_err)?)
     };
     Ok(typed_value)
@@ -248,7 +256,10 @@ impl MessageKit {
         plaintext: &[u8],
         conditions: &OptionConditions,
     ) -> Result<MessageKit, Error> {
+        console_log!("try_from_js_option::<Conditions>(conditions)?");
         let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+
+        console_log!("nucypher_core::MessageKit::new");
         Ok(MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.as_ref(),
             plaintext,
