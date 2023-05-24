@@ -527,7 +527,7 @@ dependencies = [
  "subproductdomain-pre-release",
  "thiserror",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.1.1",
  "zeroize",
 ]
 
@@ -859,7 +859,7 @@ dependencies = [
  "nucypher-core",
  "umbral-pre",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.2.0",
  "wasm-bindgen-test",
 ]
 
@@ -1435,9 +1435,8 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "umbral-pre"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65db1666dd674a92aa5fa83fa5a1618e1388a3c1cb5087383191e66e16777c0f"
+version = "0.9.2"
+source = "git+https://github.com/piotr-roslaniec/rust-umbral.git?rev=90a5075bb3462421fa6db79463960cd8e10a7025#90a5075bb3462421fa6db79463960cd8e10a7025"
 dependencies = [
  "base64 0.21.0",
  "chacha20poly1305",
@@ -1455,7 +1454,7 @@ dependencies = [
  "sha2",
  "subtle",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.2.0",
  "zeroize",
 ]
 
@@ -1535,6 +1534,19 @@ name = "wasm-bindgen-derive"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7301886930edaa72b7d102655ea395774aa9f0614c1a491393648a5fec34435"
+dependencies = [
+ "js-sys",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.107",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "wasm-bindgen-derive"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3451353ff163a0d7053a2b0e1e2b698a466317791b027c50142bb0d3387fb90"
 dependencies = [
  "js-sys",
  "proc-macro2",
