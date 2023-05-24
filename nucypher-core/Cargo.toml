@@ -11,7 +11,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 umbral-pre = { version = "0.9.1", features = ["serde"] }
-ferveo = { package = "ferveo-pre-release", version = "0.1.0-alpha.2" }
+ferveo = { package = "ferveo-pre-release", version = "0.1.0-alpha.3" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = "0.14"
 sha3 = "0.10"
