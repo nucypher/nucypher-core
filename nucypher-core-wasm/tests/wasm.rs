@@ -1,9 +1,8 @@
 use nucypher_core_wasm::*;
 
-use ferveo::bindings_wasm::Keypair;
+use ferveo::bindings_wasm::{Ciphertext, Keypair};
 use umbral_pre::bindings_wasm::{
-    generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
-    VerifiedCapsuleFrag, VerifiedKeyFrag,
+    generate_kfrags, RecoverableSignature, SecretKey, Signer, VerifiedKeyFrag,
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -50,13 +49,10 @@ where
         .unchecked_into::<T>()
 }
 
-fn make_message_kit(
-    sk: &SecretKey,
-    plaintext: &[u8],
-    conditions: Option<impl AsRef<str>>,
-) -> () {
+fn make_message_kit(sk: &SecretKey, plaintext: &[u8], conditions: Option<impl AsRef<str>>) {
     let policy_encrypting_key = sk.public_key();
-    let conditions_js: OptionConditions = into_js_option(conditions.map(|s| Conditions::new(s.as_ref())));
+    let conditions_js: OptionConditions =
+        into_js_option(conditions.map(|s| Conditions::new(s.as_ref())));
     let is_null = conditions_js.clone().is_null();
     console_log!("is_null: {}", is_null);
     MessageKit::new(&policy_encrypting_key, plaintext, &conditions_js).unwrap();
@@ -136,7 +132,7 @@ fn message_kit_decrypts() {
     let sk = SecretKey::random();
     let plaintext = "Hello, world!".as_bytes();
     let conditions = Some("{'llamas': 'yes'}");
-    let message_kit = make_message_kit(&sk, plaintext, conditions);
+    make_message_kit(&sk, plaintext, conditions);
 
     // let decrypted = message_kit.decrypt(&sk).unwrap().to_vec();
     // assert_eq!(
@@ -684,10 +680,12 @@ fn threshold_decryption_request() {
     let conditions: JsValue = Some(Conditions::new("{'some': 'condition'}")).into();
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
+    let ciphertext = Ciphertext::from_bytes(b"fake ciphertext").unwrap();
+
     let request = ThresholdDecryptionRequest::new(
         ritual_id,
         0,
-        b"fake ciphertext",
+        &ciphertext,
         &conditions.unchecked_into::<OptionConditions>(),
         &context.unchecked_into::<OptionContext>(),
     )

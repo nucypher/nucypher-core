@@ -314,7 +314,7 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use umbral_pre::encrypt;
+    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, SecretBox};
     use umbral_pre::SecretKey;
 
     use crate::{
@@ -335,13 +335,14 @@ mod tests {
 
         let random_secret_key = SecretKey::random();
 
-        let encryption_result = encrypt(&random_secret_key.public_key(), b"The Tyranny of Merit");
-
-        let (_capsule, _ciphertext) = encryption_result.unwrap();
+        let dkg_pk = DkgPublicKey::random();
+        let message = "my_message".as_bytes().to_vec();
+        let aad = "my-add".as_bytes();
+        let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
         let request = ThresholdDecryptionRequest::new(
             ritual_id,
-            &_ciphertext,
+            &ciphertext,
             Some(&Conditions::new("abcd")),
             Some(&Context::new("efgh")),
             FerveoVariant::SIMPLE,
