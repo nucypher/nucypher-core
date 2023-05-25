@@ -497,9 +497,9 @@ dependencies = [
 
 [[package]]
 name = "ferveo-pre-release"
-version = "0.1.0-alpha.6"
+version = "0.1.0-alpha.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54ae4d214433aaade1ec97052b46320141de2805a4ec31fb68793fb4ddf77e13"
+checksum = "35cb606e512c72abf2d847b4bbe437ce6930c07023e2310337d3c05f80b0203d"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -527,7 +527,7 @@ dependencies = [
  "subproductdomain-pre-release",
  "thiserror",
  "wasm-bindgen",
- "wasm-bindgen-derive 0.1.1",
+ "wasm-bindgen-derive",
  "zeroize",
 ]
 
@@ -859,7 +859,7 @@ dependencies = [
  "nucypher-core",
  "umbral-pre",
  "wasm-bindgen",
- "wasm-bindgen-derive 0.2.0",
+ "wasm-bindgen-derive",
  "wasm-bindgen-test",
 ]
 
@@ -1454,7 +1454,7 @@ dependencies = [
  "sha2",
  "subtle",
  "wasm-bindgen",
- "wasm-bindgen-derive 0.2.0",
+ "wasm-bindgen-derive",
  "zeroize",
 ]
 
@@ -1527,19 +1527,6 @@ dependencies = [
  "quote",
  "syn 2.0.16",
  "wasm-bindgen-shared",
-]
-
-[[package]]
-name = "wasm-bindgen-derive"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7301886930edaa72b7d102655ea395774aa9f0614c1a491393648a5fec34435"
-dependencies = [
- "js-sys",
- "proc-macro2",
- "quote",
- "syn 1.0.107",
- "wasm-bindgen",
 ]
 
 [[package]]
