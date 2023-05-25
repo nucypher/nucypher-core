@@ -24,10 +24,8 @@ import {
   MetadataResponsePayload,
   FleetStateChecksum,
   RecoverableSignature,
+  Keypair,
 } from "nucypher-core";
-// TODO: Should we re-export this from nucypher-core?
-import {Keypair} from "ferveo-wasm";
-
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
   const publisherVerifyingKey = (publisherSk ?? SecretKey.random()).publicKey();
@@ -90,7 +88,7 @@ const makeNodeMetadata = (sk: SecretKey) => {
     (Date.now() / 1000) | 0,
     sk.publicKey(),
     SecretKey.random().publicKey(),
-    Keypair.random().publicKey,
+      Keypair.random().publicKey,
     Buffer.from("fake-certificate-bytes"),
     "example.com",
     8080,

@@ -12,7 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::{Ciphertext, FerveoPublicKey};
+use ferveo::bindings_wasm::Ciphertext;
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -23,6 +23,9 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
 use nucypher_core::{FerveoVariant, ProtocolObject};
+
+// Re-export certain types so they can be used from `nucypher-core` WASM bindings directly.
+pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
     Error::new(&format!("{}", err))

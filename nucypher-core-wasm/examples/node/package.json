@@ -22,7 +22,6 @@
   ],
   "license": "GPL-3.0-only",
   "dependencies": {
-    "ferveo-wasm": "^0.1.0-alpha.1",
     "nucypher-core": "file:../../pkg"
   },
   "devDependencies": {
