@@ -88,7 +88,7 @@ const makeNodeMetadata = (sk: SecretKey) => {
     (Date.now() / 1000) | 0,
     sk.publicKey(),
     SecretKey.random().publicKey(),
-      Keypair.random().publicKey,
+    Keypair.random().publicKey,
     Buffer.from("fake-certificate-bytes"),
     "example.com",
     8080,

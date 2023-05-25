@@ -48,4 +48,4 @@ pub use versioning::ProtocolObject;
 pub use umbral_pre;
 
 // Re-export ferveo so that the users don't have to version-match.
-// pub use ferveo;  // TODO: Uncomment when ferveo bindings are published.
+pub use ferveo;
