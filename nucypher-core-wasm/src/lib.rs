@@ -547,7 +547,7 @@ impl EncryptedTreasureMap {
 pub struct SharedSecret(x25519_dalek::SharedSecret);
 
 #[wasm_bindgen]
-#[derive(derive_more::From, derive_more::AsRef)]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct RequesterPublicKey(x25519_dalek::PublicKey);
 
 //
@@ -642,8 +642,8 @@ impl EncryptedThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter, js_name = requesterPublicKey)]
-    pub fn requester_public_key(&self) -> Box<[u8]> {
-        self.0.requester_public_key.clone()
+    pub fn requester_public_key(&self) -> RequesterPublicKey {
+        RequesterPublicKey::from(self.0.requester_public_key)
     }
 
     pub fn decrypt(

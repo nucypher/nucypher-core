@@ -715,10 +715,9 @@ fn threshold_decryption_request() {
 
     assert_eq!(encrypted_request_from_bytes, encrypted_request);
     assert_eq!(encrypted_request_from_bytes.ritual_id(), ritual_id);
-    // TODO clean up storage/use of requester public key
     assert_eq!(
         encrypted_request_from_bytes.requester_public_key(),
-        requester_public_key.to_bytes().to_vec().into_boxed_slice()
+        requester_key
     );
 
     // service decrypts request

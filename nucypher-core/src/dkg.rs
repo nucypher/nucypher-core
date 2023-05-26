@@ -181,10 +181,8 @@ pub struct EncryptedThresholdDecryptionRequest {
     /// ID of the ritual
     pub ritual_id: u16,
 
-    #[serde(with = "serde_bytes::as_base64")]
     /// Public key of requester
-    /// TODO this should not be Box
-    pub requester_public_key: Box<[u8]>,
+    pub requester_public_key: PublicKey,
 
     #[serde(with = "serde_bytes::as_base64")]
     /// Encrypted request
@@ -201,7 +199,7 @@ impl EncryptedThresholdDecryptionRequest {
             .expect("encryption failed - out of memory?");
         Self {
             ritual_id: request.ritual_id,
-            requester_public_key: requester_public_key.to_bytes().to_vec().into_boxed_slice(),
+            requester_public_key: *requester_public_key,
             ciphertext,
         }
     }
@@ -297,7 +295,6 @@ pub struct EncryptedThresholdDecryptionResponse {
 
 impl EncryptedThresholdDecryptionResponse {
     fn new(response: &ThresholdDecryptionResponse, shared_secret: &SharedSecret) -> Self {
-        // TODO: using Umbral for encryption to avoid introducing more crypto primitives.
         let ciphertext = encrypt_with_shared_secret(shared_secret, &response.to_bytes())
             .expect("encryption failed - out of memory?");
         Self { ciphertext }
@@ -413,7 +410,7 @@ mod tests {
         assert_eq!(encrypted_request_from_bytes.ritual_id, ritual_id);
         assert_eq!(
             encrypted_request_from_bytes.requester_public_key,
-            requester_public_key.as_bytes().to_vec().into_boxed_slice()
+            requester_public_key
         );
 
         // service decrypts request
