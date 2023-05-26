@@ -69,7 +69,7 @@ fn encrypt_with_shared_secret(
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
     let key = Key::from_slice(shared_secret.as_ref());
-    let cipher = ChaCha20Poly1305::new(&key);
+    let cipher = ChaCha20Poly1305::new(key);
     let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
     let mut result = nonce.to_vec();
     let ciphertext = cipher
@@ -81,20 +81,20 @@ fn encrypt_with_shared_secret(
 
 fn decrypt_with_shared_secret(
     shared_secret: &SharedSecret,
-    ciphertext: &Box<[u8]>,
+    ciphertext: &[u8],
 ) -> Result<Box<[u8]>, DecryptionError> {
     let nonce_size = <NonceSize as Unsigned>::to_usize();
-    let buf_size = ciphertext.as_ref().len();
+    let buf_size = ciphertext.len();
     if buf_size < nonce_size {
         return Err(DecryptionError::CiphertextTooShort);
     }
-    let nonce = Nonce::from_slice(&ciphertext.as_ref()[..nonce_size]);
-    let encrypted_data = &ciphertext.as_ref()[nonce_size..];
+    let nonce = Nonce::from_slice(&ciphertext[..nonce_size]);
+    let encrypted_data = &ciphertext[nonce_size..];
 
     let key = Key::from_slice(shared_secret.as_ref());
-    let cipher = ChaCha20Poly1305::new(&key);
+    let cipher = ChaCha20Poly1305::new(key);
     let plaintext = cipher
-        .decrypt(&nonce, encrypted_data.as_ref())
+        .decrypt(nonce, encrypted_data)
         .map_err(|_err| DecryptionError::AuthenticationFailed)?;
     Ok(plaintext.into_boxed_slice())
 }
