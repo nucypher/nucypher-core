@@ -542,6 +542,14 @@ impl EncryptedTreasureMap {
     }
 }
 
+#[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SharedSecret(x25519_dalek::SharedSecret);
+
+#[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct RequesterPublicKey(x25519_dalek::PublicKey);
+
 //
 // Threshold Decryption Request
 //
@@ -598,13 +606,13 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        request_encrypting_key: &PublicKey,
-        response_encrypting_key: &PublicKey,
+        shared_secret: &SharedSecret,
+        requester_public_key: &RequesterPublicKey,
     ) -> EncryptedThresholdDecryptionRequest {
-        EncryptedThresholdDecryptionRequest(self.0.encrypt(
-            request_encrypting_key.as_ref(),
-            response_encrypting_key.as_ref(),
-        ))
+        EncryptedThresholdDecryptionRequest(
+            self.0
+                .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
+        )
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -615,37 +623,6 @@ impl ThresholdDecryptionRequest {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
-    }
-}
-
-//
-// E2EThresholdDecryptionRequest
-//
-
-#[wasm_bindgen]
-#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
-
-#[wasm_bindgen]
-impl E2EThresholdDecryptionRequest {
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
-
-    #[wasm_bindgen(getter, js_name = decryptionRequest)]
-    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
-        ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
-    }
-
-    #[wasm_bindgen(getter, js_name = responseEncryptingKey)]
-    pub fn response_encrypting_key(&self) -> PublicKey {
-        PublicKey::from(self.0.response_encrypting_key)
     }
 }
 
@@ -664,11 +641,19 @@ impl EncryptedThresholdDecryptionRequest {
         self.0.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
+    #[wasm_bindgen(getter, js_name = requesterPublicKey)]
+    pub fn requester_public_key(&self) -> Box<[u8]> {
+        self.0.requester_public_key.clone()
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SharedSecret,
+    ) -> Result<ThresholdDecryptionRequest, Error> {
         self.0
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
-            .map(E2EThresholdDecryptionRequest)
+            .map(ThresholdDecryptionRequest)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -704,8 +689,8 @@ impl ThresholdDecryptionResponse {
         self.0.decryption_share.clone()
     }
 
-    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionResponse {
-        EncryptedThresholdDecryptionResponse(self.0.encrypt(encrypting_key.as_ref()))
+    pub fn encrypt(&self, shared_secret: &SharedSecret) -> EncryptedThresholdDecryptionResponse {
+        EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -731,9 +716,12 @@ pub struct EncryptedThresholdDecryptionResponse(
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<ThresholdDecryptionResponse, Error> {
+    pub fn decrypt(
+        &self,
+        shared_secret: &SharedSecret,
+    ) -> Result<ThresholdDecryptionResponse, Error> {
         self.0
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
             .map(ThresholdDecryptionResponse)
     }

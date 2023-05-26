@@ -1,4 +1,5 @@
 use nucypher_core_wasm::*;
+use rand_core::OsRng;
 
 use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, Keypair};
 use umbral_pre::bindings_wasm::{
@@ -8,6 +9,8 @@ use umbral_pre::bindings_wasm::{
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
+
+use x25519_dalek::{EphemeralSecret, PublicKey as DalekPublicKey};
 
 //
 // Test utilities
@@ -673,11 +676,16 @@ fn metadata_response() {
 #[wasm_bindgen_test]
 fn threshold_decryption_request() {
     let ritual_id: u16 = 5;
-    let request_secret = SecretKey::random();
-    let request_encrypting_key = request_secret.public_key();
+    let service_secret = EphemeralSecret::random_from_rng(OsRng);
+    let service_public_key = DalekPublicKey::from(&service_secret);
 
-    let response_secret = SecretKey::random();
-    let response_encrypting_key = response_secret.public_key();
+    let requester_secret = EphemeralSecret::random_from_rng(OsRng);
+    let requester_public_key = DalekPublicKey::from(&requester_secret);
+
+    let service_shared_secret =
+        SharedSecret::from(service_secret.diffie_hellman(&requester_public_key));
+    let requester_shared_secret =
+        SharedSecret::from(requester_secret.diffie_hellman(&service_public_key));
 
     let conditions = "{'some': 'condition'}";
     let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
@@ -696,7 +704,9 @@ fn threshold_decryption_request() {
     )
     .unwrap();
 
-    let encrypted_request = request.encrypt(&request_encrypting_key, &response_encrypting_key);
+    // requester encrypts request to send to service
+    let requester_key = RequesterPublicKey::from(requester_public_key);
+    let encrypted_request = request.encrypt(&requester_shared_secret, &requester_key);
 
     // mimic encrypted request going over the wire
     let encrypted_request_bytes = encrypted_request.to_bytes();
@@ -705,44 +715,55 @@ fn threshold_decryption_request() {
 
     assert_eq!(encrypted_request_from_bytes, encrypted_request);
     assert_eq!(encrypted_request_from_bytes.ritual_id(), ritual_id);
-
-    let e2e_request = encrypted_request_from_bytes
-        .decrypt(&request_secret)
-        .unwrap();
+    // TODO clean up storage/use of requester public key
     assert_eq!(
-        response_encrypting_key.to_compressed_bytes(),
-        e2e_request.response_encrypting_key().to_compressed_bytes()
+        encrypted_request_from_bytes.requester_public_key(),
+        requester_public_key.to_bytes().to_vec().into_boxed_slice()
     );
-    assert_eq!(request, e2e_request.decryption_request());
 
-    // wrong secret key used
-    assert!(encrypted_request_from_bytes
-        .decrypt(&response_secret)
-        .is_err());
+    // service decrypts request
+    let decrypted_request = encrypted_request_from_bytes
+        .decrypt(&service_shared_secret)
+        .unwrap();
+    assert_eq!(request, decrypted_request);
 
-    let random_secret_key = SecretKey::random();
+    // wrong key used
+    let random_secret_key = EphemeralSecret::random_from_rng(OsRng);
+    let random_shared_secret =
+        SharedSecret::from(random_secret_key.diffie_hellman(&service_public_key));
     assert!(encrypted_request_from_bytes
-        .decrypt(&random_secret_key)
+        .decrypt(&random_shared_secret)
         .is_err());
 }
 
 #[wasm_bindgen_test]
 fn threshold_decryption_response() {
-    let response_secret = SecretKey::random();
-    let response_encrypting_key = response_secret.public_key();
+    let service_secret = EphemeralSecret::random_from_rng(OsRng);
+    let service_public_key = DalekPublicKey::from(&service_secret);
+
+    let requester_secret = EphemeralSecret::random_from_rng(OsRng);
+    let requester_public_key = DalekPublicKey::from(&requester_secret);
+
+    let service_shared_secret =
+        SharedSecret::from(service_secret.diffie_hellman(&requester_public_key));
+    let requester_shared_secret =
+        SharedSecret::from(requester_secret.diffie_hellman(&service_public_key));
 
     let decryption_share = b"The Tyranny of Merit";
 
     let response = ThresholdDecryptionResponse::new(decryption_share).unwrap();
 
-    let encrypted_response = response.encrypt(&response_encrypting_key);
-    let encrypted_response_bytes = encrypted_response.to_bytes();
+    // service encrypts response to send back
+    let encrypted_response = response.encrypt(&service_shared_secret);
 
+    // mimic serialization/deserialization over the wire
+    let encrypted_response_bytes = encrypted_response.to_bytes();
     let encrypted_response_from_bytes =
         EncryptedThresholdDecryptionResponse::from_bytes(&encrypted_response_bytes).unwrap();
 
+    // requester decrypts response
     let decrypted_response = encrypted_response_from_bytes
-        .decrypt(&response_secret)
+        .decrypt(&requester_shared_secret)
         .unwrap();
     assert_eq!(response, decrypted_response);
     assert_eq!(
@@ -751,8 +772,10 @@ fn threshold_decryption_response() {
     );
 
     // wrong secret key used
-    let random_secret_key = SecretKey::random();
+    let random_secret_key = EphemeralSecret::random_from_rng(OsRng);
+    let random_shared_secret =
+        SharedSecret::from(random_secret_key.diffie_hellman(&service_public_key));
     assert!(encrypted_response_from_bytes
-        .decrypt(&random_secret_key)
+        .decrypt(&random_shared_secret)
         .is_err());
 }

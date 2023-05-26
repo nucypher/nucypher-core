@@ -638,6 +638,14 @@ impl ReencryptionResponse {
 
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
+pub struct SharedSecret(x25519_dalek::SharedSecret);
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct RequesterPublicKey(x25519_dalek::PublicKey);
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct ThresholdDecryptionRequest {
     backend: nucypher_core::ThresholdDecryptionRequest,
 }
@@ -713,51 +721,19 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        request_encrypting_key: &PublicKey,
-        response_encrypting_key: &PublicKey,
+        shared_secret: &SharedSecret,
+        requester_public_key: &RequesterPublicKey,
     ) -> EncryptedThresholdDecryptionRequest {
         EncryptedThresholdDecryptionRequest {
-            backend: self.backend.encrypt(
-                request_encrypting_key.as_ref(),
-                response_encrypting_key.as_ref(),
-            ),
+            backend: self
+                .backend
+                .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
         }
     }
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
-    }
-
-    fn __bytes__(&self) -> PyObject {
-        to_bytes(self)
-    }
-}
-
-//
-// E2EThresholdDecryptionRequest
-//
-#[pyclass(module = "nucypher_core")]
-#[derive(derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest {
-    backend: nucypher_core::E2EThresholdDecryptionRequest,
-}
-
-#[pymethods]
-impl E2EThresholdDecryptionRequest {
-    #[getter]
-    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
-        self.backend.decryption_request.clone().into()
-    }
-
-    #[getter]
-    pub fn response_encrypting_key(&self) -> PublicKey {
-        self.backend.response_encrypting_key.into()
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -782,10 +758,10 @@ impl EncryptedThresholdDecryptionRequest {
         self.backend.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EThresholdDecryptionRequest> {
+    pub fn decrypt(&self, shared_secret: &SharedSecret) -> PyResult<ThresholdDecryptionRequest> {
         self.backend
-            .decrypt(sk.as_ref())
-            .map(E2EThresholdDecryptionRequest::from)
+            .decrypt(shared_secret.as_ref())
+            .map(ThresholdDecryptionRequest::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
@@ -823,9 +799,9 @@ impl ThresholdDecryptionResponse {
         self.backend.decryption_share.as_ref()
     }
 
-    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionResponse {
+    pub fn encrypt(&self, shared_secret: &SharedSecret) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse {
-            backend: self.backend.encrypt(encrypting_key.as_ref()),
+            backend: self.backend.encrypt(shared_secret.as_ref()),
         }
     }
 
@@ -851,9 +827,9 @@ pub struct EncryptedThresholdDecryptionResponse {
 
 #[pymethods]
 impl EncryptedThresholdDecryptionResponse {
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<ThresholdDecryptionResponse> {
+    pub fn decrypt(&self, shared_secret: &SharedSecret) -> PyResult<ThresholdDecryptionResponse> {
         self.backend
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map(ThresholdDecryptionResponse::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
@@ -1334,7 +1310,6 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<MetadataResponsePayload>()?;
     core_module.add_class::<MetadataResponse>()?;
     core_module.add_class::<ThresholdDecryptionRequest>()?;
-    core_module.add_class::<E2EThresholdDecryptionRequest>()?;
     core_module.add_class::<ThresholdDecryptionResponse>()?;
     core_module.add_class::<EncryptedThresholdDecryptionRequest>()?;
     core_module.add_class::<EncryptedThresholdDecryptionResponse>()?;
