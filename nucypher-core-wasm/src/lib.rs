@@ -12,6 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
+use ferveo::bindings_wasm::Ciphertext;
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -22,6 +23,9 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
 use nucypher_core::{FerveoVariant, ProtocolObject};
+
+// Re-export certain types so they can be used from `nucypher-core` WASM bindings directly.
+pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
     Error::new(&format!("{}", err))
@@ -54,10 +58,11 @@ where
 // (see https://github.com/rustwasm/wasm-bindgen/issues/2370).
 fn try_from_js_option<T>(value: impl AsRef<JsValue>) -> Result<Option<T>, Error>
 where
-    for<'a> T: TryFrom<&'a JsValue>,
+    for<'a> T: TryFrom<&'a JsValue> + 'static,
     for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
 {
     let js_value = value.as_ref();
+
     let typed_value = if js_value.is_null() {
         None
     } else {
@@ -248,6 +253,7 @@ impl MessageKit {
         conditions: &OptionConditions,
     ) -> Result<MessageKit, Error> {
         let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+
         Ok(MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.as_ref(),
             plaintext,
@@ -550,7 +556,7 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         id: u16,
         variant: u8,
-        ciphertext: &[u8],
+        ciphertext: &Ciphertext,
         conditions: &OptionConditions,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
@@ -565,7 +571,7 @@ impl ThresholdDecryptionRequest {
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             id,
-            ciphertext,
+            ciphertext.as_ref(),
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
             ferveo_variant,
@@ -586,8 +592,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn ciphertext(&self) -> Box<[u8]> {
-        self.0.ciphertext.clone()
+    pub fn ciphertext(&self) -> Ciphertext {
+        self.0.ciphertext.clone().into()
     }
 
     pub fn encrypt(
@@ -632,12 +638,12 @@ impl E2EThresholdDecryptionRequest {
         to_bytes(self)
     }
 
-    #[wasm_bindgen(getter, js_name=decryptionRequest)]
+    #[wasm_bindgen(getter, js_name = decryptionRequest)]
     pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
         ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
     }
 
-    #[wasm_bindgen(getter, js_name=responseEncryptingKey)]
+    #[wasm_bindgen(getter, js_name = responseEncryptingKey)]
     pub fn response_encrypting_key(&self) -> PublicKey {
         PublicKey::from(self.0.response_encrypting_key)
     }
@@ -1051,7 +1057,7 @@ impl NodeMetadataPayload {
         timestamp_epoch: u32,
         verifying_key: &PublicKey,
         encrypting_key: &PublicKey,
-        ferveo_public_key: &[u8],
+        ferveo_public_key: &FerveoPublicKey,
         certificate_der: &[u8],
         host: &str,
         port: u16,
@@ -1063,7 +1069,7 @@ impl NodeMetadataPayload {
             timestamp_epoch,
             verifying_key: *verifying_key.as_ref(),
             encrypting_key: *encrypting_key.as_ref(),
-            ferveo_public_key: ferveo_public_key.into(),
+            ferveo_public_key: *ferveo_public_key.as_ref(),
             certificate_der: certificate_der.into(),
             host: host.to_string(),
             port,

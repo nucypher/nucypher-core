@@ -24,6 +24,7 @@ import {
   MetadataResponsePayload,
   FleetStateChecksum,
   RecoverableSignature,
+  Keypair,
 } from "nucypher-core";
 
 const makeHrac = (publisherSk?: SecretKey, recipientSk?: SecretKey) => {
@@ -87,7 +88,7 @@ const makeNodeMetadata = (sk: SecretKey) => {
     (Date.now() / 1000) | 0,
     sk.publicKey(),
     SecretKey.random().publicKey(),
-    Buffer.from("fake-ferveo-public-key-bytes"), // TODO: use real ferveo public key
+    Keypair.random().publicKey,
     Buffer.from("fake-certificate-bytes"),
     "example.com",
     8080,

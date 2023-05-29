@@ -4,3 +4,8 @@ members = [
     "nucypher-core-python",
     "nucypher-core-wasm",
 ]
+
+# Prevents `local exceed maximum` error
+# See: https://github.com/rustwasm/wasm-pack/issues/981
+[profile.test]
+opt-level = 1

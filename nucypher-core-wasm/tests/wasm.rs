@@ -1,5 +1,6 @@
 use nucypher_core_wasm::*;
 
+use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, Keypair};
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -54,7 +55,8 @@ fn make_message_kit(
     conditions: Option<impl AsRef<str>>,
 ) -> MessageKit {
     let policy_encrypting_key = sk.public_key();
-    let conditions_js = into_js_option(conditions.map(|s| Conditions::new(s.as_ref())));
+    let conditions_js: OptionConditions =
+        into_js_option(conditions.map(|s| Conditions::new(s.as_ref())));
     MessageKit::new(&policy_encrypting_key, plaintext, &conditions_js).unwrap()
 }
 
@@ -88,7 +90,7 @@ fn make_node_metadata() -> NodeMetadata {
     let timestamp_epoch = 1546300800;
     let verifying_key = signing_key.public_key();
     let encrypting_key = SecretKey::random().public_key();
-    let ferveo_public_key = SecretKey::random().public_key(); // TODO: use ferveo PublicKey
+    let ferveo_public_key = Keypair::random().public_key();
     let certificate_der = b"certificate_der";
     let host = "https://localhost.com";
     let port = 443;
@@ -103,7 +105,7 @@ fn make_node_metadata() -> NodeMetadata {
         timestamp_epoch,
         &verifying_key,
         &encrypting_key,
-        &ferveo_public_key.to_compressed_bytes(),
+        &ferveo_public_key,
         certificate_der,
         host,
         port,
@@ -677,14 +679,19 @@ fn threshold_decryption_request() {
     let response_secret = SecretKey::random();
     let response_encrypting_key = response_secret.public_key();
 
-    let conditions: JsValue = Some(Conditions::new("{'some': 'condition'}")).into();
+    let conditions = "{'some': 'condition'}";
+    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
+
+    let dkg_pk = DkgPublicKey::random();
+    let message = "my-message".as_bytes();
+    let ciphertext = ferveo_encrypt(message, conditions.as_bytes(), &dkg_pk).unwrap();
 
     let request = ThresholdDecryptionRequest::new(
         ritual_id,
         0,
-        b"fake ciphertext",
-        &conditions.unchecked_into::<OptionConditions>(),
+        &ciphertext,
+        &conditions_js.unchecked_into::<OptionConditions>(),
         &context.unchecked_into::<OptionContext>(),
     )
     .unwrap();

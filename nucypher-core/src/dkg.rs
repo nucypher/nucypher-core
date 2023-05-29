@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use ferveo::api::Ciphertext;
 
 use serde::{Deserialize, Serialize};
 use umbral_pre::{decrypt_original, encrypt, serde_bytes, Capsule, PublicKey, SecretKey};
@@ -26,8 +27,7 @@ pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u16,
     /// The ciphertext to generate a decryption share for.
-    #[serde(with = "serde_bytes::as_base64")]
-    pub ciphertext: Box<[u8]>,
+    pub ciphertext: Ciphertext,
     /// A blob of bytes containing decryption conditions for this message.
     pub conditions: Option<Conditions>,
     /// A blob of bytes containing context required to evaluate conditions.
@@ -40,14 +40,14 @@ impl ThresholdDecryptionRequest {
     /// Creates a new decryption request.
     pub fn new(
         ritual_id: u16,
-        ciphertext: &[u8],
+        ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
         variant: FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
-            ciphertext: ciphertext.to_vec().into(),
+            ciphertext: ciphertext.clone(),
             conditions: conditions.cloned(),
             context: context.cloned(),
             variant,
@@ -314,7 +314,7 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use umbral_pre::encrypt;
+    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, SecretBox};
     use umbral_pre::SecretKey;
 
     use crate::{
@@ -335,13 +335,14 @@ mod tests {
 
         let random_secret_key = SecretKey::random();
 
-        let encryption_result = encrypt(&random_secret_key.public_key(), b"The Tyranny of Merit");
-
-        let (_capsule, _ciphertext) = encryption_result.unwrap();
+        let dkg_pk = DkgPublicKey::random();
+        let message = "my_message".as_bytes().to_vec();
+        let aad = "my-add".as_bytes();
+        let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
         let request = ThresholdDecryptionRequest::new(
             ritual_id,
-            &_ciphertext,
+            &ciphertext,
             Some(&Conditions::new("abcd")),
             Some(&Context::new("efgh")),
             FerveoVariant::SIMPLE,
