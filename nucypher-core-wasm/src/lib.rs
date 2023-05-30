@@ -542,13 +542,111 @@ impl EncryptedTreasureMap {
     }
 }
 
+//
+// Request Keys
+//
+
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct SharedSecret(x25519_dalek::SharedSecret);
+pub struct RequestSharedSecret(nucypher_core::RequestSharedSecret);
 
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct RequesterPublicKey(x25519_dalek::PublicKey);
+pub struct RequestPublicKey(nucypher_core::RequestPublicKey);
+
+#[wasm_bindgen]
+impl RequestPublicKey {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<RequestPublicKey, Error> {
+        from_bytes::<_, nucypher_core::RequestPublicKey>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+}
+
+#[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct RequestSecretKey(nucypher_core::RequestSecretKey);
+
+#[wasm_bindgen]
+impl RequestSecretKey {
+    /// Generates a secret key using the default RNG and returns it.
+    pub fn random() -> Self {
+        Self(nucypher_core::RequestSecretKey::random())
+    }
+
+    /// Generates a secret key using the default RNG and returns it.
+    #[wasm_bindgen(js_name = publicKey)]
+    pub fn public_key(&self) -> RequestPublicKey {
+        RequestPublicKey(self.0.public_key())
+    }
+
+    #[wasm_bindgen(js_name = diffieHellman)]
+    pub fn diffie_hellman(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
+        RequestSharedSecret(self.0.diffie_hellman(their_public_key.as_ref()))
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+}
+
+#[wasm_bindgen]
+pub struct RequestKeyFactory(nucypher_core::RequestKeyFactory);
+
+#[wasm_bindgen]
+impl RequestKeyFactory {
+    /// Generates a secret key factory using the default RNG and returns it.
+    pub fn random() -> Self {
+        Self(nucypher_core::RequestKeyFactory::random())
+    }
+
+    #[wasm_bindgen(js_name = seedSize)]
+    pub fn seed_size() -> usize {
+        nucypher_core::RequestKeyFactory::seed_size()
+    }
+
+    #[wasm_bindgen(js_name = fromSecureRandomness)]
+    pub fn from_secure_randomness(seed: &[u8]) -> Result<RequestKeyFactory, Error> {
+        nucypher_core::RequestKeyFactory::from_secure_randomness(seed)
+            .map(Self)
+            .map_err(map_js_err)
+    }
+
+    #[wasm_bindgen(js_name = makeSecret)]
+    pub fn make_secret(&self, label: &[u8]) -> Vec<u8> {
+        let secret = self.0.make_secret(label);
+        let bytes: &[u8] = secret.as_secret().as_ref();
+        bytes.into()
+    }
+
+    #[wasm_bindgen(js_name = makeKey)]
+    pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
+        RequestSecretKey(self.0.make_key(label))
+    }
+
+    #[wasm_bindgen(js_name = makeFactory)]
+    pub fn make_factory(&self, label: &[u8]) -> Self {
+        Self(self.0.make_factory(label))
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+}
 
 //
 // Threshold Decryption Request
@@ -606,8 +704,8 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        shared_secret: &SharedSecret,
-        requester_public_key: &RequesterPublicKey,
+        shared_secret: &RequestSharedSecret,
+        requester_public_key: &RequestPublicKey,
     ) -> EncryptedThresholdDecryptionRequest {
         EncryptedThresholdDecryptionRequest(
             self.0
@@ -642,13 +740,13 @@ impl EncryptedThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter, js_name = requesterPublicKey)]
-    pub fn requester_public_key(&self) -> RequesterPublicKey {
-        RequesterPublicKey::from(self.0.requester_public_key)
+    pub fn requester_public_key(&self) -> RequestPublicKey {
+        RequestPublicKey::from(self.0.requester_public_key)
     }
 
     pub fn decrypt(
         &self,
-        shared_secret: &SharedSecret,
+        shared_secret: &RequestSharedSecret,
     ) -> Result<ThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(shared_secret.as_ref())
@@ -689,7 +787,10 @@ impl ThresholdDecryptionResponse {
         self.0.decryption_share.clone()
     }
 
-    pub fn encrypt(&self, shared_secret: &SharedSecret) -> EncryptedThresholdDecryptionResponse {
+    pub fn encrypt(
+        &self,
+        shared_secret: &RequestSharedSecret,
+    ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
 
@@ -718,7 +819,7 @@ pub struct EncryptedThresholdDecryptionResponse(
 impl EncryptedThresholdDecryptionResponse {
     pub fn decrypt(
         &self,
-        shared_secret: &SharedSecret,
+        shared_secret: &RequestSharedSecret,
     ) -> Result<ThresholdDecryptionResponse, Error> {
         self.0
             .decrypt(shared_secret.as_ref())

@@ -13,13 +13,16 @@ categories = ["cryptography", "no-std"]
 umbral-pre = { version = "0.10.0", features = ["serde"] }
 ferveo = { package = "ferveo-pre-release", version = "0.1.0-alpha.8" }
 serde = { version = "1", default-features = false, features = ["derive"] }
-generic-array = "0.14"
+generic-array = { version="0.14", features = ["zeroize"] }
 sha3 = "0.10"
 rmp-serde = "1"
 serde_with = "1.14"
 hex = "0.4"
-x25519-dalek = { version="2.0.0-rc.2", features = ["serde"] }
+hkdf = "0.12.3"
+sha2 = "0.10.6"
+x25519-dalek = { version="2.0.0-rc.2", features = ["serde", "static_secrets"] }
 chacha20poly1305 = "0.10.1"
-
-[dev-dependencies]
+zeroize = { version="1.6.0", features = ["derive"] }
 rand_core = "0.6.4"
+rand_chacha = "0.3.1"
+rand = "0.8.5"

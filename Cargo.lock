@@ -862,13 +862,18 @@ dependencies = [
  "ferveo-pre-release",
  "generic-array",
  "hex",
- "rand_core",
+ "hkdf",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
  "rmp-serde",
  "serde",
  "serde_with 1.14.0",
+ "sha2",
  "sha3",
  "umbral-pre",
  "x25519-dalek",
+ "zeroize",
 ]
 
 [[package]]
@@ -881,7 +886,6 @@ dependencies = [
  "pyo3",
  "pyo3-build-config 0.19.0",
  "umbral-pre",
- "x25519-dalek",
 ]
 
 [[package]]
@@ -893,12 +897,10 @@ dependencies = [
  "ferveo-pre-release",
  "js-sys",
  "nucypher-core",
- "rand_core",
  "umbral-pre",
  "wasm-bindgen",
  "wasm-bindgen-derive",
  "wasm-bindgen-test",
- "x25519-dalek",
 ]
 
 [[package]]
@@ -1833,7 +1835,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fabd6e16dd08033932fc3265ad4510cc2eab24656058a6dcb107ffe274abcc95"
 dependencies = [
  "curve25519-dalek",
- "rand_core",
+ "rand_core 0.6.4",
  "serde",
  "zeroize",
 ]

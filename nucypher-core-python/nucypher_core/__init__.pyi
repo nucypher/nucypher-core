@@ -437,6 +437,8 @@ class ThresholdDecryptionRequest:
 class EncryptedThresholdDecryptionRequest:
     ritual_id: int
 
+    requester_public_key: RequestPublicKey
+
     def decrypt(
         self,
         sk: SecretKey
@@ -483,3 +485,55 @@ class EncryptedThresholdDecryptionResponse:
 
     def __bytes__(self) -> bytes:
         ...
+
+
+class RequestSharedSecret:
+    ...
+
+
+class RequestPublicKey:
+
+    @staticmethod
+    def from_bytes(data: bytes) -> RequestPublicKey:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class RequestSecretKey:
+
+    @staticmethod
+    def random() -> RequestSecretKey:
+        ...
+
+    def public_key(self) -> RequestPublicKey:
+        ...
+
+    def diffie_hellman(self, their_public_key: RequestPublicKey) -> RequestSharedSecret:
+        ...
+
+
+class RequestKeyFactory:
+
+    @staticmethod
+    def random() -> RequestKeyFactory:
+        ...
+
+    @staticmethod
+    def seed_size() -> int:
+        ...
+
+    @staticmethod
+    def from_secure_randomness(seed: bytes) -> RequestKeyFactory:
+        ...
+
+    def make_secret(self, label: bytes) -> bytes:
+        ...
+
+    def make_key(self, label: bytes) -> RequestSecretKey:
+        ...
+
+    def make_factory(self, label: bytes) -> RequestKeyFactory:
+        ...
+

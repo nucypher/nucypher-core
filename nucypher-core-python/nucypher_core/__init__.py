@@ -21,4 +21,8 @@ from ._nucypher_core import (
     ThresholdDecryptionResponse,
     EncryptedThresholdDecryptionRequest,
     EncryptedThresholdDecryptionResponse,
+    RequestSharedSecret,
+    RequestPublicKey,
+    RequestSecretKey,
+    RequestKeyFactory,
 )

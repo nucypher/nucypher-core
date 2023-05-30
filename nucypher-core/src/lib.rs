@@ -18,6 +18,7 @@ mod node_metadata;
 mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
+mod secret_box;
 mod treasure_map;
 mod versioning;
 
@@ -27,8 +28,9 @@ pub struct VerificationError;
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
-    EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, FerveoVariant,
-    ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    request_keys::{RequestKeyFactory, RequestPublicKey, RequestSecretKey, RequestSharedSecret},
+    DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
+    EncryptionError, FerveoVariant, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
 };
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
