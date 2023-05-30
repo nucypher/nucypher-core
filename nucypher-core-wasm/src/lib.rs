@@ -571,6 +571,10 @@ impl RequestPublicKey {
     pub fn to_string(&self) -> String {
         format!("{}", self.0)
     }
+
+    pub fn equals(&self, other: &RequestPublicKey) -> bool {
+        self.0 == other.0
+    }
 }
 
 #[wasm_bindgen]
@@ -660,7 +664,7 @@ pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest)
 impl ThresholdDecryptionRequest {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        id: u16,
+        ritual_id: u16,
         variant: u8,
         ciphertext: &Ciphertext,
         conditions: &OptionConditions,
@@ -676,7 +680,7 @@ impl ThresholdDecryptionRequest {
         };
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
-            id,
+            ritual_id,
             ciphertext.as_ref(),
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
@@ -776,10 +780,19 @@ pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionRespons
 #[wasm_bindgen]
 impl ThresholdDecryptionResponse {
     #[wasm_bindgen(constructor)]
-    pub fn new(decryption_share: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
+    pub fn new(
+        ritual_id: u16,
+        decryption_share: &[u8],
+    ) -> Result<ThresholdDecryptionResponse, Error> {
         Ok(Self(nucypher_core::ThresholdDecryptionResponse::new(
+            ritual_id,
             decryption_share,
         )))
+    }
+
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
+        self.0.ritual_id
     }
 
     #[wasm_bindgen(getter, js_name = decryptionShare)]
@@ -817,6 +830,11 @@ pub struct EncryptedThresholdDecryptionResponse(
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u16 {
+        self.0.ritual_id
+    }
+
     pub fn decrypt(
         &self,
         shared_secret: &RequestSharedSecret,

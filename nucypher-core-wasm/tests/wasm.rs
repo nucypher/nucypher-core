@@ -691,10 +691,6 @@ fn threshold_decryption_request() {
     let service_public_key = service_secret.public_key();
 
     let requester_secret = RequestSecretKey::random();
-    let requester_public_key = requester_secret.public_key();
-
-    let service_shared_secret = service_secret.diffie_hellman(&requester_public_key);
-    let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
 
     let conditions = "{'some': 'condition'}";
     let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
@@ -714,8 +710,9 @@ fn threshold_decryption_request() {
     .unwrap();
 
     // requester encrypts request to send to service
-    let requester_key = requester_secret.public_key();
-    let encrypted_request = request.encrypt(&requester_shared_secret, &requester_key);
+    let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
+    let requester_public_key = requester_secret.public_key();
+    let encrypted_request = request.encrypt(&requester_shared_secret, &requester_public_key);
 
     // mimic encrypted request going over the wire
     let encrypted_request_bytes = encrypted_request.to_bytes();
@@ -726,10 +723,12 @@ fn threshold_decryption_request() {
     assert_eq!(encrypted_request_from_bytes.ritual_id(), ritual_id);
     assert_eq!(
         encrypted_request_from_bytes.requester_public_key(),
-        requester_key
+        requester_public_key
     );
 
     // service decrypts request
+    let service_shared_secret =
+        service_secret.diffie_hellman(&encrypted_request_from_bytes.requester_public_key());
     let decrypted_request = encrypted_request_from_bytes
         .decrypt(&service_shared_secret)
         .unwrap();
@@ -746,21 +745,21 @@ fn threshold_decryption_request() {
 
 #[wasm_bindgen_test]
 fn threshold_decryption_response() {
+    let ritual_id = 10;
+
     let service_secret = RequestSecretKey::random();
-    let service_public_key = service_secret.public_key();
 
     let requester_secret = RequestSecretKey::random();
     let requester_public_key = requester_secret.public_key();
 
-    let service_shared_secret = service_secret.diffie_hellman(&requester_public_key);
-    let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
-
     let decryption_share = b"The Tyranny of Merit";
 
-    let response = ThresholdDecryptionResponse::new(decryption_share).unwrap();
+    let response = ThresholdDecryptionResponse::new(ritual_id, decryption_share).unwrap();
 
     // service encrypts response to send back
+    let service_shared_secret = service_secret.diffie_hellman(&requester_public_key);
     let encrypted_response = response.encrypt(&service_shared_secret);
+    assert_eq!(encrypted_response.ritual_id(), ritual_id);
 
     // mimic serialization/deserialization over the wire
     let encrypted_response_bytes = encrypted_response.to_bytes();
@@ -768,10 +767,13 @@ fn threshold_decryption_response() {
         EncryptedThresholdDecryptionResponse::from_bytes(&encrypted_response_bytes).unwrap();
 
     // requester decrypts response
+    let service_public_key = service_secret.public_key();
+    let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
     let decrypted_response = encrypted_response_from_bytes
         .decrypt(&requester_shared_secret)
         .unwrap();
     assert_eq!(response, decrypted_response);
+    assert_eq!(response.ritual_id(), ritual_id);
     assert_eq!(
         response.decryption_share(),
         decrypted_response.decryption_share()

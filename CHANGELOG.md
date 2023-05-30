@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced opaque types with native `ferveo` types. ([#53])
 - Removed `E2EThresholdDecryptionRequest` type and bindings. ([54])
 - Modified `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` to use Curve 25519 keys instead of Umbral keys for encryption/decryption. ([#54])
-
+- Modified `ThresholdDecryptionResponse`/`EncryptedThresholdDecryptionResponse`  to include `ritual_id` member in struct.
 
 [#53]: https://github.com/nucypher/nucypher-core/pull/53
 [#58]: https://github.com/nucypher/nucypher-core/pull/58
