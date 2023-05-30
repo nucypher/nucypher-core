@@ -8,9 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Re-exported `ferveo` Python and WASM bindings. ([#58])
-- - Added `RequestSharedSecret`, `RequestPublicKey`, `RequestSecretKey`, `RequestKeyFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
+- Added `RequestSharedSecret`, `RequestPublicKey`, `RequestSecretKey`, `RequestKeyFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
+- Added Rust `pre-commit` hooks for repos. 
 
-###  Changed
+
+### Changed
 
 - Replaced opaque types with native `ferveo` types. ([#53])
 - Removed `E2EThresholdDecryptionRequest` type and bindings. ([54])
