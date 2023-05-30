@@ -17,7 +17,7 @@ use umbral_pre::bindings_python::{
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
-use ferveo::bindings_python::{Ciphertext, PublicKey as FerveoPublicKey};
+use ferveo::bindings_python::{Ciphertext, FerveoPublicKey};
 
 use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
@@ -1369,7 +1369,7 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
     // Build the ferveo module
     let ferveo_module = PyModule::new(py, "ferveo")?;
 
-    umbral_module.add_class::<ferveo::bindings_python::PublicKey>()?;
+    umbral_module.add_class::<ferveo::bindings_python::FerveoPublicKey>()?;
     m.add_submodule(ferveo_module)?;
 
     Ok(())
