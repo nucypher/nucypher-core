@@ -293,7 +293,7 @@ pub mod request_keys {
     }
 
     type SecretKeyFactorySeedSize = U32; // the size of the seed material for key derivation
-    type RequestKeyFactoryDerivedSize = U32; // the size of the derived key (before hashing to scalar)
+    type RequestKeyFactoryDerivedKeySize = U32; // the size of the derived key
     type RequestKeyFactorySeed = GenericArray<u8, SecretKeyFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.
@@ -349,17 +349,18 @@ pub mod request_keys {
         pub fn make_secret(
             &self,
             label: &[u8],
-        ) -> SecretBox<GenericArray<u8, RequestKeyFactoryDerivedSize>> {
+        ) -> SecretBox<GenericArray<u8, RequestKeyFactoryDerivedKeySize>> {
             let prefix = b"REQUEST_SECRET_DERIVATION/";
             let info = [prefix, label].concat();
-            kdf::<RequestKeyFactoryDerivedSize>(self.0.as_secret(), None, Some(&info))
+            kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), None, Some(&info))
         }
 
         /// Creates a `RequestSecretKey` deterministically from the given label.
         pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
             let prefix = b"REQUEST_KEY_DERIVATION/";
             let info = [prefix, label].concat();
-            let seed = kdf::<RequestKeyFactoryDerivedSize>(self.0.as_secret(), None, Some(&info));
+            let seed =
+                kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), None, Some(&info));
             let rng =
                 ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
             RequestSecretKey::random_from_rng(rng)
