@@ -3,20 +3,23 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## [0.9.0] - Unreleased
 
 ### Added
 
 - Re-exported `ferveo` Python and WASM bindings. ([#58])
+- - Added `RequestSharedSecret`, `RequestPublicKey`, `RequestSecretKey`, `RequestKeyFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
 
 ###  Changed
 
 - Replaced opaque types with native `ferveo` types. ([#53])
+- Removed `E2EThresholdDecryptionRequest` type and bindings. ([54])
+- Modified `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` to use Curve 25519 keys instead of Umbral keys for encryption/decryption. ([#54])
 
 
 [#53]: https://github.com/nucypher/nucypher-core/pull/53
 [#58]: https://github.com/nucypher/nucypher-core/pull/58
+[#54]: https://github.com/nucypher/nucypher-core/pull/54
 
 
 ## [0.8.0] - 2023-05-23
@@ -38,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `ThresholdDecryptionRequest`/`ThresholdDecryptionResponse` types and bindings. ([#48])`
+- Add `ThresholdDecryptionRequest`/`ThresholdDecryptionResponse` types and bindings. ([#48])
 - Add `ferveo_public_key` field to `NodeMetadataPayload`. ([#48])
 
 
