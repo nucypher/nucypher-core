@@ -20,8 +20,8 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 # TODO: Replace with a new release after this PR is merged and released: https://github.com/nucypher/rust-umbral/pull/122
-umbral-pre = { git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "90a5075bb3462421fa6db79463960cd8e10a7025", features = ["bindings-wasm"] }
-ferveo = { package = "ferveo-pre-release", git = "https://github.com/nucypher/ferveo.git", rev = "10cc1df897a81041cfef07b99f28e25de1e76ee8", features = ["bindings-wasm"] }
+umbral-pre = { git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "fef199365a82d56b8cb8af808218198bd7bf7e4f", features = ["bindings-wasm"] }
+ferveo = { package = "ferveo-pre-release", git = "https://github.com/nucypher/ferveo.git", rev = "9795e2969f525fc7ee3a7721dca368287f4825c8", features = ["bindings-wasm"] }
 nucypher-core = { path = "../nucypher-core" }
 wasm-bindgen = "0.2.86"
 js-sys = "0.3.63"

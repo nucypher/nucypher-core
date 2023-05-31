@@ -7,6 +7,7 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 
+use ferveo::bindings_python::{Ciphertext, FerveoPublicKey};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -16,8 +17,6 @@ use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
-
-use ferveo::bindings_python::{Ciphertext, FerveoPublicKey};
 
 use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
@@ -1315,30 +1314,30 @@ impl MetadataResponse {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_class::<Address>()?;
-    m.add_class::<Conditions>()?;
-    m.add_class::<Context>()?;
-    m.add_class::<MessageKit>()?;
-    m.add_class::<HRAC>()?;
-    m.add_class::<EncryptedKeyFrag>()?;
-    m.add_class::<TreasureMap>()?;
-    m.add_class::<EncryptedTreasureMap>()?;
-    m.add_class::<ReencryptionRequest>()?;
-    m.add_class::<ReencryptionResponse>()?;
-    m.add_class::<RetrievalKit>()?;
-    m.add_class::<RevocationOrder>()?;
-    m.add_class::<NodeMetadata>()?;
-    m.add_class::<NodeMetadataPayload>()?;
-    m.add_class::<FleetStateChecksum>()?;
-    m.add_class::<MetadataRequest>()?;
-    m.add_class::<MetadataResponsePayload>()?;
-    m.add_class::<MetadataResponse>()?;
-    m.add_class::<ThresholdDecryptionRequest>()?;
-    m.add_class::<E2EThresholdDecryptionRequest>()?;
-    m.add_class::<ThresholdDecryptionResponse>()?;
-    m.add_class::<EncryptedThresholdDecryptionRequest>()?;
-    m.add_class::<EncryptedThresholdDecryptionResponse>()?;
+fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
+    core_module.add_class::<Address>()?;
+    core_module.add_class::<Conditions>()?;
+    core_module.add_class::<Context>()?;
+    core_module.add_class::<MessageKit>()?;
+    core_module.add_class::<HRAC>()?;
+    core_module.add_class::<EncryptedKeyFrag>()?;
+    core_module.add_class::<TreasureMap>()?;
+    core_module.add_class::<EncryptedTreasureMap>()?;
+    core_module.add_class::<ReencryptionRequest>()?;
+    core_module.add_class::<ReencryptionResponse>()?;
+    core_module.add_class::<RetrievalKit>()?;
+    core_module.add_class::<RevocationOrder>()?;
+    core_module.add_class::<NodeMetadata>()?;
+    core_module.add_class::<NodeMetadataPayload>()?;
+    core_module.add_class::<FleetStateChecksum>()?;
+    core_module.add_class::<MetadataRequest>()?;
+    core_module.add_class::<MetadataResponsePayload>()?;
+    core_module.add_class::<MetadataResponse>()?;
+    core_module.add_class::<ThresholdDecryptionRequest>()?;
+    core_module.add_class::<E2EThresholdDecryptionRequest>()?;
+    core_module.add_class::<ThresholdDecryptionResponse>()?;
+    core_module.add_class::<EncryptedThresholdDecryptionRequest>()?;
+    core_module.add_class::<EncryptedThresholdDecryptionResponse>()?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
@@ -1364,13 +1363,12 @@ fn _nucypher_core(py: Python, m: &PyModule) -> PyResult<()> {
         "VerificationError",
         py.get_type::<umbral_pre::bindings_python::VerificationError>(),
     )?; // depends on what `reencryption_response.verify()` returns
-    m.add_submodule(umbral_module)?;
+    core_module.add_submodule(umbral_module)?;
 
     // Build the ferveo module
     let ferveo_module = PyModule::new(py, "ferveo")?;
-
-    umbral_module.add_class::<ferveo::bindings_python::FerveoPublicKey>()?;
-    m.add_submodule(ferveo_module)?;
+    ferveo::bindings_python::make_ferveo_py_module(py, ferveo_module)?;
+    core_module.add_submodule(ferveo_module)?;
 
     Ok(())
 }

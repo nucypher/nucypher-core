@@ -482,7 +482,7 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=10cc1df897a81041cfef07b99f28e25de1e76ee8#10cc1df897a81041cfef07b99f28e25de1e76ee8"
+source = "git+https://github.com/nucypher/ferveo.git?rev=9795e2969f525fc7ee3a7721dca368287f4825c8#9795e2969f525fc7ee3a7721dca368287f4825c8"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "ferveo-pre-release"
 version = "0.1.0-alpha.7"
-source = "git+https://github.com/nucypher/ferveo.git?rev=10cc1df897a81041cfef07b99f28e25de1e76ee8#10cc1df897a81041cfef07b99f28e25de1e76ee8"
+source = "git+https://github.com/nucypher/ferveo.git?rev=9795e2969f525fc7ee3a7721dca368287f4825c8#9795e2969f525fc7ee3a7721dca368287f4825c8"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -594,7 +594,7 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=10cc1df897a81041cfef07b99f28e25de1e76ee8#10cc1df897a81041cfef07b99f28e25de1e76ee8"
+source = "git+https://github.com/nucypher/ferveo.git?rev=9795e2969f525fc7ee3a7721dca368287f4825c8#9795e2969f525fc7ee3a7721dca368287f4825c8"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1321,7 +1321,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=10cc1df897a81041cfef07b99f28e25de1e76ee8#10cc1df897a81041cfef07b99f28e25de1e76ee8"
+source = "git+https://github.com/nucypher/ferveo.git?rev=9795e2969f525fc7ee3a7721dca368287f4825c8#9795e2969f525fc7ee3a7721dca368287f4825c8"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -1432,7 +1432,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "umbral-pre"
 version = "0.9.2"
-source = "git+https://github.com/piotr-roslaniec/rust-umbral.git?rev=90a5075bb3462421fa6db79463960cd8e10a7025#90a5075bb3462421fa6db79463960cd8e10a7025"
+source = "git+https://github.com/piotr-roslaniec/rust-umbral.git?rev=fef199365a82d56b8cb8af808218198bd7bf7e4f#fef199365a82d56b8cb8af808218198bd7bf7e4f"
 dependencies = [
  "base64 0.21.0",
  "chacha20poly1305",
