@@ -693,14 +693,14 @@ impl RequestSecretKey {
         }
     }
 
-    pub fn diffie_hellman(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
+    pub fn derive_shared_secret(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
         RequestSharedSecret {
-            backend: self.backend.diffie_hellman(their_public_key.as_ref()),
+            backend: self.backend.derive_shared_secret(their_public_key.as_ref()),
         }
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self.backend))
+    fn __str__(&self) -> String {
+        self.backend.to_string()
     }
 }
 
@@ -731,12 +731,6 @@ impl RequestKeyFactory {
         Ok(Self { backend: factory })
     }
 
-    pub fn make_secret(&self, label: &[u8]) -> PyObject {
-        let secret = self.backend.make_secret(label);
-        let bytes: &[u8] = secret.as_secret().as_ref();
-        Python::with_gil(|py| PyBytes::new(py, bytes).into())
-    }
-
     pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
         RequestSecretKey {
             backend: self.backend.make_key(label),
@@ -749,8 +743,8 @@ impl RequestKeyFactory {
         }
     }
 
-    fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}", self.backend))
+    fn __str__(&self) -> String {
+        self.backend.to_string()
     }
 }
 

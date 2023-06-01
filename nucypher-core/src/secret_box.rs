@@ -24,6 +24,9 @@ The situation may improve in the future, and `secrecy` will actually become usab
 
 use alloc::boxed::Box;
 
+use generic_array::{ArrayLength, GenericArray};
+use hkdf::Hkdf;
+use sha2::Sha256;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// A container for secret data.
@@ -74,3 +77,16 @@ where
 // See https://github.com/RustCrypto/utils/issues/786
 // So we're asserting that this object is zeroized on drop, since there is a Drop impl just above.
 impl<T> ZeroizeOnDrop for SecretBox<T> where T: Zeroize + Clone {}
+
+pub fn kdf<S: ArrayLength<u8>>(seed: &[u8], info: Option<&[u8]>) -> SecretBox<GenericArray<u8, S>> {
+    let hk = Hkdf::<Sha256>::new(None, seed);
+
+    let mut okm = SecretBox::new(GenericArray::<u8, S>::default());
+
+    let def_info = info.unwrap_or_default();
+
+    // We can only get an error here if `S` is too large, and it's known at compile-time.
+    hk.expand(def_info, okm.as_mut_secret()).unwrap();
+
+    okm
+}

@@ -595,8 +595,8 @@ impl RequestSecretKey {
     }
 
     #[wasm_bindgen(js_name = diffieHellman)]
-    pub fn diffie_hellman(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
-        RequestSharedSecret(self.0.diffie_hellman(their_public_key.as_ref()))
+    pub fn derive_shared_secret(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
+        RequestSharedSecret(self.0.derive_shared_secret(their_public_key.as_ref()))
     }
 
     #[allow(clippy::inherent_to_string)]
@@ -626,13 +626,6 @@ impl RequestKeyFactory {
         nucypher_core::RequestKeyFactory::from_secure_randomness(seed)
             .map(Self)
             .map_err(map_js_err)
-    }
-
-    #[wasm_bindgen(js_name = makeSecret)]
-    pub fn make_secret(&self, label: &[u8]) -> Vec<u8> {
-        let secret = self.0.make_secret(label);
-        let bytes: &[u8] = secret.as_secret().as_ref();
-        bytes.into()
     }
 
     #[wasm_bindgen(js_name = makeKey)]

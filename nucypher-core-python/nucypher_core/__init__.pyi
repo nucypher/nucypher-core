@@ -514,7 +514,7 @@ class RequestSecretKey:
     def public_key(self) -> RequestPublicKey:
         ...
 
-    def diffie_hellman(self, their_public_key: RequestPublicKey) -> RequestSharedSecret:
+    def derive_shared_secret(self, their_public_key: RequestPublicKey) -> RequestSharedSecret:
         ...
 
 
@@ -530,9 +530,6 @@ class RequestKeyFactory:
 
     @staticmethod
     def from_secure_randomness(seed: bytes) -> RequestKeyFactory:
-        ...
-
-    def make_secret(self, label: bytes) -> bytes:
         ...
 
     def make_key(self, label: bytes) -> RequestSecretKey:

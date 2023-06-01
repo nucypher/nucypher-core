@@ -113,17 +113,17 @@ pub mod request_keys {
     use alloc::boxed::Box;
     use alloc::string::String;
     use core::fmt;
-    use generic_array::typenum::Unsigned;
-    use generic_array::{typenum::U32, ArrayLength, GenericArray};
-    use hkdf::Hkdf;
+    use generic_array::{
+        typenum::{Unsigned, U32},
+        GenericArray,
+    };
     use rand::SeedableRng;
     use rand_chacha::ChaCha20Rng;
     use rand_core::{CryptoRng, OsRng, RngCore};
     use serde::{Deserialize, Serialize};
-    use sha2::Sha256;
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
-    use crate::secret_box::SecretBox;
+    use crate::secret_box::{kdf, SecretBox};
     use zeroize::ZeroizeOnDrop;
 
     use crate::versioning::{
@@ -199,9 +199,7 @@ pub mod request_keys {
     impl fmt::Display for RequestPublicKey {
         /// Format public key information.
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let bytes = self.as_ref();
-            let bytes = if bytes.len() > 8 { &bytes[..8] } else { bytes };
-            write!(f, "RequestPublicKey: {}", hex::encode(bytes),)
+            write!(f, "RequestPublicKey: {}", hex::encode(&self.as_ref()[..8]))
         }
     }
 
@@ -246,7 +244,10 @@ pub mod request_keys {
 
     impl RequestSecretKey {
         /// Perform diffie-hellman
-        pub fn diffie_hellman(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
+        pub fn derive_shared_secret(
+            &self,
+            their_public_key: &RequestPublicKey,
+        ) -> RequestSharedSecret {
             let shared_secret = self.0.diffie_hellman(&their_public_key.0);
             RequestSharedSecret(shared_secret)
         }
@@ -273,23 +274,6 @@ pub mod request_keys {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "RequestSecretKey:...")
         }
-    }
-
-    pub(crate) fn kdf<S: ArrayLength<u8>>(
-        seed: &[u8],
-        salt: Option<&[u8]>,
-        info: Option<&[u8]>,
-    ) -> SecretBox<GenericArray<u8, S>> {
-        let hk = Hkdf::<Sha256>::new(salt, seed);
-
-        let mut okm = SecretBox::new(GenericArray::<u8, S>::default());
-
-        let def_info = info.unwrap_or(&[]);
-
-        // We can only get an error here if `S` is too large, and it's known at compile-time.
-        hk.expand(def_info, okm.as_mut_secret()).unwrap();
-
-        okm
     }
 
     type SecretKeyFactorySeedSize = U32; // the size of the seed material for key derivation
@@ -336,7 +320,6 @@ pub mod request_keys {
             seed: &[u8],
         ) -> Result<Self, InvalidRequestFactorySeedLengthError> {
             if seed.len() != Self::seed_size() {
-                // TODO: should I just panic! here instead?
                 return Err(InvalidRequestFactorySeedLengthError);
             }
             Ok(Self(SecretBox::new(*RequestKeyFactorySeed::from_slice(
@@ -344,23 +327,11 @@ pub mod request_keys {
             ))))
         }
 
-        /// Creates an untyped bytestring deterministically from the given label.
-        /// This can be used externally to seed some kind of a secret key.
-        pub fn make_secret(
-            &self,
-            label: &[u8],
-        ) -> SecretBox<GenericArray<u8, RequestKeyFactoryDerivedKeySize>> {
-            let prefix = b"REQUEST_SECRET_DERIVATION/";
-            let info = [prefix, label].concat();
-            kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), None, Some(&info))
-        }
-
         /// Creates a `RequestSecretKey` deterministically from the given label.
         pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
             let prefix = b"REQUEST_KEY_DERIVATION/";
             let info = [prefix, label].concat();
-            let seed =
-                kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), None, Some(&info));
+            let seed = kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), Some(&info));
             let rng =
                 ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
             RequestSecretKey::random_from_rng(rng)
@@ -370,8 +341,7 @@ pub mod request_keys {
         pub fn make_factory(&self, label: &[u8]) -> Self {
             let prefix = b"REQUEST_KEY_FACTORY_DERIVATION/";
             let info = [prefix, label].concat();
-            let derived_seed =
-                kdf::<SecretKeyFactorySeedSize>(self.0.as_secret(), None, Some(&info));
+            let derived_seed = kdf::<SecretKeyFactorySeedSize>(self.0.as_secret(), Some(&info));
             Self(derived_seed)
         }
     }
@@ -650,7 +620,7 @@ mod tests {
         let requester_secret = RequestSecretKey::random();
         let requester_public_key = requester_secret.public_key();
 
-        let service_shared_secret = service_secret.diffie_hellman(&requester_public_key);
+        let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
 
         let ciphertext = b"1".to_vec().into_boxed_slice(); // length less than nonce size
         let nonce_size = <NonceSize as Unsigned>::to_usize();
@@ -675,8 +645,9 @@ mod tests {
         let requester_secret_key = secret_factory.make_key(&label_2.as_ref());
         let requester_public_key = requester_secret_key.public_key();
 
-        let service_shared_secret = service_secret_key.diffie_hellman(&requester_public_key);
-        let requester_shared_secret = requester_secret_key.diffie_hellman(&service_public_key);
+        let service_shared_secret = service_secret_key.derive_shared_secret(&requester_public_key);
+        let requester_shared_secret =
+            requester_secret_key.derive_shared_secret(&service_public_key);
 
         let data_to_encrypt = b"The Tyranny of Merit".to_vec().into_boxed_slice();
         let ciphertext =
@@ -745,7 +716,7 @@ mod tests {
 
         // requester encrypts request to send to service
         let service_public_key = service_secret.public_key();
-        let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
+        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
         let encrypted_request = request.encrypt(&requester_shared_secret, &requester_public_key);
 
         // mimic serialization/deserialization over the wire
@@ -761,7 +732,7 @@ mod tests {
 
         // service decrypts request
         let service_shared_secret =
-            service_secret.diffie_hellman(&encrypted_request_from_bytes.requester_public_key);
+            service_secret.derive_shared_secret(&encrypted_request_from_bytes.requester_public_key);
         let decrypted_request = encrypted_request_from_bytes
             .decrypt(&service_shared_secret)
             .unwrap();
@@ -769,7 +740,7 @@ mod tests {
 
         // wrong shared key used
         let random_secret_key = RequestSecretKey::random();
-        let random_shared_secret = random_secret_key.diffie_hellman(&requester_public_key);
+        let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
         assert!(encrypted_request_from_bytes
             .decrypt(&random_shared_secret)
             .is_err());
@@ -788,7 +759,8 @@ mod tests {
 
         // service encrypts response to send back
         let requester_public_key = requester_secret.public_key();
-        let service_shared_secret = service_secret.diffie_hellman(&requester_public_key);
+
+        let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
         let encrypted_response = response.encrypt(&service_shared_secret);
         assert_eq!(encrypted_response.ritual_id, ritual_id);
 
@@ -799,7 +771,7 @@ mod tests {
 
         // requester decrypts response
         let service_public_key = service_secret.public_key();
-        let requester_shared_secret = requester_secret.diffie_hellman(&service_public_key);
+        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
         let decrypted_response = encrypted_response_from_bytes
             .decrypt(&requester_shared_secret)
             .unwrap();
@@ -812,7 +784,7 @@ mod tests {
 
         // wrong shared key used
         let random_secret_key = RequestSecretKey::random();
-        let random_shared_secret = random_secret_key.diffie_hellman(&requester_public_key);
+        let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
         assert!(encrypted_response_from_bytes
             .decrypt(&random_shared_secret)
             .is_err());
