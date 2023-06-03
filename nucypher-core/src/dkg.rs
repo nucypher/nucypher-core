@@ -121,6 +121,7 @@ pub mod request_keys {
     use rand_chacha::ChaCha20Rng;
     use rand_core::{CryptoRng, OsRng, RngCore};
     use serde::{Deserialize, Serialize};
+    use sha2::{Digest, Sha256};
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
     use crate::secret_box::{kdf, SecretBox};
@@ -132,33 +133,33 @@ pub mod request_keys {
 
     /// A Diffie-Hellman shared secret
     #[derive(ZeroizeOnDrop)]
-    pub struct RequestSharedSecret(pub(crate) SharedSecret);
+    pub struct RequestSharedSecret {
+        shared_secret: SharedSecret,
+        hashed_bytes: [u8; 32],
+    }
 
     /// Implementation of Diffie-Hellman shared secret
     impl RequestSharedSecret {
         /// Create new shared secret from underlying library.
         pub fn new(shared_secret: SharedSecret) -> Self {
-            Self(shared_secret)
-        }
-
-        /// Convert this shared secret to a byte array.
-        #[inline]
-        pub fn to_bytes(&self) -> [u8; 32] {
-            self.0.to_bytes()
+            let hash = Sha256::digest(shared_secret.as_bytes());
+            let hashed_bytes = hash.as_slice().try_into().expect("invalid length");
+            Self {
+                shared_secret,
+                hashed_bytes,
+            }
         }
 
         /// View this shared secret key as a byte array.
-        #[inline]
         pub fn as_bytes(&self) -> &[u8; 32] {
-            self.0.as_bytes()
+            &self.hashed_bytes
         }
     }
 
     impl AsRef<[u8]> for RequestSharedSecret {
         /// View this shared secret key as a byte array.
-        #[inline]
         fn as_ref(&self) -> &[u8] {
-            self.0.as_bytes()
+            self.as_bytes()
         }
     }
 
@@ -171,26 +172,18 @@ pub mod request_keys {
 
     /// A request public key.
     #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Serialize, Deserialize)]
-    pub struct RequestPublicKey(pub(crate) PublicKey);
+    pub struct RequestPublicKey(PublicKey);
 
     /// Implementation of request public key
     impl RequestPublicKey {
         /// Convert this public key to a byte array.
-        #[inline]
         pub fn to_bytes(&self) -> [u8; 32] {
             self.0.to_bytes()
-        }
-
-        /// View this public key as a byte array.
-        #[inline]
-        pub fn as_bytes(&self) -> &[u8; 32] {
-            self.0.as_bytes()
         }
     }
 
     impl AsRef<[u8]> for RequestPublicKey {
         /// View this public key as a byte array.
-        #[inline]
         fn as_ref(&self) -> &[u8] {
             self.0.as_bytes()
         }
@@ -200,14 +193,6 @@ pub mod request_keys {
         /// Format public key information.
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "RequestPublicKey: {}", hex::encode(&self.as_ref()[..8]))
-        }
-    }
-
-    impl<'a> From<&'a RequestSecretKey> for RequestPublicKey {
-        /// Compute corresponding [`RequestPublicKey`].
-        fn from(secret: &'a RequestSecretKey) -> RequestPublicKey {
-            let public_key = PublicKey::from(&secret.0);
-            RequestPublicKey(public_key)
         }
     }
 
@@ -249,23 +234,24 @@ pub mod request_keys {
             their_public_key: &RequestPublicKey,
         ) -> RequestSharedSecret {
             let shared_secret = self.0.diffie_hellman(&their_public_key.0);
-            RequestSharedSecret(shared_secret)
+            RequestSharedSecret::new(shared_secret)
         }
 
         /// Create secret key from rng.
-        pub fn random_from_rng<T: RngCore + CryptoRng>(csprng: T) -> Self {
+        pub fn random_from_rng(csprng: &mut (impl RngCore + CryptoRng)) -> Self {
             let secret_key = StaticSecret::random_from_rng(csprng);
             Self(secret_key)
         }
 
         /// Create random secret key.
         pub fn random() -> Self {
-            Self::random_from_rng(OsRng)
+            Self::random_from_rng(&mut OsRng)
         }
 
         /// Returns a public key corresponding to this secret key.
         pub fn public_key(&self) -> RequestPublicKey {
-            RequestPublicKey::from(self)
+            let public_key = PublicKey::from(&self.0);
+            RequestPublicKey(public_key)
         }
     }
 
@@ -332,9 +318,9 @@ pub mod request_keys {
             let prefix = b"REQUEST_KEY_DERIVATION/";
             let info = [prefix, label].concat();
             let seed = kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), Some(&info));
-            let rng =
+            let mut rng =
                 ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
-            RequestSecretKey::random_from_rng(rng)
+            RequestSecretKey::random_from_rng(&mut rng)
         }
 
         /// Creates a `RequestKeyFactory` deterministically from the given label.

@@ -9,16 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Re-exported `ferveo` Python and WASM bindings. ([#58])
 - Added `RequestSharedSecret`, `RequestPublicKey`, `RequestSecretKey`, `RequestKeyFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
-- Added Rust `pre-commit` hooks for repos. 
-- Added `secret_box` functionality.
+- Added Rust `pre-commit` hooks for repos. ([#54])
+- Added `secret_box` functionality. ([#54])
 
 
 ### Changed
 
 - Replaced opaque types with native `ferveo` types. ([#53])
-- Removed `E2EThresholdDecryptionRequest` type and bindings. ([54])
+- Removed `E2EThresholdDecryptionRequest` type and bindings. ([#54])
 - Modified `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` to use Curve 25519 keys instead of Umbral keys for encryption/decryption. ([#54])
-- Modified `ThresholdDecryptionResponse`/`EncryptedThresholdDecryptionResponse`  to include `ritual_id` member in struct.
+- Modified `ThresholdDecryptionResponse`/`EncryptedThresholdDecryptionResponse`  to include `ritual_id` member in struct. ([#54])
+
 
 [#53]: https://github.com/nucypher/nucypher-core/pull/53
 [#58]: https://github.com/nucypher/nucypher-core/pull/58
