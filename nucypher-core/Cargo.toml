@@ -11,7 +11,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 # TODO: Replace with a new release after this PR is merged and released: https://github.com/nucypher/rust-umbral/pull/122
-umbral-pre = { git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "5a279039d1e44e415f2cfac85282fc5102d41a6c", features = ["serde"] }
+umbral-pre = { version = "0.10.0", features = ["serde"] }
 ferveo = { package = "ferveo-pre-release", git = "https://github.com/nucypher/ferveo.git", rev = "9795e2969f525fc7ee3a7721dca368287f4825c8" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = "0.14"
