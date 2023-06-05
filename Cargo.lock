@@ -170,9 +170,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "base16ct"
-version = "0.2.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+checksum = "349a06037c7bf932dd7e7d1f653678b2038b9ad46a74102f1fc7bd7872678cce"
 
 [[package]]
 name = "base64"
@@ -315,9 +315,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-bigint"
-version = "0.5.2"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf4c2f4e1afd912bc40bfd6fed5d9dc1f288e0ba01bfcc835cc5bc3eb13efe15"
+checksum = "ef2b4b23cddf68b89b8f8069890e8c270d54e2d5fe1b143820234805e4cb17ef"
 dependencies = [
  "generic-array",
  "rand_core 0.6.4",
@@ -408,12 +408,11 @@ dependencies = [
 
 [[package]]
 name = "der"
-version = "0.7.6"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56acb310e15652100da43d130af8d97b509e95af61aab1c5a7939ef24337ee17"
+checksum = "f1a467a65c5e759bce6e65eaf91cc29f466cdc57cb65777bd646872a8a1fd4de"
 dependencies = [
  "const-oid",
- "zeroize",
 ]
 
 [[package]]
@@ -445,19 +444,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer",
- "const-oid",
  "crypto-common",
  "subtle",
 ]
 
 [[package]]
 name = "ecdsa"
-version = "0.16.7"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0997c976637b606099b9985693efa3581e84e41f5c11ba5255f88711058ad428"
+checksum = "12844141594ad74185a926d030f3b605f6a903b4e3fec351f3ea338ac5b7637e"
 dependencies = [
  "der",
- "digest",
  "elliptic-curve",
  "rfc6979",
  "signature",
@@ -471,12 +468,13 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "elliptic-curve"
-version = "0.13.5"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "968405c8fdc9b3bf4df0a6638858cc0b52462836ab6b1c87377785dd09cf1c0b"
+checksum = "e7bb888ab5300a19b8e5bceef25ac745ad065f3c9f7efc6de1b91958110891d3"
 dependencies = [
  "base16ct",
  "crypto-bigint",
+ "der",
  "digest",
  "ff",
  "generic-array",
@@ -539,9 +537,9 @@ dependencies = [
 
 [[package]]
 name = "ff"
-version = "0.13.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ded41244b729663b1e574f1b4fb731469f69f79c17667b5d776b16cda0479449"
+checksum = "d013fc25338cc558c5c2cfbad646908fb23591e2404481826742b651c9af7160"
 dependencies = [
  "rand_core 0.6.4",
  "subtle",
@@ -590,9 +588,9 @@ dependencies = [
 
 [[package]]
 name = "group"
-version = "0.13.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0f9ef7462f7c099f518d754361858f86d8a07af53ba9af0fe635bbccb151a63"
+checksum = "5dfbfb3a6cfbd390d5c9564ab283a0349b9b9fcd46a706c1eb10e0db70bfbac7"
 dependencies = [
  "ff",
  "rand_core 0.6.4",
@@ -758,9 +756,9 @@ dependencies = [
 
 [[package]]
 name = "k256"
-version = "0.13.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cadb76004ed8e97623117f3df85b17aaa6626ab0b0831e6573f104df16cd1bcc"
+checksum = "92a55e0ff3b72c262bcf041d9e97f1b84492b68f1c1a384de2323d3dc9403397"
 dependencies = [
  "cfg-if",
  "ecdsa",
@@ -1123,12 +1121,13 @@ dependencies = [
 
 [[package]]
 name = "rfc6979"
-version = "0.4.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
+checksum = "7743f17af12fa0b03b803ba12cd6a8d9483a587e89c69445e3909655c0b9fabb"
 dependencies = [
+ "crypto-bigint",
  "hmac",
- "subtle",
+ "zeroize",
 ]
 
 [[package]]
@@ -1182,9 +1181,9 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "sec1"
-version = "0.7.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48518a2b5775ba8ca5b46596aae011caa431e6ce7e4a67ead66d92f08884220e"
+checksum = "3be24c1842290c45df0a7bf069e0c268a747ad05a192f2fd7dcfdbc1cba40928"
 dependencies = [
  "base16ct",
  "der",
@@ -1433,9 +1432,8 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "umbral-pre"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "594a478131f30b32cf28a822d95821ef32881e9773d567739c09df9f2accd692"
+version = "0.9.2"
+source = "git+https://github.com/piotr-roslaniec/rust-umbral.git?rev=5a279039d1e44e415f2cfac85282fc5102d41a6c#5a279039d1e44e415f2cfac85282fc5102d41a6c"
 dependencies = [
  "base64 0.21.2",
  "chacha20poly1305",

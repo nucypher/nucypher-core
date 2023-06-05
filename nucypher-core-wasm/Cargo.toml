@@ -27,8 +27,7 @@ wasm-bindgen = "0.2.86"
 js-sys = "0.3.63"
 console_error_panic_hook = { version = "0.1", optional = true }
 derive_more = { version = "0.99", default-features = false, features = ["from", "as_ref"] }
-# TODO: Replace with a new release after this issue is fixed: https://github.com/fjarri/wasm-bindgen-derive/issues/3
-wasm-bindgen-derive = { git = "https://github.com/piotr-roslaniec/wasm-bindgen-derive.git", rev = "d13475a9b36d6c6e5f2f99372d175f21b00bf0d6" }
+wasm-bindgen-derive = "0.2.1"
 
 [dev-dependencies]
 console_error_panic_hook = "0.1"
