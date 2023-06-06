@@ -122,7 +122,6 @@ pub mod session {
     use rand_chacha::ChaCha20Rng;
     use rand_core::{CryptoRng, OsRng, RngCore};
     use serde::{Deserialize, Serialize};
-    use sha2::{Digest, Sha256};
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
     use crate::secret_box::{kdf, SecretBox};
@@ -135,25 +134,22 @@ pub mod session {
     /// A Diffie-Hellman shared secret
     #[derive(ZeroizeOnDrop)]
     pub struct SessionSharedSecret {
-        shared_secret: SharedSecret,
-        hashed_bytes: [u8; 32],
+        derived_bytes: [u8; 32],
     }
 
     /// Implementation of Diffie-Hellman shared secret
     impl SessionSharedSecret {
         /// Create new shared secret from underlying library.
         pub fn new(shared_secret: SharedSecret) -> Self {
-            let hash = Sha256::digest(shared_secret.as_bytes());
-            let hashed_bytes = hash.as_slice().try_into().expect("invalid length");
-            Self {
-                shared_secret,
-                hashed_bytes,
-            }
+            let info = b"SESSION_SHARED_SECRET_DERIVATION/";
+            let derived_key = kdf::<U32>(shared_secret.as_bytes(), Some(info));
+            let derived_bytes = <[u8; 32]>::try_from(derived_key.as_secret().as_slice()).unwrap();
+            Self { derived_bytes }
         }
 
         /// View this shared secret as a byte array.
         pub fn as_bytes(&self) -> &[u8; 32] {
-            &self.hashed_bytes
+            &self.derived_bytes
         }
     }
 
