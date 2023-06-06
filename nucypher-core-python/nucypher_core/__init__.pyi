@@ -10,6 +10,11 @@ from .umbral import (
     RecoverableSignature
 )
 
+from .ferveo import  (
+    FerveoPublicKey,
+    Ciphertext
+)
+
 
 class Address:
 
@@ -300,7 +305,7 @@ class NodeMetadataPayload:
         timestamp_epoch: int,
         verifying_key: PublicKey,
         encrypting_key: PublicKey,
-        ferveo_public_key: bytes,
+        ferveo_public_key: FerveoPublicKey,
         certificate_der: bytes,
         host: str,
         port: int,
@@ -314,7 +319,7 @@ class NodeMetadataPayload:
 
     encrypting_key: PublicKey
 
-    ferveo_public_key: bytes
+    ferveo_public_key: FerveoPublicKey
 
     operator_signature: RecoverableSignature
 
@@ -405,7 +410,7 @@ class MetadataResponse:
 
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: int, ciphertext: bytes, conditions: Optional[Conditions], context: Optional[Context]):
+    def __init__(self, ritual_id: int, variant: int, ciphertext: Ciphertext, conditions: Optional[Conditions], context: Optional[Context]):
         ...
 
     ritual_id: int
@@ -416,7 +421,7 @@ class ThresholdDecryptionRequest:
 
     variant: int
 
-    ciphertext: bytes
+    ciphertext: Ciphertext
 
     def encrypt(self, request_encrypting_key: PublicKey, response_encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
         ...

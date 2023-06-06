@@ -3,11 +3,27 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.9.0] - Unreleased
+
+### Added
+
+- Re-exported `ferveo` Python and WASM bindings. ([#58])
+
+###  Changed
+
+- Replaced opaque types with native `ferveo` types. ([#53])
+
+
+[#53]: https://github.com/nucypher/nucypher-core/pull/53
+[#58]: https://github.com/nucypher/nucypher-core/pull/58
+
+
 ## [0.8.0] - 2023-05-23
 
 ### Added
 
-- Add `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` types and bindings. ([#52])`
+- Add `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` types and bindings. ([#52])
 
 
 ### Changed

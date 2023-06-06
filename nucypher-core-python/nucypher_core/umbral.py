@@ -2,7 +2,7 @@ from ._nucypher_core import umbral as _umbral
 
 SecretKey = _umbral.SecretKey
 PublicKey = _umbral.PublicKey
-SecretKeyFactory =_umbral.SecretKeyFactory
+SecretKeyFactory = _umbral.SecretKeyFactory
 Signature = _umbral.Signature
 RecoverableSignature = _umbral.RecoverableSignature
 Signer = _umbral.Signer

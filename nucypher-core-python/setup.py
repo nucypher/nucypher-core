@@ -17,7 +17,7 @@ setup(
     rust_extensions=[RustExtension("nucypher_core._nucypher_core", binding=Binding.PyO3, debug=False)],
     packages=["nucypher_core"],
     package_data = {
-        'nucypher_core': ['py.typed', '__init__.pyi', 'umbral.pyi'],
+        'nucypher_core': ['py.typed', '__init__.pyi', 'umbral.pyi', 'ferveo.pyi'],
     },
     # rust extensions are not zip safe, just like C-extensions.
     zip_safe=False,
