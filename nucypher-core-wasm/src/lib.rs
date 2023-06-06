@@ -657,7 +657,7 @@ pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest)
 impl ThresholdDecryptionRequest {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        ritual_id: u16,
+        ritual_id: u32,
         variant: u8,
         ciphertext: &Ciphertext,
         conditions: &OptionConditions,
@@ -682,7 +682,7 @@ impl ThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 
@@ -732,7 +732,7 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 
@@ -774,7 +774,7 @@ pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionRespons
 impl ThresholdDecryptionResponse {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        ritual_id: u16,
+        ritual_id: u32,
         decryption_share: &[u8],
     ) -> Result<ThresholdDecryptionResponse, Error> {
         Ok(Self(nucypher_core::ThresholdDecryptionResponse::new(
@@ -784,7 +784,7 @@ impl ThresholdDecryptionResponse {
     }
 
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 
@@ -824,7 +824,7 @@ pub struct EncryptedThresholdDecryptionResponse(
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 

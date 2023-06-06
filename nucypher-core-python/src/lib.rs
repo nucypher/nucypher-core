@@ -762,7 +762,7 @@ pub struct ThresholdDecryptionRequest {
 impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
-        ritual_id: u16,
+        ritual_id: u32,
         variant: u8,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
@@ -792,7 +792,7 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 
@@ -863,7 +863,7 @@ pub struct EncryptedThresholdDecryptionRequest {
 #[pymethods]
 impl EncryptedThresholdDecryptionRequest {
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 
@@ -905,14 +905,14 @@ pub struct ThresholdDecryptionResponse {
 #[pymethods]
 impl ThresholdDecryptionResponse {
     #[new]
-    pub fn new(ritual_id: u16, decryption_share: &[u8]) -> Self {
+    pub fn new(ritual_id: u32, decryption_share: &[u8]) -> Self {
         ThresholdDecryptionResponse {
             backend: nucypher_core::ThresholdDecryptionResponse::new(ritual_id, decryption_share),
         }
     }
 
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 
@@ -953,7 +953,7 @@ pub struct EncryptedThresholdDecryptionResponse {
 #[pymethods]
 impl EncryptedThresholdDecryptionResponse {
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 

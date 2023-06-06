@@ -688,7 +688,7 @@ fn request_public_key() {
 
 #[wasm_bindgen_test]
 fn threshold_decryption_request() {
-    let ritual_id: u16 = 5;
+    let ritual_id: u32 = 5;
     let service_secret = RequestSecretKey::random();
     let service_public_key = service_secret.public_key();
 

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `E2EThresholdDecryptionRequest` type and bindings. ([#54])
 - Modified `EncryptedThresholdDecryptionRequest`/`EncryptedThresholdDecryptionResponse` to use Curve 25519 keys instead of Umbral keys for encryption/decryption. ([#54])
 - Modified `ThresholdDecryptionResponse`/`EncryptedThresholdDecryptionResponse`  to include `ritual_id` member in struct. ([#54])
+- Ritual ID for `ThresholdDecryption[Request/Response]` / `EncryptedThresholdDecryption[Request/Response]` is now u32 instead of u16. ([#54])
 
 
 [#53]: https://github.com/nucypher/nucypher-core/pull/53

@@ -901,6 +901,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-derive",
  "wasm-bindgen-test",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -1597,7 +1598,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
- "wasm-bindgen",
 ]
 
 [[package]]

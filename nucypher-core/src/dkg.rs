@@ -267,9 +267,9 @@ pub mod request_keys {
     type RequestKeyFactorySeed = GenericArray<u8, SecretKeyFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.
-    pub struct InvalidRequestFactorySeedLengthError;
+    pub struct InvalidRequestFactorySeedLength;
 
-    impl fmt::Display for InvalidRequestFactorySeedLengthError {
+    impl fmt::Display for InvalidRequestFactorySeedLength {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "Invalid seed length")
         }
@@ -304,9 +304,9 @@ pub mod request_keys {
         /// from a cryptographically secure source of randomness!
         pub fn from_secure_randomness(
             seed: &[u8],
-        ) -> Result<Self, InvalidRequestFactorySeedLengthError> {
+        ) -> Result<Self, InvalidRequestFactorySeedLength> {
             if seed.len() != Self::seed_size() {
-                return Err(InvalidRequestFactorySeedLengthError);
+                return Err(InvalidRequestFactorySeedLength);
             }
             Ok(Self(SecretBox::new(*RequestKeyFactorySeed::from_slice(
                 seed,
@@ -343,7 +343,7 @@ pub mod request_keys {
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
-    pub ritual_id: u16,
+    pub ritual_id: u32,
     /// The ciphertext to generate a decryption share for.
     pub ciphertext: Ciphertext,
     /// A blob of bytes containing decryption conditions for this message.
@@ -357,7 +357,7 @@ pub struct ThresholdDecryptionRequest {
 impl ThresholdDecryptionRequest {
     /// Creates a new decryption request.
     pub fn new(
-        ritual_id: u16,
+        ritual_id: u32,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
@@ -384,7 +384,7 @@ impl ThresholdDecryptionRequest {
 
 impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -410,7 +410,7 @@ impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedThresholdDecryptionRequest {
     /// ID of the ritual
-    pub ritual_id: u16,
+    pub ritual_id: u32,
 
     /// Public key of requester
     pub requester_public_key: RequestPublicKey,
@@ -449,7 +449,7 @@ impl EncryptedThresholdDecryptionRequest {
 
 impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -475,7 +475,7 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionRequest {}
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdDecryptionResponse {
     /// The ID of the ritual.
-    pub ritual_id: u16,
+    pub ritual_id: u32,
 
     /// The decryption share to include in the response.
     #[serde(with = "serde_bytes::as_base64")]
@@ -484,7 +484,7 @@ pub struct ThresholdDecryptionResponse {
 
 impl ThresholdDecryptionResponse {
     /// Creates and a new decryption response.
-    pub fn new(ritual_id: u16, decryption_share: &[u8]) -> Self {
+    pub fn new(ritual_id: u32, decryption_share: &[u8]) -> Self {
         ThresholdDecryptionResponse {
             ritual_id,
             decryption_share: decryption_share.to_vec().into(),
@@ -502,7 +502,7 @@ impl ThresholdDecryptionResponse {
 
 impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -528,7 +528,7 @@ impl<'a> ProtocolObject<'a> for ThresholdDecryptionResponse {}
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedThresholdDecryptionResponse {
     /// The ID of the ritual.
-    pub ritual_id: u16,
+    pub ritual_id: u32,
 
     #[serde(with = "serde_bytes::as_base64")]
     ciphertext: Box<[u8]>,
@@ -560,7 +560,7 @@ impl EncryptedThresholdDecryptionResponse {
 
 impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
-        (1, 0)
+        (2, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -719,6 +719,10 @@ mod tests {
         // service decrypts request
         let service_shared_secret =
             service_secret.derive_shared_secret(&encrypted_request_from_bytes.requester_public_key);
+        assert_eq!(
+            service_shared_secret.as_bytes(),
+            requester_shared_secret.as_bytes()
+        );
         let decrypted_request = encrypted_request_from_bytes
             .decrypt(&service_shared_secret)
             .unwrap();
@@ -758,6 +762,10 @@ mod tests {
         // requester decrypts response
         let service_public_key = service_secret.public_key();
         let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+        assert_eq!(
+            requester_shared_secret.as_bytes(),
+            service_shared_secret.as_bytes()
+        );
         let decrypted_response = encrypted_response_from_bytes
             .decrypt(&requester_shared_secret)
             .unwrap();
