@@ -264,6 +264,7 @@ pub mod session {
     type SessionSecretFactorySeed = GenericArray<u8, SessionSecretFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.
+    #[derive(Debug)]
     pub struct InvalidSessionSecretFactorySeedLength;
 
     impl fmt::Display for InvalidSessionSecretFactorySeedLength {
@@ -318,14 +319,6 @@ pub mod session {
             let mut rng =
                 ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
             SessionStaticSecret::random_from_rng(&mut rng)
-        }
-
-        /// Creates a `SessionSecretFactory` deterministically from the given label.
-        pub fn make_factory(&self, label: &[u8]) -> Self {
-            let prefix = b"SESSION_SECRET_FACTORY_DERIVATION/";
-            let info = [prefix, label].concat();
-            let derived_seed = kdf::<SessionSecretFactorySeedSize>(self.0.as_secret(), Some(&info));
-            Self(derived_seed)
         }
     }
 
@@ -590,6 +583,7 @@ mod tests {
     };
 
     use generic_array::typenum::Unsigned;
+    use rand_core::RngCore;
 
     use crate::dkg::session::SessionStaticSecret;
     use crate::dkg::{
@@ -652,9 +646,12 @@ mod tests {
         assert_ne!(requester_public_key, not_same_requester_public_key);
 
         // ensure that two secret factories with the same seed generate the same keys
-        let secret_factory_label = b"seeded_secret_factory_label".to_vec().into_boxed_slice();
-        let seeded_secret_factory_1 = secret_factory.make_factory(&secret_factory_label.as_ref());
-        let seeded_secret_factory_2 = secret_factory.make_factory(&secret_factory_label.as_ref());
+        let mut secret_factory_seed = [0u8; 32];
+        rand::thread_rng().fill_bytes(&mut secret_factory_seed);
+        let seeded_secret_factory_1 =
+            SessionSecretFactory::from_secure_randomness(&secret_factory_seed).unwrap();
+        let seeded_secret_factory_2 =
+            SessionSecretFactory::from_secure_randomness(&secret_factory_seed).unwrap();
 
         let key_label = b"seeded_factory_key_label".to_vec().into_boxed_slice();
         let sk_1 = seeded_secret_factory_1.make_key(&key_label);

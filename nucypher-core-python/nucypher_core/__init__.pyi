@@ -534,7 +534,3 @@ class SessionSecretFactory:
 
     def make_key(self, label: bytes) -> SessionStaticSecret:
         ...
-
-    def make_factory(self, label: bytes) -> RequestKeyFactory:
-        ...
-

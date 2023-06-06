@@ -737,12 +737,6 @@ impl SessionSecretFactory {
         }
     }
 
-    pub fn make_factory(&self, label: &[u8]) -> SessionSecretFactory {
-        SessionSecretFactory {
-            backend: self.backend.make_factory(label),
-        }
-    }
-
     fn __str__(&self) -> String {
         self.backend.to_string()
     }

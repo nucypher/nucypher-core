@@ -633,11 +633,6 @@ impl SessionSecretFactory {
         SessionStaticSecret(self.0.make_key(label))
     }
 
-    #[wasm_bindgen(js_name = makeFactory)]
-    pub fn make_factory(&self, label: &[u8]) -> Self {
-        Self(self.0.make_factory(label))
-    }
-
     #[allow(clippy::inherent_to_string)]
     #[wasm_bindgen(js_name = toString)]
     pub fn to_string(&self) -> String {
