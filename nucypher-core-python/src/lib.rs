@@ -633,26 +633,26 @@ impl ReencryptionResponse {
 }
 
 //
-// Request Keys
+// Session Keys
 //
 
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct RequestSharedSecret {
-    backend: nucypher_core::RequestSharedSecret,
+pub struct SessionSharedSecret {
+    backend: nucypher_core::SessionSharedSecret,
 }
 
 #[pyclass(module = "nucypher_core")]
 #[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::AsRef)]
-pub struct RequestPublicKey {
-    backend: nucypher_core::RequestPublicKey,
+pub struct SessionStaticKey {
+    backend: nucypher_core::SessionStaticKey,
 }
 
 #[pymethods]
-impl RequestPublicKey {
+impl SessionStaticKey {
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::RequestPublicKey>(data)
+        from_bytes::<_, nucypher_core::SessionStaticKey>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -664,7 +664,7 @@ impl RequestPublicKey {
     }
 
     fn __hash__(&self) -> PyResult<isize> {
-        hash("RequestPublicKey", self)
+        hash("SessionStaticKey", self)
     }
 
     fn __str__(&self) -> PyResult<String> {
@@ -674,27 +674,27 @@ impl RequestPublicKey {
 
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct RequestSecretKey {
-    backend: nucypher_core::RequestSecretKey,
+pub struct SessionStaticSecret {
+    backend: nucypher_core::SessionStaticSecret,
 }
 
 #[pymethods]
-impl RequestSecretKey {
+impl SessionStaticSecret {
     #[staticmethod]
     pub fn random() -> PyResult<Self> {
         Ok(Self {
-            backend: nucypher_core::RequestSecretKey::random(),
+            backend: nucypher_core::SessionStaticSecret::random(),
         })
     }
 
-    pub fn public_key(&self) -> RequestPublicKey {
-        RequestPublicKey {
+    pub fn public_key(&self) -> SessionStaticKey {
+        SessionStaticKey {
             backend: self.backend.public_key(),
         }
     }
 
-    pub fn derive_shared_secret(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
-        RequestSharedSecret {
+    pub fn derive_shared_secret(&self, their_public_key: &SessionStaticKey) -> SessionSharedSecret {
+        SessionSharedSecret {
             backend: self.backend.derive_shared_secret(their_public_key.as_ref()),
         }
     }
@@ -706,39 +706,39 @@ impl RequestSecretKey {
 
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct RequestKeyFactory {
-    backend: nucypher_core::RequestKeyFactory,
+pub struct SessionSecretFactory {
+    backend: nucypher_core::SessionSecretFactory,
 }
 
 #[pymethods]
-impl RequestKeyFactory {
+impl SessionSecretFactory {
     #[staticmethod]
     pub fn random() -> PyResult<Self> {
         Ok(Self {
-            backend: nucypher_core::RequestKeyFactory::random(),
+            backend: nucypher_core::SessionSecretFactory::random(),
         })
     }
 
     #[staticmethod]
     pub fn seed_size() -> usize {
-        nucypher_core::RequestKeyFactory::seed_size()
+        nucypher_core::SessionSecretFactory::seed_size()
     }
 
     #[staticmethod]
     pub fn from_secure_randomness(seed: &[u8]) -> PyResult<Self> {
-        let factory = nucypher_core::RequestKeyFactory::from_secure_randomness(seed)
+        let factory = nucypher_core::SessionSecretFactory::from_secure_randomness(seed)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
         Ok(Self { backend: factory })
     }
 
-    pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
-        RequestSecretKey {
+    pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
+        SessionStaticSecret {
             backend: self.backend.make_key(label),
         }
     }
 
-    pub fn make_factory(&self, label: &[u8]) -> RequestKeyFactory {
-        RequestKeyFactory {
+    pub fn make_factory(&self, label: &[u8]) -> SessionSecretFactory {
+        SessionSecretFactory {
             backend: self.backend.make_factory(label),
         }
     }
@@ -829,8 +829,8 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
-        requester_public_key: &RequestPublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> EncryptedThresholdDecryptionRequest {
         let encrypted_request = self
             .backend
@@ -868,13 +868,13 @@ impl EncryptedThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn requester_public_key(&self) -> RequestPublicKey {
+    pub fn requester_public_key(&self) -> SessionStaticKey {
         self.backend.requester_public_key.into()
     }
 
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> PyResult<ThresholdDecryptionRequest> {
         self.backend
             .decrypt(shared_secret.as_ref())
@@ -923,7 +923,7 @@ impl ThresholdDecryptionResponse {
 
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse {
             backend: self.backend.encrypt(shared_secret.as_ref()),
@@ -959,7 +959,7 @@ impl EncryptedThresholdDecryptionResponse {
 
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> PyResult<ThresholdDecryptionResponse> {
         self.backend
             .decrypt(shared_secret.as_ref())
@@ -1446,10 +1446,10 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<ThresholdDecryptionResponse>()?;
     core_module.add_class::<EncryptedThresholdDecryptionRequest>()?;
     core_module.add_class::<EncryptedThresholdDecryptionResponse>()?;
-    core_module.add_class::<RequestSharedSecret>()?;
-    core_module.add_class::<RequestPublicKey>()?;
-    core_module.add_class::<RequestSecretKey>()?;
-    core_module.add_class::<RequestKeyFactory>()?;
+    core_module.add_class::<SessionSharedSecret>()?;
+    core_module.add_class::<SessionStaticKey>()?;
+    core_module.add_class::<SessionStaticSecret>()?;
+    core_module.add_class::<SessionSecretFactory>()?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;

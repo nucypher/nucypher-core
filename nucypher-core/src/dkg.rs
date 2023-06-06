@@ -16,7 +16,7 @@ use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 
 use crate::conditions::{Conditions, Context};
-use crate::dkg::request_keys::{RequestPublicKey, RequestSharedSecret};
+use crate::dkg::session::{SessionSharedSecret, SessionStaticKey};
 
 /// Errors during encryption.
 #[derive(Debug)]
@@ -66,7 +66,7 @@ impl fmt::Display for DecryptionError {
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
 fn encrypt_with_shared_secret(
-    shared_secret: &RequestSharedSecret,
+    shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
     let key = Key::from_slice(shared_secret.as_ref());
@@ -81,7 +81,7 @@ fn encrypt_with_shared_secret(
 }
 
 fn decrypt_with_shared_secret(
-    shared_secret: &RequestSharedSecret,
+    shared_secret: &SessionSharedSecret,
     ciphertext: &[u8],
 ) -> Result<Box<[u8]>, DecryptionError> {
     let nonce_size = <NonceSize as Unsigned>::to_usize();
@@ -109,7 +109,8 @@ pub enum FerveoVariant {
     PRECOMPUTED,
 }
 
-pub mod request_keys {
+/// Module for session key objects.
+pub mod session {
     use alloc::boxed::Box;
     use alloc::string::String;
     use core::fmt;
@@ -133,13 +134,13 @@ pub mod request_keys {
 
     /// A Diffie-Hellman shared secret
     #[derive(ZeroizeOnDrop)]
-    pub struct RequestSharedSecret {
+    pub struct SessionSharedSecret {
         shared_secret: SharedSecret,
         hashed_bytes: [u8; 32],
     }
 
     /// Implementation of Diffie-Hellman shared secret
-    impl RequestSharedSecret {
+    impl SessionSharedSecret {
         /// Create new shared secret from underlying library.
         pub fn new(shared_secret: SharedSecret) -> Self {
             let hash = Sha256::digest(shared_secret.as_bytes());
@@ -150,59 +151,59 @@ pub mod request_keys {
             }
         }
 
-        /// View this shared secret key as a byte array.
+        /// View this shared secret as a byte array.
         pub fn as_bytes(&self) -> &[u8; 32] {
             &self.hashed_bytes
         }
     }
 
-    impl AsRef<[u8]> for RequestSharedSecret {
-        /// View this shared secret key as a byte array.
+    impl AsRef<[u8]> for SessionSharedSecret {
+        /// View this shared secret as a byte array.
         fn as_ref(&self) -> &[u8] {
             self.as_bytes()
         }
     }
 
-    impl fmt::Display for RequestSharedSecret {
+    impl fmt::Display for SessionSharedSecret {
         /// Format shared secret information.
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "RequestSharedSecret...")
+            write!(f, "SessionSharedSecret...")
         }
     }
 
-    /// A request public key.
+    /// A session public key.
     #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Serialize, Deserialize)]
-    pub struct RequestPublicKey(PublicKey);
+    pub struct SessionStaticKey(PublicKey);
 
-    /// Implementation of request public key
-    impl RequestPublicKey {
+    /// Implementation of session static key
+    impl SessionStaticKey {
         /// Convert this public key to a byte array.
         pub fn to_bytes(&self) -> [u8; 32] {
             self.0.to_bytes()
         }
     }
 
-    impl AsRef<[u8]> for RequestPublicKey {
+    impl AsRef<[u8]> for SessionStaticKey {
         /// View this public key as a byte array.
         fn as_ref(&self) -> &[u8] {
             self.0.as_bytes()
         }
     }
 
-    impl fmt::Display for RequestPublicKey {
+    impl fmt::Display for SessionStaticKey {
         /// Format public key information.
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "RequestPublicKey: {}", hex::encode(&self.as_ref()[..8]))
+            write!(f, "SessionStaticKey: {}", hex::encode(&self.as_ref()[..8]))
         }
     }
 
-    impl<'a> ProtocolObjectInner<'a> for RequestPublicKey {
+    impl<'a> ProtocolObjectInner<'a> for SessionStaticKey {
         fn version() -> (u16, u16) {
             (1, 0)
         }
 
         fn brand() -> [u8; 4] {
-            *b"TRPk"
+            *b"TSSk"
         }
 
         fn unversioned_to_bytes(&self) -> Box<[u8]> {
@@ -221,23 +222,23 @@ pub mod request_keys {
         }
     }
 
-    impl<'a> ProtocolObject<'a> for RequestPublicKey {}
+    impl<'a> ProtocolObject<'a> for SessionStaticKey {}
 
-    /// A request secret key.
+    /// A session secret key.
     #[derive(ZeroizeOnDrop)]
-    pub struct RequestSecretKey(pub(crate) StaticSecret);
+    pub struct SessionStaticSecret(pub(crate) StaticSecret);
 
-    impl RequestSecretKey {
+    impl SessionStaticSecret {
         /// Perform diffie-hellman
         pub fn derive_shared_secret(
             &self,
-            their_public_key: &RequestPublicKey,
-        ) -> RequestSharedSecret {
+            their_public_key: &SessionStaticKey,
+        ) -> SessionSharedSecret {
             let shared_secret = self.0.diffie_hellman(&their_public_key.0);
-            RequestSharedSecret::new(shared_secret)
+            SessionSharedSecret::new(shared_secret)
         }
 
-        /// Create secret key from rng.
+        /// Create secret key from RNG.
         pub fn random_from_rng(csprng: &mut (impl RngCore + CryptoRng)) -> Self {
             let secret_key = StaticSecret::random_from_rng(csprng);
             Self(secret_key)
@@ -249,92 +250,92 @@ pub mod request_keys {
         }
 
         /// Returns a public key corresponding to this secret key.
-        pub fn public_key(&self) -> RequestPublicKey {
+        pub fn public_key(&self) -> SessionStaticKey {
             let public_key = PublicKey::from(&self.0);
-            RequestPublicKey(public_key)
+            SessionStaticKey(public_key)
         }
     }
 
-    impl fmt::Display for RequestSecretKey {
+    impl fmt::Display for SessionStaticSecret {
         /// Format information above secret key.
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "RequestSecretKey:...")
+            write!(f, "SessionStaticSecret:...")
         }
     }
 
-    type SecretKeyFactorySeedSize = U32; // the size of the seed material for key derivation
-    type RequestKeyFactoryDerivedKeySize = U32; // the size of the derived key
-    type RequestKeyFactorySeed = GenericArray<u8, SecretKeyFactorySeedSize>;
+    type SessionSecretFactorySeedSize = U32; // the size of the seed material for key derivation
+    type SessionSecretFactoryDerivedKeySize = U32; // the size of the derived key
+    type SessionSecretFactorySeed = GenericArray<u8, SessionSecretFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.
-    pub struct InvalidRequestFactorySeedLength;
+    pub struct InvalidSessionSecretFactorySeedLength;
 
-    impl fmt::Display for InvalidRequestFactorySeedLength {
+    impl fmt::Display for InvalidSessionSecretFactorySeedLength {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "Invalid seed length")
         }
     }
 
-    /// This class handles keyring material for request keys, by allowing deterministic
-    /// derivation of `RequestSecretKey` objects based on labels.
+    /// This class handles keyring material for session keys, by allowing deterministic
+    /// derivation of `SessionStaticSecret` objects based on labels.
     #[derive(Clone, ZeroizeOnDrop, PartialEq)]
-    pub struct RequestKeyFactory(SecretBox<RequestKeyFactorySeed>);
+    pub struct SessionSecretFactory(SecretBox<SessionSecretFactorySeed>);
 
-    impl RequestKeyFactory {
-        /// Creates a secret key factory using the given RNG.
+    impl SessionSecretFactory {
+        /// Creates a session secret factory using the given RNG.
         pub fn random_with_rng(rng: &mut (impl CryptoRng + RngCore)) -> Self {
-            let mut bytes = SecretBox::new(RequestKeyFactorySeed::default());
+            let mut bytes = SecretBox::new(SessionSecretFactorySeed::default());
             rng.fill_bytes(bytes.as_mut_secret());
             Self(bytes)
         }
 
-        /// Creates a secret key factory using the default RNG.
+        /// Creates a session secret factory using the default RNG.
         pub fn random() -> Self {
             Self::random_with_rng(&mut OsRng)
         }
 
         /// Returns the seed size required by
         pub fn seed_size() -> usize {
-            SecretKeyFactorySeedSize::to_usize()
+            SessionSecretFactorySeedSize::to_usize()
         }
 
-        /// Creates a RequestKeyFactory factory using the given random bytes.
+        /// Creates a `SessionSecretFactory` using the given random bytes.
         ///
         /// **Warning:** make sure the given seed has been obtained
         /// from a cryptographically secure source of randomness!
         pub fn from_secure_randomness(
             seed: &[u8],
-        ) -> Result<Self, InvalidRequestFactorySeedLength> {
+        ) -> Result<Self, InvalidSessionSecretFactorySeedLength> {
             if seed.len() != Self::seed_size() {
-                return Err(InvalidRequestFactorySeedLength);
+                return Err(InvalidSessionSecretFactorySeedLength);
             }
-            Ok(Self(SecretBox::new(*RequestKeyFactorySeed::from_slice(
+            Ok(Self(SecretBox::new(*SessionSecretFactorySeed::from_slice(
                 seed,
             ))))
         }
 
-        /// Creates a `RequestSecretKey` deterministically from the given label.
-        pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
-            let prefix = b"REQUEST_KEY_DERIVATION/";
+        /// Creates a `SessionStaticSecret` deterministically from the given label.
+        pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
+            let prefix = b"SESSION_KEY_DERIVATION/";
             let info = [prefix, label].concat();
-            let seed = kdf::<RequestKeyFactoryDerivedKeySize>(self.0.as_secret(), Some(&info));
+            let seed = kdf::<SessionSecretFactoryDerivedKeySize>(self.0.as_secret(), Some(&info));
             let mut rng =
                 ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
-            RequestSecretKey::random_from_rng(&mut rng)
+            SessionStaticSecret::random_from_rng(&mut rng)
         }
 
-        /// Creates a `RequestKeyFactory` deterministically from the given label.
+        /// Creates a `SessionSecretFactory` deterministically from the given label.
         pub fn make_factory(&self, label: &[u8]) -> Self {
-            let prefix = b"REQUEST_KEY_FACTORY_DERIVATION/";
+            let prefix = b"SESSION_SECRET_FACTORY_DERIVATION/";
             let info = [prefix, label].concat();
-            let derived_seed = kdf::<SecretKeyFactorySeedSize>(self.0.as_secret(), Some(&info));
+            let derived_seed = kdf::<SessionSecretFactorySeedSize>(self.0.as_secret(), Some(&info));
             Self(derived_seed)
         }
     }
 
-    impl fmt::Display for RequestKeyFactory {
+    impl fmt::Display for SessionSecretFactory {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "SecretKeyFactory:...")
+            write!(f, "SessionSecretFactory:...")
         }
     }
 }
@@ -375,8 +376,8 @@ impl ThresholdDecryptionRequest {
     /// Encrypts the decryption request.
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
-        requester_public_key: &RequestPublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> EncryptedThresholdDecryptionRequest {
         EncryptedThresholdDecryptionRequest::new(self, shared_secret, requester_public_key)
     }
@@ -413,7 +414,7 @@ pub struct EncryptedThresholdDecryptionRequest {
     pub ritual_id: u32,
 
     /// Public key of requester
-    pub requester_public_key: RequestPublicKey,
+    pub requester_public_key: SessionStaticKey,
 
     #[serde(with = "serde_bytes::as_base64")]
     /// Encrypted request
@@ -423,8 +424,8 @@ pub struct EncryptedThresholdDecryptionRequest {
 impl EncryptedThresholdDecryptionRequest {
     fn new(
         request: &ThresholdDecryptionRequest,
-        shared_secret: &RequestSharedSecret,
-        requester_public_key: &RequestPublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> Self {
         let ciphertext = encrypt_with_shared_secret(shared_secret, &request.to_bytes())
             .expect("encryption failed - out of memory?");
@@ -438,7 +439,7 @@ impl EncryptedThresholdDecryptionRequest {
     /// Decrypts the decryption request
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> Result<ThresholdDecryptionRequest, DecryptionError> {
         let decryption_request_bytes = decrypt_with_shared_secret(shared_secret, &self.ciphertext)?;
         let decryption_request = ThresholdDecryptionRequest::from_bytes(&decryption_request_bytes)
@@ -494,7 +495,7 @@ impl ThresholdDecryptionResponse {
     /// Encrypts the decryption response.
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse::new(self, shared_secret)
     }
@@ -535,7 +536,7 @@ pub struct EncryptedThresholdDecryptionResponse {
 }
 
 impl EncryptedThresholdDecryptionResponse {
-    fn new(response: &ThresholdDecryptionResponse, shared_secret: &RequestSharedSecret) -> Self {
+    fn new(response: &ThresholdDecryptionResponse, shared_secret: &SessionSharedSecret) -> Self {
         let ciphertext = encrypt_with_shared_secret(shared_secret, &response.to_bytes())
             .expect("encryption failed - out of memory?");
         Self {
@@ -547,7 +548,7 @@ impl EncryptedThresholdDecryptionResponse {
     /// Decrypts the decryption request
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> Result<ThresholdDecryptionResponse, DecryptionError> {
         let decryption_response_bytes =
             decrypt_with_shared_secret(shared_secret, &self.ciphertext)?;
@@ -588,22 +589,22 @@ mod tests {
 
     use crate::{
         Conditions, Context, EncryptedThresholdDecryptionRequest,
-        EncryptedThresholdDecryptionResponse, FerveoVariant, ProtocolObject, RequestKeyFactory,
+        EncryptedThresholdDecryptionResponse, FerveoVariant, ProtocolObject, SessionSecretFactory,
         ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
 
     use generic_array::typenum::Unsigned;
 
-    use crate::dkg::request_keys::RequestSecretKey;
+    use crate::dkg::session::SessionStaticSecret;
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
 
     #[test]
     fn decryption_with_shared_secret() {
-        let service_secret = RequestSecretKey::random();
+        let service_secret = SessionStaticSecret::random();
 
-        let requester_secret = RequestSecretKey::random();
+        let requester_secret = SessionStaticSecret::random();
         let requester_public_key = requester_secret.public_key();
 
         let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
@@ -620,7 +621,7 @@ mod tests {
 
     #[test]
     fn request_key_factory() {
-        let secret_factory = RequestKeyFactory::random();
+        let secret_factory = SessionSecretFactory::random();
 
         // ensure that shared secret derived from factory can be used correctly
         let label_1 = b"label_1".to_vec().into_boxed_slice();
@@ -649,7 +650,7 @@ mod tests {
         assert_eq!(requester_public_key, same_requester_public_key);
 
         // ensure different key generated using same seed but using different factory
-        let other_secret_factory = RequestKeyFactory::random();
+        let other_secret_factory = SessionSecretFactory::random();
         let not_same_requester_secret_key = other_secret_factory.make_key(&label_2.as_ref());
         let not_same_requester_public_key = not_same_requester_secret_key.public_key();
         assert_ne!(requester_public_key, not_same_requester_public_key);
@@ -670,11 +671,11 @@ mod tests {
 
         // test secure randomness
         let bytes = [0u8; 32];
-        let factory = RequestKeyFactory::from_secure_randomness(&bytes);
+        let factory = SessionSecretFactory::from_secure_randomness(&bytes);
         assert!(factory.is_ok());
 
         let bytes = [0u8; 31];
-        let factory = RequestKeyFactory::from_secure_randomness(&bytes);
+        let factory = SessionSecretFactory::from_secure_randomness(&bytes);
         assert!(factory.is_err());
     }
 
@@ -682,9 +683,9 @@ mod tests {
     fn threshold_decryption_request() {
         let ritual_id = 0;
 
-        let service_secret = RequestSecretKey::random();
+        let service_secret = SessionStaticSecret::random();
 
-        let requester_secret = RequestSecretKey::random();
+        let requester_secret = SessionStaticSecret::random();
         let requester_public_key = requester_secret.public_key();
 
         let dkg_pk = DkgPublicKey::random();
@@ -729,7 +730,7 @@ mod tests {
         assert_eq!(decrypted_request, request);
 
         // wrong shared key used
-        let random_secret_key = RequestSecretKey::random();
+        let random_secret_key = SessionStaticSecret::random();
         let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
         assert!(encrypted_request_from_bytes
             .decrypt(&random_shared_secret)
@@ -740,8 +741,8 @@ mod tests {
     fn threshold_decryption_response() {
         let ritual_id = 5;
 
-        let service_secret = RequestSecretKey::random();
-        let requester_secret = RequestSecretKey::random();
+        let service_secret = SessionStaticSecret::random();
+        let requester_secret = SessionStaticSecret::random();
 
         let decryption_share = b"The Tyranny of Merit";
 
@@ -777,7 +778,7 @@ mod tests {
         );
 
         // wrong shared key used
-        let random_secret_key = RequestSecretKey::random();
+        let random_secret_key = SessionStaticSecret::random();
         let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
         assert!(encrypted_response_from_bytes
             .decrypt(&random_shared_secret)

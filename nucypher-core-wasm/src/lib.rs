@@ -543,22 +543,22 @@ impl EncryptedTreasureMap {
 }
 
 //
-// Request Keys
+// Session Keys
 //
 
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct RequestSharedSecret(nucypher_core::RequestSharedSecret);
+pub struct SessionSharedSecret(nucypher_core::SessionSharedSecret);
 
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct RequestPublicKey(nucypher_core::RequestPublicKey);
+pub struct SessionStaticKey(nucypher_core::SessionStaticKey);
 
 #[wasm_bindgen]
-impl RequestPublicKey {
+impl SessionStaticKey {
     #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<RequestPublicKey, Error> {
-        from_bytes::<_, nucypher_core::RequestPublicKey>(data)
+    pub fn from_bytes(data: &[u8]) -> Result<SessionStaticKey, Error> {
+        from_bytes::<_, nucypher_core::SessionStaticKey>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -572,31 +572,31 @@ impl RequestPublicKey {
         format!("{}", self.0)
     }
 
-    pub fn equals(&self, other: &RequestPublicKey) -> bool {
+    pub fn equals(&self, other: &SessionStaticKey) -> bool {
         self.0 == other.0
     }
 }
 
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct RequestSecretKey(nucypher_core::RequestSecretKey);
+pub struct SessionStaticSecret(nucypher_core::SessionStaticSecret);
 
 #[wasm_bindgen]
-impl RequestSecretKey {
+impl SessionStaticSecret {
     /// Generates a secret key using the default RNG and returns it.
     pub fn random() -> Self {
-        Self(nucypher_core::RequestSecretKey::random())
+        Self(nucypher_core::SessionStaticSecret::random())
     }
 
     /// Generates a secret key using the default RNG and returns it.
     #[wasm_bindgen(js_name = publicKey)]
-    pub fn public_key(&self) -> RequestPublicKey {
-        RequestPublicKey(self.0.public_key())
+    pub fn public_key(&self) -> SessionStaticKey {
+        SessionStaticKey(self.0.public_key())
     }
 
-    #[wasm_bindgen(js_name = diffieHellman)]
-    pub fn derive_shared_secret(&self, their_public_key: &RequestPublicKey) -> RequestSharedSecret {
-        RequestSharedSecret(self.0.derive_shared_secret(their_public_key.as_ref()))
+    #[wasm_bindgen(js_name = deriveSharedSecret)]
+    pub fn derive_shared_secret(&self, their_public_key: &SessionStaticKey) -> SessionSharedSecret {
+        SessionSharedSecret(self.0.derive_shared_secret(their_public_key.as_ref()))
     }
 
     #[allow(clippy::inherent_to_string)]
@@ -607,30 +607,30 @@ impl RequestSecretKey {
 }
 
 #[wasm_bindgen]
-pub struct RequestKeyFactory(nucypher_core::RequestKeyFactory);
+pub struct SessionSecretFactory(nucypher_core::SessionSecretFactory);
 
 #[wasm_bindgen]
-impl RequestKeyFactory {
+impl SessionSecretFactory {
     /// Generates a secret key factory using the default RNG and returns it.
     pub fn random() -> Self {
-        Self(nucypher_core::RequestKeyFactory::random())
+        Self(nucypher_core::SessionSecretFactory::random())
     }
 
     #[wasm_bindgen(js_name = seedSize)]
     pub fn seed_size() -> usize {
-        nucypher_core::RequestKeyFactory::seed_size()
+        nucypher_core::SessionSecretFactory::seed_size()
     }
 
     #[wasm_bindgen(js_name = fromSecureRandomness)]
-    pub fn from_secure_randomness(seed: &[u8]) -> Result<RequestKeyFactory, Error> {
-        nucypher_core::RequestKeyFactory::from_secure_randomness(seed)
+    pub fn from_secure_randomness(seed: &[u8]) -> Result<SessionSecretFactory, Error> {
+        nucypher_core::SessionSecretFactory::from_secure_randomness(seed)
             .map(Self)
             .map_err(map_js_err)
     }
 
     #[wasm_bindgen(js_name = makeKey)]
-    pub fn make_key(&self, label: &[u8]) -> RequestSecretKey {
-        RequestSecretKey(self.0.make_key(label))
+    pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
+        SessionStaticSecret(self.0.make_key(label))
     }
 
     #[wasm_bindgen(js_name = makeFactory)]
@@ -701,8 +701,8 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
-        requester_public_key: &RequestPublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> EncryptedThresholdDecryptionRequest {
         EncryptedThresholdDecryptionRequest(
             self.0
@@ -737,13 +737,13 @@ impl EncryptedThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter, js_name = requesterPublicKey)]
-    pub fn requester_public_key(&self) -> RequestPublicKey {
-        RequestPublicKey::from(self.0.requester_public_key)
+    pub fn requester_public_key(&self) -> SessionStaticKey {
+        SessionStaticKey::from(self.0.requester_public_key)
     }
 
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> Result<ThresholdDecryptionRequest, Error> {
         self.0
             .decrypt(shared_secret.as_ref())
@@ -795,7 +795,7 @@ impl ThresholdDecryptionResponse {
 
     pub fn encrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
@@ -830,7 +830,7 @@ impl EncryptedThresholdDecryptionResponse {
 
     pub fn decrypt(
         &self,
-        shared_secret: &RequestSharedSecret,
+        shared_secret: &SessionSharedSecret,
     ) -> Result<ThresholdDecryptionResponse, Error> {
         self.0
             .decrypt(shared_secret.as_ref())

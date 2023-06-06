@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Re-exported `ferveo` Python and WASM bindings. ([#58])
-- Added `RequestSharedSecret`, `RequestPublicKey`, `RequestSecretKey`, `RequestKeyFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
+- Added `SessionSharedSecret`, `SessionStaticKey`, `SessionStaticSecret`, `SessionSecretFactory` as wrappers for underlying Curve 25519 key functionality. ([#54])
 - Added Rust `pre-commit` hooks for repos. ([#54])
 - Added `secret_box` functionality. ([#54])
 

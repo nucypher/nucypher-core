@@ -28,7 +28,7 @@ pub struct VerificationError;
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
-    request_keys::{RequestKeyFactory, RequestPublicKey, RequestSecretKey, RequestSharedSecret},
+    session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
     DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
     EncryptionError, FerveoVariant, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
 };
