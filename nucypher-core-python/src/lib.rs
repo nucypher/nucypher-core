@@ -633,6 +633,116 @@ impl ReencryptionResponse {
 }
 
 //
+// Session Keys
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SessionSharedSecret {
+    backend: nucypher_core::SessionSharedSecret,
+}
+
+#[pyclass(module = "nucypher_core")]
+#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::AsRef)]
+pub struct SessionStaticKey {
+    backend: nucypher_core::SessionStaticKey,
+}
+
+#[pymethods]
+impl SessionStaticKey {
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::SessionStaticKey>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
+        richcmp(self, other, op)
+    }
+
+    fn __hash__(&self) -> PyResult<isize> {
+        hash("SessionStaticKey", self)
+    }
+
+    fn __str__(&self) -> PyResult<String> {
+        Ok(format!("{}", self.backend))
+    }
+}
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SessionStaticSecret {
+    backend: nucypher_core::SessionStaticSecret,
+}
+
+#[pymethods]
+impl SessionStaticSecret {
+    #[staticmethod]
+    pub fn random() -> PyResult<Self> {
+        Ok(Self {
+            backend: nucypher_core::SessionStaticSecret::random(),
+        })
+    }
+
+    pub fn public_key(&self) -> SessionStaticKey {
+        SessionStaticKey {
+            backend: self.backend.public_key(),
+        }
+    }
+
+    pub fn derive_shared_secret(&self, their_public_key: &SessionStaticKey) -> SessionSharedSecret {
+        SessionSharedSecret {
+            backend: self.backend.derive_shared_secret(their_public_key.as_ref()),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.backend.to_string()
+    }
+}
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SessionSecretFactory {
+    backend: nucypher_core::SessionSecretFactory,
+}
+
+#[pymethods]
+impl SessionSecretFactory {
+    #[staticmethod]
+    pub fn random() -> PyResult<Self> {
+        Ok(Self {
+            backend: nucypher_core::SessionSecretFactory::random(),
+        })
+    }
+
+    #[staticmethod]
+    pub fn seed_size() -> usize {
+        nucypher_core::SessionSecretFactory::seed_size()
+    }
+
+    #[staticmethod]
+    pub fn from_secure_randomness(seed: &[u8]) -> PyResult<Self> {
+        let factory = nucypher_core::SessionSecretFactory::from_secure_randomness(seed)
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(Self { backend: factory })
+    }
+
+    pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
+        SessionStaticSecret {
+            backend: self.backend.make_key(label),
+        }
+    }
+
+    fn __str__(&self) -> String {
+        self.backend.to_string()
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 
@@ -646,7 +756,7 @@ pub struct ThresholdDecryptionRequest {
 impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
-        ritual_id: u16,
+        ritual_id: u32,
         variant: u8,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
@@ -676,7 +786,7 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 
@@ -713,51 +823,20 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        request_encrypting_key: &PublicKey,
-        response_encrypting_key: &PublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> EncryptedThresholdDecryptionRequest {
+        let encrypted_request = self
+            .backend
+            .encrypt(shared_secret.as_ref(), requester_public_key.as_ref());
         EncryptedThresholdDecryptionRequest {
-            backend: self.backend.encrypt(
-                request_encrypting_key.as_ref(),
-                response_encrypting_key.as_ref(),
-            ),
+            backend: encrypted_request,
         }
     }
 
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
-    }
-
-    fn __bytes__(&self) -> PyObject {
-        to_bytes(self)
-    }
-}
-
-//
-// E2EThresholdDecryptionRequest
-//
-#[pyclass(module = "nucypher_core")]
-#[derive(derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest {
-    backend: nucypher_core::E2EThresholdDecryptionRequest,
-}
-
-#[pymethods]
-impl E2EThresholdDecryptionRequest {
-    #[getter]
-    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
-        self.backend.decryption_request.clone().into()
-    }
-
-    #[getter]
-    pub fn response_encrypting_key(&self) -> PublicKey {
-        self.backend.response_encrypting_key.into()
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -778,14 +857,22 @@ pub struct EncryptedThresholdDecryptionRequest {
 #[pymethods]
 impl EncryptedThresholdDecryptionRequest {
     #[getter]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.backend.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<E2EThresholdDecryptionRequest> {
+    #[getter]
+    pub fn requester_public_key(&self) -> SessionStaticKey {
+        self.backend.requester_public_key.into()
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> PyResult<ThresholdDecryptionRequest> {
         self.backend
-            .decrypt(sk.as_ref())
-            .map(E2EThresholdDecryptionRequest::from)
+            .decrypt(shared_secret.as_ref())
+            .map(ThresholdDecryptionRequest::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
 
@@ -812,10 +899,15 @@ pub struct ThresholdDecryptionResponse {
 #[pymethods]
 impl ThresholdDecryptionResponse {
     #[new]
-    pub fn new(decryption_share: &[u8]) -> Self {
+    pub fn new(ritual_id: u32, decryption_share: &[u8]) -> Self {
         ThresholdDecryptionResponse {
-            backend: nucypher_core::ThresholdDecryptionResponse::new(decryption_share),
+            backend: nucypher_core::ThresholdDecryptionResponse::new(ritual_id, decryption_share),
         }
+    }
+
+    #[getter]
+    pub fn ritual_id(&self) -> u32 {
+        self.backend.ritual_id
     }
 
     #[getter]
@@ -823,9 +915,12 @@ impl ThresholdDecryptionResponse {
         self.backend.decryption_share.as_ref()
     }
 
-    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionResponse {
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse {
-            backend: self.backend.encrypt(encrypting_key.as_ref()),
+            backend: self.backend.encrypt(shared_secret.as_ref()),
         }
     }
 
@@ -851,9 +946,17 @@ pub struct EncryptedThresholdDecryptionResponse {
 
 #[pymethods]
 impl EncryptedThresholdDecryptionResponse {
-    pub fn decrypt(&self, sk: &SecretKey) -> PyResult<ThresholdDecryptionResponse> {
+    #[getter]
+    pub fn ritual_id(&self) -> u32 {
+        self.backend.ritual_id
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> PyResult<ThresholdDecryptionResponse> {
         self.backend
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map(ThresholdDecryptionResponse::from)
             .map_err(|err| PyValueError::new_err(format!("{}", err)))
     }
@@ -1334,10 +1437,13 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<MetadataResponsePayload>()?;
     core_module.add_class::<MetadataResponse>()?;
     core_module.add_class::<ThresholdDecryptionRequest>()?;
-    core_module.add_class::<E2EThresholdDecryptionRequest>()?;
     core_module.add_class::<ThresholdDecryptionResponse>()?;
     core_module.add_class::<EncryptedThresholdDecryptionRequest>()?;
     core_module.add_class::<EncryptedThresholdDecryptionResponse>()?;
+    core_module.add_class::<SessionSharedSecret>()?;
+    core_module.add_class::<SessionStaticKey>()?;
+    core_module.add_class::<SessionStaticSecret>()?;
+    core_module.add_class::<SessionSecretFactory>()?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;

@@ -543,6 +543,104 @@ impl EncryptedTreasureMap {
 }
 
 //
+// Session Keys
+//
+
+#[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SessionSharedSecret(nucypher_core::SessionSharedSecret);
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct SessionStaticKey(nucypher_core::SessionStaticKey);
+
+#[wasm_bindgen]
+impl SessionStaticKey {
+    #[wasm_bindgen(js_name = fromBytes)]
+    pub fn from_bytes(data: &[u8]) -> Result<SessionStaticKey, Error> {
+        from_bytes::<_, nucypher_core::SessionStaticKey>(data)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    pub fn equals(&self, other: &SessionStaticKey) -> bool {
+        self.0 == other.0
+    }
+}
+
+#[wasm_bindgen]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SessionStaticSecret(nucypher_core::SessionStaticSecret);
+
+#[wasm_bindgen]
+impl SessionStaticSecret {
+    /// Generates a secret key using the default RNG and returns it.
+    pub fn random() -> Self {
+        Self(nucypher_core::SessionStaticSecret::random())
+    }
+
+    /// Generates a secret key using the default RNG and returns it.
+    #[wasm_bindgen(js_name = publicKey)]
+    pub fn public_key(&self) -> SessionStaticKey {
+        SessionStaticKey(self.0.public_key())
+    }
+
+    #[wasm_bindgen(js_name = deriveSharedSecret)]
+    pub fn derive_shared_secret(&self, their_public_key: &SessionStaticKey) -> SessionSharedSecret {
+        SessionSharedSecret(self.0.derive_shared_secret(their_public_key.as_ref()))
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+}
+
+#[wasm_bindgen]
+pub struct SessionSecretFactory(nucypher_core::SessionSecretFactory);
+
+#[wasm_bindgen]
+impl SessionSecretFactory {
+    /// Generates a secret key factory using the default RNG and returns it.
+    pub fn random() -> Self {
+        Self(nucypher_core::SessionSecretFactory::random())
+    }
+
+    #[wasm_bindgen(js_name = seedSize)]
+    pub fn seed_size() -> usize {
+        nucypher_core::SessionSecretFactory::seed_size()
+    }
+
+    #[wasm_bindgen(js_name = fromSecureRandomness)]
+    pub fn from_secure_randomness(seed: &[u8]) -> Result<SessionSecretFactory, Error> {
+        nucypher_core::SessionSecretFactory::from_secure_randomness(seed)
+            .map(Self)
+            .map_err(map_js_err)
+    }
+
+    #[wasm_bindgen(js_name = makeKey)]
+    pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
+        SessionStaticSecret(self.0.make_key(label))
+    }
+
+    #[allow(clippy::inherent_to_string)]
+    #[wasm_bindgen(js_name = toString)]
+    pub fn to_string(&self) -> String {
+        format!("{}", self.0)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 
@@ -554,7 +652,7 @@ pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest)
 impl ThresholdDecryptionRequest {
     #[wasm_bindgen(constructor)]
     pub fn new(
-        id: u16,
+        ritual_id: u32,
         variant: u8,
         ciphertext: &Ciphertext,
         conditions: &OptionConditions,
@@ -570,7 +668,7 @@ impl ThresholdDecryptionRequest {
         };
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
-            id,
+            ritual_id,
             ciphertext.as_ref(),
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
@@ -579,7 +677,7 @@ impl ThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 
@@ -598,13 +696,13 @@ impl ThresholdDecryptionRequest {
 
     pub fn encrypt(
         &self,
-        request_encrypting_key: &PublicKey,
-        response_encrypting_key: &PublicKey,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
     ) -> EncryptedThresholdDecryptionRequest {
-        EncryptedThresholdDecryptionRequest(self.0.encrypt(
-            request_encrypting_key.as_ref(),
-            response_encrypting_key.as_ref(),
-        ))
+        EncryptedThresholdDecryptionRequest(
+            self.0
+                .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
+        )
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -619,37 +717,6 @@ impl ThresholdDecryptionRequest {
 }
 
 //
-// E2EThresholdDecryptionRequest
-//
-
-#[wasm_bindgen]
-#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct E2EThresholdDecryptionRequest(nucypher_core::E2EThresholdDecryptionRequest);
-
-#[wasm_bindgen]
-impl E2EThresholdDecryptionRequest {
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<E2EThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::E2EThresholdDecryptionRequest>(data)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
-
-    #[wasm_bindgen(getter, js_name = decryptionRequest)]
-    pub fn decryption_request(&self) -> ThresholdDecryptionRequest {
-        ThresholdDecryptionRequest::from(self.0.decryption_request.clone())
-    }
-
-    #[wasm_bindgen(getter, js_name = responseEncryptingKey)]
-    pub fn response_encrypting_key(&self) -> PublicKey {
-        PublicKey::from(self.0.response_encrypting_key)
-    }
-}
-
-//
 // EncryptedThresholdDecryptionRequest
 //
 
@@ -660,15 +727,23 @@ pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThreshold
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
     #[wasm_bindgen(getter, js_name = ritualId)]
-    pub fn ritual_id(&self) -> u16 {
+    pub fn ritual_id(&self) -> u32 {
         self.0.ritual_id
     }
 
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<E2EThresholdDecryptionRequest, Error> {
+    #[wasm_bindgen(getter, js_name = requesterPublicKey)]
+    pub fn requester_public_key(&self) -> SessionStaticKey {
+        SessionStaticKey::from(self.0.requester_public_key)
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<ThresholdDecryptionRequest, Error> {
         self.0
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
-            .map(E2EThresholdDecryptionRequest)
+            .map(ThresholdDecryptionRequest)
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -693,10 +768,19 @@ pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionRespons
 #[wasm_bindgen]
 impl ThresholdDecryptionResponse {
     #[wasm_bindgen(constructor)]
-    pub fn new(decryption_share: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
+    pub fn new(
+        ritual_id: u32,
+        decryption_share: &[u8],
+    ) -> Result<ThresholdDecryptionResponse, Error> {
         Ok(Self(nucypher_core::ThresholdDecryptionResponse::new(
+            ritual_id,
             decryption_share,
         )))
+    }
+
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u32 {
+        self.0.ritual_id
     }
 
     #[wasm_bindgen(getter, js_name = decryptionShare)]
@@ -704,8 +788,11 @@ impl ThresholdDecryptionResponse {
         self.0.decryption_share.clone()
     }
 
-    pub fn encrypt(&self, encrypting_key: &PublicKey) -> EncryptedThresholdDecryptionResponse {
-        EncryptedThresholdDecryptionResponse(self.0.encrypt(encrypting_key.as_ref()))
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdDecryptionResponse {
+        EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
 
     #[wasm_bindgen(js_name = fromBytes)]
@@ -731,9 +818,17 @@ pub struct EncryptedThresholdDecryptionResponse(
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
-    pub fn decrypt(&self, sk: &SecretKey) -> Result<ThresholdDecryptionResponse, Error> {
+    #[wasm_bindgen(getter, js_name = ritualId)]
+    pub fn ritual_id(&self) -> u32 {
+        self.0.ritual_id
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<ThresholdDecryptionResponse, Error> {
         self.0
-            .decrypt(sk.as_ref())
+            .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
             .map(ThresholdDecryptionResponse)
     }

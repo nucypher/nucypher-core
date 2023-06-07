@@ -423,7 +423,7 @@ class ThresholdDecryptionRequest:
 
     ciphertext: Ciphertext
 
-    def encrypt(self, request_encrypting_key: PublicKey, response_encrypting_key: PublicKey) -> EncryptedThresholdDecryptionRequest:
+    def encrypt(self, shared_secret: SessionSharedSecret, requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -434,27 +434,15 @@ class ThresholdDecryptionRequest:
         ...
 
 
-class E2EThresholdDecryptionRequest:
-
-    decryption_request: ThresholdDecryptionRequest
-
-    response_encrypting_key: PublicKey
-
-    @staticmethod
-    def from_bytes(data: bytes) -> E2EThresholdDecryptionRequest:
-        ...
-
-    def __bytes__(self) -> bytes:
-        ...
-
-
 class EncryptedThresholdDecryptionRequest:
     ritual_id: int
 
+    requester_public_key: SessionStaticKey
+
     def decrypt(
         self,
-        sk: SecretKey
-    ) -> E2EThresholdDecryptionRequest:
+        shared_secret: SessionSharedSecret
+    ) -> ThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -467,12 +455,14 @@ class EncryptedThresholdDecryptionRequest:
 
 class ThresholdDecryptionResponse:
 
-    def __init__(self, decryption_share: bytes):
+    def __init__(self, ritual_id: int, decryption_share: bytes):
         ...
 
     decryption_share: bytes
 
-    def encrypt(self, encrypting_key: PublicKey) -> EncryptedThresholdDecryptionResponse:
+    ritual_id: int
+
+    def encrypt(self, shared_secret: SessionSharedSecret) -> EncryptedThresholdDecryptionResponse:
         ...
 
     @staticmethod
@@ -485,9 +475,11 @@ class ThresholdDecryptionResponse:
 
 class EncryptedThresholdDecryptionResponse:
 
+    ritual_id: int
+
     def decrypt(
         self,
-        sk: SecretKey
+        shared_secret: SessionSharedSecret
     ) -> ThresholdDecryptionResponse:
         ...
 
@@ -496,4 +488,49 @@ class EncryptedThresholdDecryptionResponse:
         ...
 
     def __bytes__(self) -> bytes:
+        ...
+
+
+class SessionSharedSecret:
+    ...
+
+
+class SessionStaticKey:
+
+    @staticmethod
+    def from_bytes(data: bytes) -> SessionStaticKey:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class SessionStaticSecret:
+
+    @staticmethod
+    def random() -> SessionStaticSecret:
+        ...
+
+    def public_key(self) -> SessionStaticKey:
+        ...
+
+    def derive_shared_secret(self, their_public_key: SessionStaticKey) -> SessionSharedSecret:
+        ...
+
+
+class SessionSecretFactory:
+
+    @staticmethod
+    def random() -> SessionSecretFactory:
+        ...
+
+    @staticmethod
+    def seed_size() -> int:
+        ...
+
+    @staticmethod
+    def from_secure_randomness(seed: bytes) -> SessionSecretFactory:
+        ...
+
+    def make_key(self, label: bytes) -> SessionStaticSecret:
         ...
