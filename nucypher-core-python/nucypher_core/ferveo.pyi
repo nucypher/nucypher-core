@@ -11,7 +11,7 @@ class Keypair:
         ...
 
     @staticmethod
-    def secure_randomness_size(data: bytes) -> int:
+    def secure_randomness_size() -> int:
         ...
 
     @staticmethod
