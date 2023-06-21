@@ -1,4 +1,5 @@
 use alloc::string::String;
+use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +26,12 @@ impl From<String> for Conditions {
     }
 }
 
+impl fmt::Display for Conditions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Conditions({})", self.0)
+    }
+}
+
 /// Context for reencryption conditions.
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct Context(String);
@@ -45,5 +52,11 @@ impl AsRef<str> for Context {
 impl From<String> for Context {
     fn from(source: String) -> Self {
         Self(source)
+    }
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Context({})", self.0)
     }
 }

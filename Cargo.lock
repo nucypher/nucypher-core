@@ -912,6 +912,7 @@ dependencies = [
  "console_error_panic_hook",
  "derive_more",
  "ferveo-pre-release",
+ "hex",
  "js-sys",
  "nucypher-core",
  "umbral-pre",
