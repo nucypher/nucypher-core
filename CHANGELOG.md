@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Custom (de)serialization of `SessionStaticKey` to bytestring instead of vector of integers. ([#63])
+- Replaced raw tuples with `ValidatorMessage` in Python bindings. ([#65])
 - Removed `DkgPublicParams` from bindings. ([#66])
 
 
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#56]: https://github.com/nucypher/nucypher-core/pull/56
 [#61]: https://github.com/nucypher/nucypher-core/pull/61
 [#63]: https://github.com/nucypher/nucypher-core/pull/63
+[#65]: https://github.com/nucypher/nucypher-core/pull/65
 [#66]: https://github.com/nucypher/nucypher-core/pull/66
 
 
