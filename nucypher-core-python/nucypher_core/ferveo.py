@@ -16,7 +16,6 @@ DecryptionShareSimple = _ferveo.DecryptionShareSimple
 DecryptionSharePrecomputed = _ferveo.DecryptionSharePrecomputed
 AggregatedTranscript = _ferveo.AggregatedTranscript
 DkgPublicKey = _ferveo.DkgPublicKey
-DkgPublicParameters = _ferveo.DkgPublicParameters
 SharedSecret = _ferveo.SharedSecret
 ThresholdEncryptionError = _ferveo.ThresholdEncryptionError
 InvalidShareNumberParameter = _ferveo.InvalidShareNumberParameter
