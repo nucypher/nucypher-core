@@ -10,6 +10,7 @@ decrypt_with_shared_secret = _ferveo.decrypt_with_shared_secret
 
 Validator = _ferveo.Validator
 Transcript = _ferveo.Transcript
+ValidatorMessage = _ferveo.ValidatorMessage
 Dkg = _ferveo.Dkg
 Ciphertext = _ferveo.Ciphertext
 DecryptionShareSimple = _ferveo.DecryptionShareSimple
