@@ -4,22 +4,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## 0.9.1 - Unreleased
+## 0.10.0 - Unreleased
 
 ### Changed
 
-- Removed `DkgPublicParams` from bindings. ([ferveo#127])
+- Custom (de)serialization of `SessionStaticKey` to bytestring instead of vector of integers. ([#63])
+- Removed `DkgPublicParams` from bindings. ([#66])
 
-### Fixed
-
-- Fixed a typo in the Python type stubs for `ferveo.Keypair.secure_randomness_size()`. ([#61])
 
 ### Added
 
 - Added `equals` method to protocol objects in WASM bindings ([#56])
 
-[ferveo#127]: https://github.com/nucypher/nucypher-core/pull/127
+
+### Fixed
+
+- Fixed a typo in the Python type stubs for `ferveo.Keypair.secure_randomness_size()`. ([#61])
+
+
+[#56]: https://github.com/nucypher/nucypher-core/pull/56
 [#61]: https://github.com/nucypher/nucypher-core/pull/61
+[#63]: https://github.com/nucypher/nucypher-core/pull/63
+[#66]: https://github.com/nucypher/nucypher-core/pull/66
 
 
 ## [0.9.0] - 2023-6-23

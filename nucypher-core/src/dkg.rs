@@ -121,7 +121,8 @@ pub mod session {
     use rand::SeedableRng;
     use rand_chacha::ChaCha20Rng;
     use rand_core::{CryptoRng, OsRng, RngCore};
-    use serde::{Deserialize, Serialize};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use umbral_pre::serde_bytes;
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
 
     use crate::secret_box::{kdf, SecretBox};
@@ -168,7 +169,7 @@ pub mod session {
     }
 
     /// A session public key.
-    #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Serialize, Deserialize)]
+    #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
     pub struct SessionStaticKey(PublicKey);
 
     /// Implementation of session static key
@@ -193,9 +194,35 @@ pub mod session {
         }
     }
 
+    impl Serialize for SessionStaticKey {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            serde_bytes::as_hex::serialize(self.0.as_bytes(), serializer)
+        }
+    }
+
+    impl serde_bytes::TryFromBytes for SessionStaticKey {
+        type Error = core::array::TryFromSliceError;
+        fn try_from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
+            let array: [u8; 32] = bytes.try_into()?;
+            Ok(SessionStaticKey(PublicKey::from(array)))
+        }
+    }
+
+    impl<'a> Deserialize<'a> for SessionStaticKey {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'a>,
+        {
+            serde_bytes::as_hex::deserialize(deserializer)
+        }
+    }
+
     impl<'a> ProtocolObjectInner<'a> for SessionStaticKey {
         fn version() -> (u16, u16) {
-            (1, 0)
+            (2, 0)
         }
 
         fn brand() -> [u8; 4] {
@@ -579,7 +606,7 @@ mod tests {
     use crate::{
         Conditions, Context, EncryptedThresholdDecryptionRequest,
         EncryptedThresholdDecryptionResponse, FerveoVariant, ProtocolObject, SessionSecretFactory,
-        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+        SessionStaticKey, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
 
     use generic_array::typenum::Unsigned;
@@ -589,6 +616,7 @@ mod tests {
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
+    use crate::versioning::ProtocolObjectInner;
 
     #[test]
     fn decryption_with_shared_secret() {
@@ -669,6 +697,30 @@ mod tests {
         let bytes = [0u8; 31];
         let factory = SessionSecretFactory::from_secure_randomness(&bytes);
         assert!(factory.is_err());
+    }
+
+    #[test]
+    fn session_static_key() {
+        let public_key_1: SessionStaticKey = SessionStaticSecret::random().public_key();
+        let public_key_2: SessionStaticKey = SessionStaticSecret::random().public_key();
+
+        let public_key_1_bytes = public_key_1.unversioned_to_bytes();
+        let public_key_2_bytes = public_key_2.unversioned_to_bytes();
+
+        // serialized public keys should always have the same length
+        assert_eq!(public_key_1_bytes.len(), public_key_2_bytes.len());
+
+        let deserialized_public_key_1 =
+            SessionStaticKey::unversioned_from_bytes(0, &public_key_1_bytes)
+                .unwrap()
+                .unwrap();
+        let deserialized_public_key_2 =
+            SessionStaticKey::unversioned_from_bytes(0, &public_key_2_bytes)
+                .unwrap()
+                .unwrap();
+
+        assert_eq!(public_key_1, deserialized_public_key_1);
+        assert_eq!(public_key_2, deserialized_public_key_2);
     }
 
     #[test]
