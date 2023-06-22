@@ -505,7 +505,7 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
+source = "git+https://github.com/nucypher/ferveo.git?rev=0d4e973e007b16cff34d649ae107608c809349af#0d4e973e007b16cff34d649ae107608c809349af"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "ferveo-pre-release"
 version = "0.1.0-alpha.8"
-source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
+source = "git+https://github.com/nucypher/ferveo.git?rev=0d4e973e007b16cff34d649ae107608c809349af#0d4e973e007b16cff34d649ae107608c809349af"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -634,7 +634,7 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
+source = "git+https://github.com/nucypher/ferveo.git?rev=0d4e973e007b16cff34d649ae107608c809349af#0d4e973e007b16cff34d649ae107608c809349af"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1399,7 +1399,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
+source = "git+https://github.com/nucypher/ferveo.git?rev=0d4e973e007b16cff34d649ae107608c809349af#0d4e973e007b16cff34d649ae107608c809349af"
 dependencies = [
  "anyhow",
  "ark-ec",

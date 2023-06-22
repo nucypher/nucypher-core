@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple
+from typing import Sequence
 
 
 class Keypair:
@@ -65,6 +65,19 @@ class DkgPublicKey:
         ...
 
 
+class ValidatorMessage:
+
+    def __init__(
+            self,
+            validator: Validator,
+            transcript: Transcript,
+    ):
+        ...
+
+    validator: Validator
+    transcript: Transcript
+
+
 class Dkg:
 
     def __init__(
@@ -82,7 +95,7 @@ class Dkg:
     def generate_transcript(self) -> Transcript:
         ...
 
-    def aggregate_transcripts(self, messages: Sequence[Tuple[Validator, Transcript]]) -> AggregatedTranscript:
+    def aggregate_transcripts(self, messages: Sequence[ValidatorMessage]) -> AggregatedTranscript:
         ...
 
 
@@ -115,10 +128,10 @@ class DecryptionSharePrecomputed:
 
 class AggregatedTranscript:
 
-    def __init__(self, messages: Sequence[Tuple[Validator, Transcript]]):
+    def __init__(self, messages: Sequence[ValidatorMessage]):
         ...
 
-    def verify(self, shares_num: int, messages: Sequence[Tuple[Validator, Transcript]]) -> bool:
+    def verify(self, shares_num: int, messages: Sequence[ValidatorMessage]) -> bool:
         ...
 
     def create_decryption_share_simple(
