@@ -123,7 +123,7 @@ macro_rules! generate_to_bytes {
         impl $struct_name {
             #[wasm_bindgen(js_name = "toBytes")]
             pub fn to_bytes(&self) -> Box<[u8]> {
-                to_bytes(&self)
+                to_bytes(self)
             }
         }
     };
