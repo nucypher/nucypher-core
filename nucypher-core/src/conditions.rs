@@ -28,7 +28,7 @@ impl From<String> for Conditions {
 
 impl fmt::Display for Conditions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Conditions({})", self.0)
+        write!(f, "{}", self.0)
     }
 }
 
@@ -57,6 +57,6 @@ impl From<String> for Context {
 
 impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Context({})", self.0)
+        write!(f, "{}", self.0)
     }
 }
