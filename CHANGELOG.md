@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed a typo in the Python type stubs for `ferveo.Keypair.secure_randomness_size()`. ([#61])
 
+### Added
+
+- Added `equals` method to protocol objects in WASM bindings ([#56])
 
 [ferveo#127]: https://github.com/nucypher/nucypher-core/pull/127
 [#61]: https://github.com/nucypher/nucypher-core/pull/61
@@ -39,8 +42,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 [#53]: https://github.com/nucypher/nucypher-core/pull/53
-[#58]: https://github.com/nucypher/nucypher-core/pull/58
 [#54]: https://github.com/nucypher/nucypher-core/pull/54
+[#56]: https://github.com/nucypher/nucypher-core/pull/56
+[#58]: https://github.com/nucypher/nucypher-core/pull/58
 
 
 ## [0.8.0] - 2023-05-23

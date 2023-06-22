@@ -105,6 +105,55 @@ where
         .unchecked_into::<T>()
 }
 
+macro_rules! generate_from_bytes {
+    ($struct_name:ident) => {
+        #[wasm_bindgen]
+        impl $struct_name {
+            #[wasm_bindgen(js_name = "fromBytes")]
+            pub fn from_bytes(bytes: &[u8]) -> Result<$struct_name, Error> {
+                from_bytes(bytes).map(Self)
+            }
+        }
+    };
+}
+
+macro_rules! generate_to_bytes {
+    ($struct_name:ident) => {
+        #[wasm_bindgen]
+        impl $struct_name {
+            #[wasm_bindgen(js_name = "toBytes")]
+            pub fn to_bytes(&self) -> Box<[u8]> {
+                to_bytes(self)
+            }
+        }
+    };
+}
+
+macro_rules! generate_equals {
+    ($struct_name:ident) => {
+        #[wasm_bindgen]
+        impl $struct_name {
+            #[wasm_bindgen]
+            pub fn equals(&self, other: &$struct_name) -> bool {
+                self.0 == other.0
+            }
+        }
+    };
+}
+
+macro_rules! generate_to_string {
+    ($struct_name:ident) => {
+        #[wasm_bindgen]
+        impl $struct_name {
+            #[allow(clippy::inherent_to_string)]
+            #[wasm_bindgen(js_name = toString)]
+            pub fn to_string(&self) -> String {
+                format!("{}", self.0)
+            }
+        }
+    };
+}
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(typescript_type = "VerifiedCapsuleFrag[]")]
@@ -155,6 +204,9 @@ extern "C" {
 #[wasm_bindgen]
 pub struct Conditions(nucypher_core::Conditions);
 
+generate_to_string!(Conditions);
+generate_equals!(Conditions);
+
 #[wasm_bindgen]
 impl Conditions {
     #[wasm_bindgen(constructor)]
@@ -162,16 +214,11 @@ impl Conditions {
         Self(nucypher_core::Conditions::new(conditions))
     }
 
+    // TODO: Why is this called `from_bytes` and not `from_string`?
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &str) -> Self {
         let data_owned: String = data.into();
         Self(nucypher_core::Conditions::from(data_owned))
-    }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        self.0.as_ref().into()
     }
 }
 
@@ -180,6 +227,9 @@ impl Conditions {
 #[derive(Clone)]
 pub struct Context(nucypher_core::Context);
 
+generate_to_string!(Context);
+generate_equals!(Context);
+
 #[wasm_bindgen]
 impl Context {
     #[wasm_bindgen(constructor)]
@@ -187,16 +237,11 @@ impl Context {
         Self(nucypher_core::Context::new(context))
     }
 
+    // TODO: Why is this called `from_bytes` and not `from_string`?
     #[wasm_bindgen(js_name = fromBytes)]
     pub fn from_bytes(data: &str) -> Self {
         let data_owned: String = data.into();
         Self(nucypher_core::Context::from(data_owned))
-    }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        self.0.as_ref().into()
     }
 }
 
@@ -208,6 +253,8 @@ impl Context {
 #[wasm_bindgen]
 #[derive(Clone, derive_more::AsRef, derive_more::From)]
 pub struct Address(nucypher_core::Address);
+
+generate_equals!(Address);
 
 #[wasm_bindgen]
 impl Address {
@@ -230,10 +277,6 @@ impl Address {
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
     }
-
-    pub fn equals(&self, other: &Address) -> bool {
-        self.0 == other.0
-    }
 }
 
 //
@@ -243,6 +286,10 @@ impl Address {
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct MessageKit(nucypher_core::MessageKit);
+
+generate_equals!(MessageKit);
+generate_from_bytes!(MessageKit);
+generate_to_bytes!(MessageKit);
 
 #[wasm_bindgen]
 impl MessageKit {
@@ -275,16 +322,6 @@ impl MessageKit {
         self.0.conditions.clone().map(Conditions)
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<MessageKit, Error> {
-        from_bytes::<_, nucypher_core::MessageKit>(data)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
-
     #[wasm_bindgen(js_name = decryptReencrypted)]
     pub fn decrypt_reencrypted(
         &self,
@@ -313,6 +350,9 @@ impl MessageKit {
 #[derive(PartialEq, Eq)]
 pub struct HRAC(nucypher_core::HRAC);
 
+generate_to_string!(HRAC);
+generate_equals!(HRAC);
+
 #[wasm_bindgen]
 impl HRAC {
     #[wasm_bindgen(constructor)]
@@ -338,12 +378,6 @@ impl HRAC {
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
     }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        format!("{}", self.0)
-    }
 }
 
 //
@@ -354,6 +388,8 @@ impl HRAC {
 #[wasm_bindgen]
 #[derive(Clone, PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct EncryptedKeyFrag(nucypher_core::EncryptedKeyFrag);
+
+generate_from_bytes!(EncryptedKeyFrag);
 
 #[wasm_bindgen]
 impl EncryptedKeyFrag {
@@ -384,11 +420,6 @@ impl EncryptedKeyFrag {
             .map(VerifiedKeyFrag::from)
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<EncryptedKeyFrag, Error> {
-        from_bytes::<_, nucypher_core::EncryptedKeyFrag>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -402,6 +433,9 @@ impl EncryptedKeyFrag {
 #[wasm_bindgen]
 #[derive(Clone, PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct TreasureMap(nucypher_core::TreasureMap);
+
+generate_equals!(TreasureMap);
+generate_from_bytes!(TreasureMap);
 
 #[wasm_bindgen]
 impl TreasureMap {
@@ -499,11 +533,6 @@ impl TreasureMap {
         PublicKey::from(self.0.publisher_verifying_key)
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<TreasureMap, Error> {
-        from_bytes::<_, nucypher_core::TreasureMap>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -518,6 +547,9 @@ impl TreasureMap {
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct EncryptedTreasureMap(nucypher_core::EncryptedTreasureMap);
 
+generate_equals!(EncryptedTreasureMap);
+generate_from_bytes!(EncryptedTreasureMap);
+
 #[wasm_bindgen]
 impl EncryptedTreasureMap {
     pub fn decrypt(
@@ -529,11 +561,6 @@ impl EncryptedTreasureMap {
             .decrypt(sk.as_ref(), publisher_verifying_key.as_ref())
             .map_err(map_js_err)
             .map(TreasureMap)
-    }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<EncryptedTreasureMap, Error> {
-        from_bytes::<_, nucypher_core::EncryptedTreasureMap>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -554,32 +581,23 @@ pub struct SessionSharedSecret(nucypher_core::SessionSharedSecret);
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct SessionStaticKey(nucypher_core::SessionStaticKey);
 
+generate_equals!(SessionStaticKey);
+generate_from_bytes!(SessionStaticKey);
+generate_to_string!(SessionStaticKey);
+
 #[wasm_bindgen]
 impl SessionStaticKey {
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<SessionStaticKey, Error> {
-        from_bytes::<_, nucypher_core::SessionStaticKey>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
-    }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        format!("{}", self.0)
-    }
-
-    pub fn equals(&self, other: &SessionStaticKey) -> bool {
-        self.0 == other.0
     }
 }
 
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
 pub struct SessionStaticSecret(nucypher_core::SessionStaticSecret);
+
+generate_to_string!(SessionStaticSecret);
 
 #[wasm_bindgen]
 impl SessionStaticSecret {
@@ -598,16 +616,12 @@ impl SessionStaticSecret {
     pub fn derive_shared_secret(&self, their_public_key: &SessionStaticKey) -> SessionSharedSecret {
         SessionSharedSecret(self.0.derive_shared_secret(their_public_key.as_ref()))
     }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        format!("{}", self.0)
-    }
 }
 
 #[wasm_bindgen]
 pub struct SessionSecretFactory(nucypher_core::SessionSecretFactory);
+
+generate_to_string!(SessionSecretFactory);
 
 #[wasm_bindgen]
 impl SessionSecretFactory {
@@ -632,12 +646,6 @@ impl SessionSecretFactory {
     pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
         SessionStaticSecret(self.0.make_key(label))
     }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        format!("{}", self.0)
-    }
 }
 
 //
@@ -647,6 +655,9 @@ impl SessionSecretFactory {
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest);
+
+generate_from_bytes!(ThresholdDecryptionRequest);
+generate_equals!(ThresholdDecryptionRequest);
 
 #[wasm_bindgen]
 impl ThresholdDecryptionRequest {
@@ -705,11 +716,6 @@ impl ThresholdDecryptionRequest {
         )
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::ThresholdDecryptionRequest>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -723,6 +729,8 @@ impl ThresholdDecryptionRequest {
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThresholdDecryptionRequest);
+
+generate_from_bytes!(EncryptedThresholdDecryptionRequest);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
@@ -746,11 +754,6 @@ impl EncryptedThresholdDecryptionRequest {
             .map(ThresholdDecryptionRequest)
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<EncryptedThresholdDecryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::EncryptedThresholdDecryptionRequest>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -764,6 +767,8 @@ impl EncryptedThresholdDecryptionRequest {
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionResponse);
+
+generate_from_bytes!(ThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl ThresholdDecryptionResponse {
@@ -795,11 +800,6 @@ impl ThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<ThresholdDecryptionResponse, Error> {
-        from_bytes::<_, nucypher_core::ThresholdDecryptionResponse>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -815,6 +815,8 @@ impl ThresholdDecryptionResponse {
 pub struct EncryptedThresholdDecryptionResponse(
     nucypher_core::EncryptedThresholdDecryptionResponse,
 );
+
+generate_from_bytes!(EncryptedThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
@@ -833,11 +835,6 @@ impl EncryptedThresholdDecryptionResponse {
             .map(ThresholdDecryptionResponse)
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<EncryptedThresholdDecryptionResponse, Error> {
-        from_bytes::<_, nucypher_core::EncryptedThresholdDecryptionResponse>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -851,6 +848,8 @@ impl EncryptedThresholdDecryptionResponse {
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionRequest(nucypher_core::ReencryptionRequest);
+
+generate_from_bytes!(ReencryptionRequest);
 
 #[wasm_bindgen]
 impl ReencryptionRequest {
@@ -907,11 +906,6 @@ impl ReencryptionRequest {
         into_js_array(self.0.capsules.iter().cloned().map(Capsule::from))
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<ReencryptionRequest, Error> {
-        from_bytes::<_, nucypher_core::ReencryptionRequest>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -935,6 +929,8 @@ impl ReencryptionRequest {
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
 pub struct ReencryptionResponse(nucypher_core::ReencryptionResponse);
+
+generate_from_bytes!(ReencryptionResponse);
 
 #[wasm_bindgen]
 impl ReencryptionResponse {
@@ -974,11 +970,6 @@ impl ReencryptionResponse {
             signer.as_ref(),
             backend_capsules.iter().zip(backend_vcfrags.into_iter()),
         )))
-    }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<ReencryptionResponse, Error> {
-        from_bytes::<_, nucypher_core::ReencryptionResponse>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1031,6 +1022,8 @@ impl ReencryptionResponse {
 #[derive(derive_more::From, derive_more::AsRef)]
 pub struct RetrievalKit(nucypher_core::RetrievalKit);
 
+generate_from_bytes!(RetrievalKit);
+
 #[wasm_bindgen]
 impl RetrievalKit {
     #[wasm_bindgen(constructor)]
@@ -1069,11 +1062,6 @@ impl RetrievalKit {
         into_js_array(self.0.queried_addresses.iter().cloned().map(Address::from))
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<RetrievalKit, Error> {
-        from_bytes::<_, nucypher_core::RetrievalKit>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -1092,6 +1080,8 @@ impl RetrievalKit {
 #[wasm_bindgen]
 #[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct RevocationOrder(nucypher_core::RevocationOrder);
+
+generate_from_bytes!(RevocationOrder);
 
 #[wasm_bindgen]
 impl RevocationOrder {
@@ -1122,11 +1112,6 @@ impl RevocationOrder {
             JsValue::from(Address(address)),
             JsValue::from(EncryptedKeyFrag(ekfrag)),
         ]))
-    }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<RevocationOrder, Error> {
-        from_bytes::<_, nucypher_core::RevocationOrder>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1235,6 +1220,8 @@ impl NodeMetadataPayload {
 #[derive(Clone, PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
 pub struct NodeMetadata(nucypher_core::NodeMetadata);
 
+generate_from_bytes!(NodeMetadata);
+
 #[wasm_bindgen]
 impl NodeMetadata {
     #[wasm_bindgen(constructor)]
@@ -1254,11 +1241,6 @@ impl NodeMetadata {
         NodeMetadataPayload(self.0.payload.clone())
     }
 
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<NodeMetadata, Error> {
-        from_bytes::<_, nucypher_core::NodeMetadata>(data)
-    }
-
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
@@ -1272,6 +1254,8 @@ impl NodeMetadata {
 #[wasm_bindgen]
 #[derive(Clone, derive_more::AsRef)]
 pub struct FleetStateChecksum(nucypher_core::FleetStateChecksum);
+
+generate_to_string!(FleetStateChecksum);
 
 #[wasm_bindgen]
 impl FleetStateChecksum {
@@ -1296,12 +1280,6 @@ impl FleetStateChecksum {
     pub fn to_bytes(&self) -> Box<[u8]> {
         self.0.as_ref().to_vec().into_boxed_slice()
     }
-
-    #[allow(clippy::inherent_to_string)]
-    #[wasm_bindgen(js_name = toString)]
-    pub fn to_string(&self) -> String {
-        format!("{}", self.0)
-    }
 }
 
 //
@@ -1311,6 +1289,8 @@ impl FleetStateChecksum {
 #[wasm_bindgen]
 #[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataRequest(nucypher_core::MetadataRequest);
+
+generate_from_bytes!(MetadataRequest);
 
 #[wasm_bindgen]
 impl MetadataRequest {
@@ -1338,11 +1318,6 @@ impl MetadataRequest {
     #[wasm_bindgen(getter, js_name = announceNodes)]
     pub fn announce_nodes(&self) -> NodeMetadataArray {
         into_js_array(self.0.announce_nodes.iter().cloned().map(NodeMetadata))
-    }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<MetadataRequest, Error> {
-        from_bytes::<_, nucypher_core::MetadataRequest>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]
@@ -1395,6 +1370,8 @@ impl MetadataResponsePayload {
 #[derive(derive_more::From, derive_more::AsRef)]
 pub struct MetadataResponse(nucypher_core::MetadataResponse);
 
+generate_from_bytes!(MetadataResponse);
+
 #[wasm_bindgen]
 impl MetadataResponse {
     #[wasm_bindgen(constructor)]
@@ -1412,11 +1389,6 @@ impl MetadataResponse {
             .verify(verifying_pk.as_ref())
             .map_err(|_err| Error::new("Failed to verify MetadataResponse"))
             .map(MetadataResponsePayload)
-    }
-
-    #[wasm_bindgen(js_name = fromBytes)]
-    pub fn from_bytes(data: &[u8]) -> Result<MetadataResponse, Error> {
-        from_bytes::<_, nucypher_core::MetadataResponse>(data)
     }
 
     #[wasm_bindgen(js_name = toBytes)]

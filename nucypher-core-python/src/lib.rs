@@ -768,7 +768,7 @@ impl ThresholdDecryptionRequest {
             _ => {
                 return Err(PyValueError::new_err(
                     "Invalid ThresholdDecryptionRequest variant",
-                ))
+                ));
             }
         };
 

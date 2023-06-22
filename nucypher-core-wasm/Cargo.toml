@@ -31,4 +31,5 @@ x25519-dalek = "2.0.0-rc.2"
 
 [dev-dependencies]
 console_error_panic_hook = "0.1"
+hex = "0.4.3"
 wasm-bindgen-test = "0.3.36"
