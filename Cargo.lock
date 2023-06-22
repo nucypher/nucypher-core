@@ -505,8 +505,7 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0-alpha.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a03b0fdd554fcec312af62f105ea5820c00191faaedd3b0331ff6f7581337db7"
+source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -521,8 +520,7 @@ dependencies = [
 [[package]]
 name = "ferveo-pre-release"
 version = "0.1.0-alpha.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eb36a788400eb4579a83623696b1e4feb9ea7a47df03e771ac5c990f763ef2d"
+source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -612,6 +610,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ghost"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e77ac7b51b8e6313251737fcef4b1c01a2ea102bde68415b62c0ee9268fec357"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.18",
+]
+
+[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -625,8 +634,7 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0-alpha.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3de2158ab5d2651720f4913144ebd5cb77e60268ff2dff05433db76063025ca"
+source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -757,6 +765,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "inventory"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0539b5de9241582ce6bd6b0ba7399313560151e58c9aaf8b74b711b1bdce644"
+dependencies = [
+ "ghost",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -856,7 +873,7 @@ checksum = "94c7128ba23c81f6471141b90f17654f89ef44a56e14b8a4dd0fddfccd655277"
 
 [[package]]
 name = "nucypher-core"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chacha20poly1305",
  "ferveo-pre-release",
@@ -878,19 +895,19 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "derive_more",
  "ferveo-pre-release",
  "nucypher-core",
  "pyo3",
- "pyo3-build-config 0.19.0",
+ "pyo3-build-config",
  "umbral-pre",
 ]
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "console_error_panic_hook",
  "derive_more",
@@ -1025,10 +1042,11 @@ checksum = "e3b1ac5b3731ba34fdaa9785f8d74d17448cd18f30cf19e0c7e7b1fdb5272109"
 dependencies = [
  "cfg-if",
  "indoc",
+ "inventory",
  "libc",
  "memoffset",
  "parking_lot",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
@@ -1045,23 +1063,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyo3-build-config"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "713eccf888fb05f1a96eb78c0dbc51907fee42b3377272dc902eb38985f418d5"
-dependencies = [
- "once_cell",
- "target-lexicon",
-]
-
-[[package]]
 name = "pyo3-ffi"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d7c5337821916ea2a1d21d1092e8443cf34879e53a0ac653fbb98f44ff65c"
 dependencies = [
  "libc",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
 ]
 
 [[package]]
@@ -1390,8 +1398,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0-alpha.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b53446b638d1c20006bbe8076edd41141200741dabc0a80d434fc5c4a356de9"
+source = "git+https://github.com/nucypher/ferveo.git?rev=ccdc20990ed3ad6ed8267e5dc54745a3a500b730#ccdc20990ed3ad6ed8267e5dc54745a3a500b730"
 dependencies = [
  "anyhow",
  "ark-ec",

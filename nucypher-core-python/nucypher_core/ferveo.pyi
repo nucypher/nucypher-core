@@ -79,8 +79,6 @@ class Dkg:
 
     public_key: DkgPublicKey
 
-    public_params: DkgPublicParameters
-
     def generate_transcript(self) -> Transcript:
         ...
 
@@ -109,15 +107,6 @@ class DecryptionShareSimple:
 class DecryptionSharePrecomputed:
     @staticmethod
     def from_bytes(data: bytes) -> DecryptionSharePrecomputed:
-        ...
-
-    def __bytes__(self) -> bytes:
-        ...
-
-
-class DkgPublicParameters:
-    @staticmethod
-    def from_bytes(data: bytes) -> DkgPublicParameters:
         ...
 
     def __bytes__(self) -> bytes:
@@ -188,7 +177,6 @@ def decrypt_with_shared_secret(
         ciphertext: Ciphertext,
         aad: bytes,
         shared_secret: SharedSecret,
-        dkg_params: DkgPublicParameters,
 ) -> bytes:
     ...
 

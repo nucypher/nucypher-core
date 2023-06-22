@@ -6,11 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.9.1 - Unreleased
 
+### Changed
+
+- Removed `DkgPublicParams` from bindings. ([ferveo#127])
+
 ### Fixed
 
 - Fixed a typo in the Python type stubs for `ferveo.Keypair.secure_randomness_size()`. ([#61])
 
 
+[ferveo#127]: https://github.com/nucypher/nucypher-core/pull/127
 [#61]: https://github.com/nucypher/nucypher-core/pull/61
 
 
