@@ -12,7 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::Ciphertext;
+use ferveo::{api::FerveoVariant, bindings_wasm::Ciphertext};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -22,7 +22,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
-use nucypher_core::{FerveoVariant, ProtocolObject};
+use nucypher_core::ProtocolObject;
 
 // Re-export certain types so they can be used from `nucypher-core` WASM bindings directly.
 pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
@@ -673,8 +673,8 @@ impl ThresholdDecryptionRequest {
         let typed_context = try_from_js_option::<Context>(context)?;
 
         let ferveo_variant = match variant {
-            0 => FerveoVariant::SIMPLE,
-            1 => FerveoVariant::PRECOMPUTED,
+            0 => FerveoVariant::Simple,
+            1 => FerveoVariant::Precomputed,
             _ => return Err(Error::new("Invalid variant")),
         };
 
@@ -695,8 +695,8 @@ impl ThresholdDecryptionRequest {
     #[wasm_bindgen(getter)]
     pub fn variant(&self) -> u8 {
         match self.0.variant {
-            FerveoVariant::SIMPLE => 0,
-            FerveoVariant::PRECOMPUTED => 1,
+            FerveoVariant::Simple => 0,
+            FerveoVariant::Precomputed => 1,
         }
     }
 

@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 use core::fmt;
-use ferveo::api::Ciphertext;
+use ferveo::api::{Ciphertext, FerveoVariant};
 use generic_array::typenum::Unsigned;
 
 use serde::{Deserialize, Serialize};
@@ -98,15 +98,6 @@ fn decrypt_with_shared_secret(
         .decrypt(nonce, encrypted_data)
         .map_err(|_err| DecryptionError::AuthenticationFailed)?;
     Ok(plaintext.into_boxed_slice())
-}
-
-/// The ferveo variant to use for the decryption share derivation.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Copy, Clone)]
-pub enum FerveoVariant {
-    /// The simple variant requires m of n shares to decrypt
-    SIMPLE,
-    /// The precomputed variant requires n of n shares to decrypt
-    PRECOMPUTED,
 }
 
 /// Module for session key objects.
@@ -601,11 +592,11 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, SecretBox};
+    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
 
     use crate::{
         Conditions, Context, EncryptedThresholdDecryptionRequest,
-        EncryptedThresholdDecryptionResponse, FerveoVariant, ProtocolObject, SessionSecretFactory,
+        EncryptedThresholdDecryptionResponse, ProtocolObject, SessionSecretFactory,
         SessionStaticKey, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
 
@@ -742,7 +733,7 @@ mod tests {
             &ciphertext,
             Some(&Conditions::new("abcd")),
             Some(&Context::new("efgh")),
-            FerveoVariant::SIMPLE,
+            FerveoVariant::Simple,
         );
 
         // requester encrypts request to send to service

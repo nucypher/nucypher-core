@@ -7,7 +7,10 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 
-use ferveo::bindings_python::{Ciphertext, FerveoPublicKey};
+use ferveo::{
+    api::FerveoVariant,
+    bindings_python::{Ciphertext, FerveoPublicKey},
+};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -18,7 +21,6 @@ use umbral_pre::bindings_python::{
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
-use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
@@ -763,8 +765,8 @@ impl ThresholdDecryptionRequest {
         context: Option<&Context>,
     ) -> PyResult<Self> {
         let ferveo_variant = match variant {
-            0 => FerveoVariant::SIMPLE,
-            1 => FerveoVariant::PRECOMPUTED,
+            0 => FerveoVariant::Simple,
+            1 => FerveoVariant::Precomputed,
             _ => {
                 return Err(PyValueError::new_err(
                     "Invalid ThresholdDecryptionRequest variant",
@@ -816,8 +818,8 @@ impl ThresholdDecryptionRequest {
     #[getter]
     pub fn variant(&self) -> u8 {
         match self.backend.variant {
-            FerveoVariant::SIMPLE => 0,
-            FerveoVariant::PRECOMPUTED => 1,
+            FerveoVariant::Simple => 0,
+            FerveoVariant::Precomputed => 1,
         }
     }
 
