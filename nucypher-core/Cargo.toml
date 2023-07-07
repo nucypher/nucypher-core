@@ -11,7 +11,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 umbral-pre = { version = "0.10.0", features = ["serde"] }
-ferveo = { package = "ferveo-pre-release", version = "0.1.0-alpha.10", git = "https://github.com/nucypher/ferveo.git", rev = "90c73180f00f8a1122594881ea67f5a75a9fb0b1" }
+ferveo = { package = "ferveo-pre-release", version = "0.2.0" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", features = ["zeroize"] }
 sha3 = "0.10"
