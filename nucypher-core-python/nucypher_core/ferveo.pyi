@@ -1,13 +1,13 @@
-from typing import Sequence
+from typing import Sequence, final
 
-
+@final
 class Keypair:
     @staticmethod
     def random() -> Keypair:
         ...
 
     @staticmethod
-    def from_secure_randomness(data: bytes) -> Keypair:
+    def from_secure_randomness(bytes: bytes) -> Keypair:
         ...
 
     @staticmethod
@@ -15,7 +15,7 @@ class Keypair:
         ...
 
     @staticmethod
-    def from_bytes(data: bytes) -> Keypair:
+    def from_bytes(bytes: bytes) -> Keypair:
         ...
 
     def __bytes__(self) -> bytes:
@@ -24,10 +24,10 @@ class Keypair:
     def public_key(self) -> FerveoPublicKey:
         ...
 
-
+@final
 class FerveoPublicKey:
     @staticmethod
-    def from_bytes(data: bytes) -> FerveoPublicKey:
+    def from_bytes(bytes: bytes) -> FerveoPublicKey:
         ...
 
     def __bytes__(self) -> bytes:
@@ -36,7 +36,11 @@ class FerveoPublicKey:
     def __hash__(self) -> int:
         ...
 
+    @staticmethod
+    def serialized_size() -> int:
+        ...
 
+@final
 class Validator:
 
     def __init__(self, address: str, public_key: FerveoPublicKey):
@@ -46,25 +50,29 @@ class Validator:
 
     public_key: FerveoPublicKey
 
-
+@final
 class Transcript:
     @staticmethod
-    def from_bytes(data: bytes) -> Transcript:
+    def from_bytes(bytes: bytes) -> Transcript:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
-
+@final
 class DkgPublicKey:
     @staticmethod
-    def from_bytes(data: bytes) -> DkgPublicKey:
+    def from_bytes(bytes: bytes) -> DkgPublicKey:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
+    @staticmethod
+    def serialized_size() -> int:
+        ...
 
+@final
 class ValidatorMessage:
 
     def __init__(
@@ -77,7 +85,7 @@ class ValidatorMessage:
     validator: Validator
     transcript: Transcript
 
-
+@final
 class Dkg:
 
     def __init__(
@@ -98,34 +106,33 @@ class Dkg:
     def aggregate_transcripts(self, messages: Sequence[ValidatorMessage]) -> AggregatedTranscript:
         ...
 
-
+@final
 class Ciphertext:
     @staticmethod
-    def from_bytes(data: bytes) -> Ciphertext:
+    def from_bytes(bytes: bytes) -> Ciphertext:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
-
+@final
 class DecryptionShareSimple:
     @staticmethod
-    def from_bytes(data: bytes) -> DecryptionShareSimple:
+    def from_bytes(bytes: bytes) -> DecryptionShareSimple:
         ...
 
     def __bytes__(self) -> bytes:
         ...
-
-
+@final
 class DecryptionSharePrecomputed:
     @staticmethod
-    def from_bytes(data: bytes) -> DecryptionSharePrecomputed:
+    def from_bytes(bytes: bytes) -> DecryptionSharePrecomputed:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
-
+@final
 class AggregatedTranscript:
 
     def __init__(self, messages: Sequence[ValidatorMessage]):
@@ -153,35 +160,44 @@ class AggregatedTranscript:
         ...
 
     @staticmethod
-    def from_bytes(data: bytes) -> AggregatedTranscript:
+    def from_bytes(bytes: bytes) -> AggregatedTranscript:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
-
+@final
 class SharedSecret:
 
     @staticmethod
-    def from_bytes(data: bytes) -> SharedSecret:
+    def from_bytes(bytes: bytes) -> SharedSecret:
         ...
 
     def __bytes__(self) -> bytes:
         ...
 
 
-def encrypt(message: bytes, add: bytes, dkg_public_key: DkgPublicKey) -> Ciphertext:
+@final
+class FerveoVariant:
+    @staticmethod
+    def simple() -> str: ...
+
+    @staticmethod
+    def precomputed() -> str: ...
+
+
+def encrypt(message: bytes, aad: bytes, dkg_public_key: DkgPublicKey) -> Ciphertext:
     ...
 
 
 def combine_decryption_shares_simple(
-        decryption_shares: Sequence[DecryptionShareSimple],
+        shares: Sequence[DecryptionShareSimple],
 ) -> bytes:
     ...
 
 
 def combine_decryption_shares_precomputed(
-        decryption_shares: Sequence[DecryptionSharePrecomputed],
+        shares: Sequence[DecryptionSharePrecomputed],
 ) -> SharedSecret:
     ...
 
@@ -195,10 +211,6 @@ def decrypt_with_shared_secret(
 
 
 class ThresholdEncryptionError(Exception):
-    pass
-
-
-class InvalidShareNumberParameter(Exception):
     pass
 
 

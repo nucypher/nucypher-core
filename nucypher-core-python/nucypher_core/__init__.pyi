@@ -1,4 +1,4 @@
-from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set
+from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set, final
 
 from .umbral import (
     SecretKey,
@@ -10,12 +10,13 @@ from .umbral import (
     RecoverableSignature
 )
 
-from .ferveo import  (
+from .ferveo import (
     FerveoPublicKey,
     Ciphertext
 )
 
 
+@final
 class Address:
 
     def __init__(self, address_bytes: bytes):
@@ -31,32 +32,31 @@ class Address:
         ...
 
 
+@final
 class Conditions:
 
     def __init__(self, conditions: str):
         ...
 
-    @classmethod
-    def from_string(cls, conditions: str) -> Conditions:
+    @staticmethod
+    def from_string(conditions: str) -> Conditions:
         ...
 
     def __str__(self) -> str:
         ...
 
 
+@final
 class Context:
 
     def __init__(self, context: str):
         ...
 
-    @classmethod
-    def from_string(cls, context: str) -> Context:
-        ...
-
     def __str__(self) -> str:
         ...
 
 
+@final
 class MessageKit:
 
     @staticmethod
@@ -64,10 +64,10 @@ class MessageKit:
         ...
 
     def __init__(
-        self,
-        policy_encrypting_key: PublicKey,
-        plaintext: bytes,
-        conditions: Optional[Conditions]
+            self,
+            policy_encrypting_key: PublicKey,
+            plaintext: bytes,
+            conditions: Optional[Conditions]
     ):
         ...
 
@@ -75,11 +75,14 @@ class MessageKit:
         ...
 
     def decrypt_reencrypted(
-        self,
-        sk: SecretKey,
-        policy_encrypting_key: PublicKey,
-        vcfrags: Sequence[VerifiedCapsuleFrag]
+            self,
+            sk: SecretKey,
+            policy_encrypting_key: PublicKey,
+            vcfrags: Sequence[VerifiedCapsuleFrag]
     ) -> bytes:
+        ...
+
+    def __bytes__(self) -> bytes:
         ...
 
     capsule: Capsule
@@ -87,13 +90,14 @@ class MessageKit:
     conditions: Optional[Conditions]
 
 
+@final
 class HRAC:
 
     def __init__(
-        self,
-        publisher_verifying_key: PublicKey,
-        bob_verifying_key: PublicKey,
-        label: bytes,
+            self,
+            publisher_verifying_key: PublicKey,
+            bob_verifying_key: PublicKey,
+            label: bytes,
     ):
         ...
 
@@ -105,22 +109,23 @@ class HRAC:
         ...
 
 
+@final
 class EncryptedKeyFrag:
 
     def __init__(
-        self,
-        signer: Signer,
-        recipient_key: PublicKey,
-        hrac: HRAC,
-        verified_kfrag: VerifiedKeyFrag,
+            self,
+            signer: Signer,
+            recipient_key: PublicKey,
+            hrac: HRAC,
+            verified_kfrag: VerifiedKeyFrag,
     ):
         ...
 
     def decrypt(
-        self,
-        sk: SecretKey,
-        hrac: HRAC,
-        publisher_verifying_key: PublicKey,
+            self,
+            sk: SecretKey,
+            hrac: HRAC,
+            publisher_verifying_key: PublicKey,
     ) -> VerifiedKeyFrag:
         ...
 
@@ -132,15 +137,16 @@ class EncryptedKeyFrag:
         ...
 
 
+@final
 class TreasureMap:
 
     def __init__(
-        self,
-        signer: Signer,
-        hrac: HRAC,
-        policy_encrypting_key: PublicKey,
-        assigned_kfrags: Mapping[Address, Tuple[PublicKey, VerifiedKeyFrag]],
-        threshold: int,
+            self,
+            signer: Signer,
+            hrac: HRAC,
+            policy_encrypting_key: PublicKey,
+            assigned_kfrags: Mapping[Address, Tuple[PublicKey, VerifiedKeyFrag]],
+            threshold: int,
     ):
         ...
 
@@ -168,12 +174,13 @@ class TreasureMap:
         ...
 
 
+@final
 class EncryptedTreasureMap:
 
     def decrypt(
-        self,
-        sk: SecretKey,
-        publisher_verifying_key: PublicKey,
+            self,
+            sk: SecretKey,
+            publisher_verifying_key: PublicKey,
     ) -> TreasureMap:
         ...
 
@@ -185,17 +192,18 @@ class EncryptedTreasureMap:
         ...
 
 
+@final
 class ReencryptionRequest:
 
     def __init__(
-        self,
-        capsules: Sequence[Capsule],
-        hrac: HRAC,
-        encrypted_kfrag: EncryptedKeyFrag,
-        publisher_verifying_key: PublicKey,
-        bob_verifying_key: PublicKey,
-        conditions: Optional[Conditions],
-        context: Optional[Context],
+            self,
+            capsules: Sequence[Capsule],
+            hrac: HRAC,
+            encrypted_kfrag: EncryptedKeyFrag,
+            publisher_verifying_key: PublicKey,
+            bob_verifying_key: PublicKey,
+            conditions: Optional[Conditions],
+            context: Optional[Context],
     ):
         ...
 
@@ -221,18 +229,19 @@ class ReencryptionRequest:
         ...
 
 
+@final
 class ReencryptionResponse:
 
     def __init__(self, signer: Signer, capsules_and_vcfrags: Sequence[Tuple[Capsule, VerifiedCapsuleFrag]]):
         ...
 
     def verify(
-        self,
-        capsules: Sequence[Capsule],
-        alice_verifying_key: PublicKey,
-        ursula_verifying_key: PublicKey,
-        policy_encrypting_key: PublicKey,
-        bob_encrypting_key: PublicKey,
+            self,
+            capsules: Sequence[Capsule],
+            alice_verifying_key: PublicKey,
+            ursula_verifying_key: PublicKey,
+            policy_encrypting_key: PublicKey,
+            bob_encrypting_key: PublicKey,
     ) -> List[VerifiedCapsuleFrag]:
         ...
 
@@ -244,6 +253,7 @@ class ReencryptionResponse:
         ...
 
 
+@final
 class RetrievalKit:
 
     @staticmethod
@@ -251,10 +261,10 @@ class RetrievalKit:
         ...
 
     def __init__(
-        self,
-        capsule: Capsule,
-        queried_addresses: Set[Address],
-        conditions: Optional[Conditions],
+            self,
+            capsule: Capsule,
+            queried_addresses: Set[Address],
+            conditions: Optional[Conditions],
     ):
         ...
 
@@ -272,19 +282,20 @@ class RetrievalKit:
         ...
 
 
+@final
 class RevocationOrder:
 
     def __init__(
-        self,
-        signer: Signer,
-        staking_provider_address: Address,
-        encrypted_kfrag: EncryptedKeyFrag,
+            self,
+            signer: Signer,
+            staking_provider_address: Address,
+            encrypted_kfrag: EncryptedKeyFrag,
     ):
         ...
 
     def verify(
-        self,
-        alice_verifying_key: PublicKey,
+            self,
+            alice_verifying_key: PublicKey,
     ) -> Tuple[Address, EncryptedKeyFrag]:
         ...
 
@@ -296,20 +307,21 @@ class RevocationOrder:
         ...
 
 
+@final
 class NodeMetadataPayload:
 
     def __init__(
-        self,
-        staking_provider_address: Address,
-        domain: str,
-        timestamp_epoch: int,
-        verifying_key: PublicKey,
-        encrypting_key: PublicKey,
-        ferveo_public_key: FerveoPublicKey,
-        certificate_der: bytes,
-        host: str,
-        port: int,
-        operator_signature: RecoverableSignature,
+            self,
+            staking_provider_address: Address,
+            domain: str,
+            timestamp_epoch: int,
+            verifying_key: PublicKey,
+            encrypting_key: PublicKey,
+            ferveo_public_key: FerveoPublicKey,
+            certificate_der: bytes,
+            host: str,
+            port: int,
+            operator_signature: RecoverableSignature,
     ):
         ...
 
@@ -337,6 +349,7 @@ class NodeMetadataPayload:
         ...
 
 
+@final
 class NodeMetadata:
 
     def __init__(self, signer: Signer, payload: NodeMetadataPayload):
@@ -355,18 +368,23 @@ class NodeMetadata:
         ...
 
 
+@final
 class FleetStateChecksum:
 
     def __init__(self, other_nodes: Sequence[NodeMetadata], this_node: Optional[NodeMetadata]):
         ...
 
+    def __bytes__(self) -> bytes:
+        ...
 
+
+@final
 class MetadataRequest:
 
     def __init__(
-        self,
-        fleet_state_checksum: FleetStateChecksum,
-        announce_nodes: Sequence[NodeMetadata],
+            self,
+            fleet_state_checksum: FleetStateChecksum,
+            announce_nodes: Sequence[NodeMetadata],
     ):
         ...
 
@@ -382,6 +400,7 @@ class MetadataRequest:
         ...
 
 
+@final
 class MetadataResponsePayload:
 
     def __init__(self, timestamp_epoch: int, announce_nodes: Sequence[NodeMetadata]):
@@ -392,6 +411,7 @@ class MetadataResponsePayload:
     announce_nodes: List[NodeMetadata]
 
 
+@final
 class MetadataResponse:
 
     def __init__(self, signer: Signer, payload: MetadataResponsePayload):
@@ -408,9 +428,11 @@ class MetadataResponse:
         ...
 
 
+@final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: int, ciphertext: Ciphertext, conditions: Optional[Conditions], context: Optional[Context]):
+    def __init__(self, ritual_id: int, variant: int, ciphertext: Ciphertext, conditions: Optional[Conditions],
+                 context: Optional[Context]):
         ...
 
     ritual_id: int
@@ -423,7 +445,8 @@ class ThresholdDecryptionRequest:
 
     ciphertext: Ciphertext
 
-    def encrypt(self, shared_secret: SessionSharedSecret, requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:
+    def encrypt(self, shared_secret: SessionSharedSecret,
+                requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -434,14 +457,15 @@ class ThresholdDecryptionRequest:
         ...
 
 
+@final
 class EncryptedThresholdDecryptionRequest:
     ritual_id: int
 
     requester_public_key: SessionStaticKey
 
     def decrypt(
-        self,
-        shared_secret: SessionSharedSecret
+            self,
+            shared_secret: SessionSharedSecret
     ) -> ThresholdDecryptionRequest:
         ...
 
@@ -453,6 +477,7 @@ class EncryptedThresholdDecryptionRequest:
         ...
 
 
+@final
 class ThresholdDecryptionResponse:
 
     def __init__(self, ritual_id: int, decryption_share: bytes):
@@ -473,13 +498,13 @@ class ThresholdDecryptionResponse:
         ...
 
 
+@final
 class EncryptedThresholdDecryptionResponse:
-
     ritual_id: int
 
     def decrypt(
-        self,
-        shared_secret: SessionSharedSecret
+            self,
+            shared_secret: SessionSharedSecret
     ) -> ThresholdDecryptionResponse:
         ...
 
@@ -491,10 +516,12 @@ class EncryptedThresholdDecryptionResponse:
         ...
 
 
+@final
 class SessionSharedSecret:
     ...
 
 
+@final
 class SessionStaticKey:
 
     @staticmethod
@@ -505,6 +532,7 @@ class SessionStaticKey:
         ...
 
 
+@final
 class SessionStaticSecret:
 
     @staticmethod
@@ -518,6 +546,7 @@ class SessionStaticSecret:
         ...
 
 
+@final
 class SessionSecretFactory:
 
     @staticmethod

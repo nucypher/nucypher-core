@@ -141,13 +141,6 @@ impl Context {
         }
     }
 
-    #[staticmethod]
-    pub fn from_bytes(context: String) -> Self {
-        Self {
-            backend: context.into(),
-        }
-    }
-
     fn __str__(&self) -> &str {
         self.backend.as_ref()
     }
