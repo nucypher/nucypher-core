@@ -518,8 +518,7 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81b88f694e924a2878d4abf89b79df44cdee2e0670875aba885bb769ccd71be3"
+source = "git+https://github.com/nucypher/ferveo.git#434fd5d07b54e72d120e9aa06cbc3e47848e6bcf"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -534,8 +533,7 @@ dependencies = [
 [[package]]
 name = "ferveo-pre-release"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58661702af7320b5e643e34f41a1528db32ee7faa92b6294e93feff307f52e41"
+source = "git+https://github.com/nucypher/ferveo.git#434fd5d07b54e72d120e9aa06cbc3e47848e6bcf"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -638,8 +636,7 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ade4859b58171e6815b0641e23f615f5dab030ecf2376b069d652f323fa760b"
+source = "git+https://github.com/nucypher/ferveo.git#434fd5d07b54e72d120e9aa06cbc3e47848e6bcf"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1395,8 +1392,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7331c4e4ab9b7c9ed4ad2e950e8760826622c7ab110d9f1b3f350e2005017eab"
+source = "git+https://github.com/nucypher/ferveo.git#434fd5d07b54e72d120e9aa06cbc3e47848e6bcf"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -1495,8 +1491,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "umbral-pre"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "594a478131f30b32cf28a822d95821ef32881e9773d567739c09df9f2accd692"
+source = "git+https://github.com/piotr-roslaniec/rust-umbral.git#c7ff41296e26ae0696f84f4a62fd26d619479c52"
 dependencies = [
  "base64 0.21.2",
  "chacha20poly1305",

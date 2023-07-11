@@ -19,8 +19,8 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-umbral-pre = { version = "0.10.0", features = ["bindings-wasm"] }
-ferveo = { package = "ferveo-pre-release", version = "0.2.0", features = ["bindings-wasm"] }
+umbral-pre = { version = "0.10.0", features = ["bindings-wasm"], git = "https://github.com/piotr-roslaniec/rust-umbral.git", ref = "4b28a85c494e4e2640abb131460da0680a74134d" }
+ferveo = { package = "ferveo-pre-release", version = "0.2.0", features = ["bindings-wasm"], git = "https://github.com/nucypher/ferveo.git", ref = "4fcc7c0ad33c05b0d956378efed3858c2a389885" }
 nucypher-core = { path = "../nucypher-core" }
 wasm-bindgen = "0.2.86"
 js-sys = "0.3.63"
