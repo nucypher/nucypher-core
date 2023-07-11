@@ -7,10 +7,7 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 
-use ferveo::{
-    api::FerveoVariant,
-    bindings_python::{Ciphertext, FerveoPublicKey},
-};
+use ferveo::bindings_python::{Ciphertext, FerveoPublicKey, FerveoVariant};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -752,21 +749,11 @@ impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
         ritual_id: u32,
-        variant: u8,
+        variant: &str,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
     ) -> PyResult<Self> {
-        let ferveo_variant = match variant {
-            0 => FerveoVariant::Simple,
-            1 => FerveoVariant::Precomputed,
-            _ => {
-                return Err(PyValueError::new_err(
-                    "Invalid ThresholdDecryptionRequest variant",
-                ));
-            }
-        };
-
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 ritual_id,
@@ -775,7 +762,7 @@ impl ThresholdDecryptionRequest {
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
-                ferveo_variant,
+                variant,
             ),
         })
     }
@@ -809,11 +796,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn variant(&self) -> u8 {
-        match self.backend.variant {
-            FerveoVariant::Simple => 0,
-            FerveoVariant::Precomputed => 1,
-        }
+    pub fn variant(&self) -> String {
+        self.backend.variant.to_string()
     }
 
     pub fn encrypt(
