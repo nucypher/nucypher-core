@@ -7,7 +7,7 @@ class Keypair:
         ...
 
     @staticmethod
-    def from_secure_randomness(bytes: bytes) -> Keypair:
+    def from_secure_randomness(secure_randomness: bytes) -> Keypair:
         ...
 
     @staticmethod
@@ -15,7 +15,7 @@ class Keypair:
         ...
 
     @staticmethod
-    def from_bytes(bytes: bytes) -> Keypair:
+    def from_bytes(data: bytes) -> Keypair:
         ...
 
     def __bytes__(self) -> bytes:
@@ -27,7 +27,7 @@ class Keypair:
 @final
 class FerveoPublicKey:
     @staticmethod
-    def from_bytes(bytes: bytes) -> FerveoPublicKey:
+    def from_bytes(data: bytes) -> FerveoPublicKey:
         ...
 
     def __bytes__(self) -> bytes:
@@ -53,7 +53,7 @@ class Validator:
 @final
 class Transcript:
     @staticmethod
-    def from_bytes(bytes: bytes) -> Transcript:
+    def from_bytes(data: bytes) -> Transcript:
         ...
 
     def __bytes__(self) -> bytes:
@@ -62,7 +62,7 @@ class Transcript:
 @final
 class DkgPublicKey:
     @staticmethod
-    def from_bytes(bytes: bytes) -> DkgPublicKey:
+    def from_bytes(data: bytes) -> DkgPublicKey:
         ...
 
     def __bytes__(self) -> bytes:
@@ -109,7 +109,7 @@ class Dkg:
 @final
 class Ciphertext:
     @staticmethod
-    def from_bytes(bytes: bytes) -> Ciphertext:
+    def from_bytes(data: bytes) -> Ciphertext:
         ...
 
     def __bytes__(self) -> bytes:
@@ -118,7 +118,7 @@ class Ciphertext:
 @final
 class DecryptionShareSimple:
     @staticmethod
-    def from_bytes(bytes: bytes) -> DecryptionShareSimple:
+    def from_bytes(data: bytes) -> DecryptionShareSimple:
         ...
 
     def __bytes__(self) -> bytes:
@@ -126,7 +126,7 @@ class DecryptionShareSimple:
 @final
 class DecryptionSharePrecomputed:
     @staticmethod
-    def from_bytes(bytes: bytes) -> DecryptionSharePrecomputed:
+    def from_bytes(data: bytes) -> DecryptionSharePrecomputed:
         ...
 
     def __bytes__(self) -> bytes:
@@ -160,7 +160,7 @@ class AggregatedTranscript:
         ...
 
     @staticmethod
-    def from_bytes(bytes: bytes) -> AggregatedTranscript:
+    def from_bytes(data: bytes) -> AggregatedTranscript:
         ...
 
     def __bytes__(self) -> bytes:
@@ -170,7 +170,7 @@ class AggregatedTranscript:
 class SharedSecret:
 
     @staticmethod
-    def from_bytes(bytes: bytes) -> SharedSecret:
+    def from_bytes(data: bytes) -> SharedSecret:
         ...
 
     def __bytes__(self) -> bytes:
@@ -179,11 +179,8 @@ class SharedSecret:
 
 @final
 class FerveoVariant:
-    @staticmethod
-    def simple() -> str: ...
-
-    @staticmethod
-    def precomputed() -> str: ...
+    simple: str
+    precomputed: str
 
 
 def encrypt(message: bytes, aad: bytes, dkg_public_key: DkgPublicKey) -> Ciphertext:
