@@ -1,6 +1,6 @@
 use nucypher_core_wasm::*;
 
-use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, Keypair};
+use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, FerveoVariant, Keypair};
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
@@ -704,7 +704,7 @@ fn threshold_decryption_request() {
 
     let request = ThresholdDecryptionRequest::new(
         ritual_id,
-        0,
+        &FerveoVariant::simple(),
         &ciphertext,
         &conditions_js.unchecked_into::<OptionConditions>(),
         &context.unchecked_into::<OptionContext>(),

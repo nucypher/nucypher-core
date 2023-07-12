@@ -12,7 +12,8 @@ from .umbral import (
 
 from .ferveo import (
     FerveoPublicKey,
-    Ciphertext
+    Ciphertext,
+    FerveoVariant
 )
 
 
@@ -431,7 +432,7 @@ class MetadataResponse:
 @final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: int, ciphertext: Ciphertext, conditions: Optional[Conditions],
+    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, conditions: Optional[Conditions],
                  context: Optional[Context]):
         ...
 
@@ -441,7 +442,7 @@ class ThresholdDecryptionRequest:
 
     context: Optional[Context]
 
-    variant: int
+    variant: FerveoVariant
 
     ciphertext: Ciphertext
 

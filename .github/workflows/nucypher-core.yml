@@ -125,7 +125,7 @@ jobs:
         run: pip install mypy
 
       - name: Run mypy.stubtest
-        run: python -m mypy.stubtest nucypher_core
+        run: python -m mypy.stubtest nucypher_core --allowlist stubtest-allowlist.txt
         working-directory: nucypher-core-python
 
   trigger-wheels:

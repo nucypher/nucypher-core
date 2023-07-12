@@ -1,5 +1,6 @@
 from typing import Sequence, final
 
+
 @final
 class Keypair:
     @staticmethod
@@ -24,6 +25,7 @@ class Keypair:
     def public_key(self) -> FerveoPublicKey:
         ...
 
+
 @final
 class FerveoPublicKey:
     @staticmethod
@@ -40,6 +42,10 @@ class FerveoPublicKey:
     def serialized_size() -> int:
         ...
 
+    def __eq__(self, other: object) -> bool:
+        ...
+
+
 @final
 class Validator:
 
@@ -50,6 +56,7 @@ class Validator:
 
     public_key: FerveoPublicKey
 
+
 @final
 class Transcript:
     @staticmethod
@@ -58,6 +65,7 @@ class Transcript:
 
     def __bytes__(self) -> bytes:
         ...
+
 
 @final
 class DkgPublicKey:
@@ -72,6 +80,7 @@ class DkgPublicKey:
     def serialized_size() -> int:
         ...
 
+
 @final
 class ValidatorMessage:
 
@@ -84,6 +93,7 @@ class ValidatorMessage:
 
     validator: Validator
     transcript: Transcript
+
 
 @final
 class Dkg:
@@ -106,6 +116,7 @@ class Dkg:
     def aggregate_transcripts(self, messages: Sequence[ValidatorMessage]) -> AggregatedTranscript:
         ...
 
+
 @final
 class Ciphertext:
     @staticmethod
@@ -115,6 +126,7 @@ class Ciphertext:
     def __bytes__(self) -> bytes:
         ...
 
+
 @final
 class DecryptionShareSimple:
     @staticmethod
@@ -123,6 +135,8 @@ class DecryptionShareSimple:
 
     def __bytes__(self) -> bytes:
         ...
+
+
 @final
 class DecryptionSharePrecomputed:
     @staticmethod
@@ -131,6 +145,7 @@ class DecryptionSharePrecomputed:
 
     def __bytes__(self) -> bytes:
         ...
+
 
 @final
 class AggregatedTranscript:
@@ -166,6 +181,7 @@ class AggregatedTranscript:
     def __bytes__(self) -> bytes:
         ...
 
+
 @final
 class SharedSecret:
 
@@ -179,8 +195,11 @@ class SharedSecret:
 
 @final
 class FerveoVariant:
-    simple: str
-    precomputed: str
+    simple: FerveoVariant
+    precomputed: FerveoVariant
+
+    def __eq__(self, other: object) -> bool:
+        ...
 
 
 def encrypt(message: bytes, aad: bytes, dkg_public_key: DkgPublicKey) -> Ciphertext:
@@ -188,13 +207,13 @@ def encrypt(message: bytes, aad: bytes, dkg_public_key: DkgPublicKey) -> Ciphert
 
 
 def combine_decryption_shares_simple(
-        shares: Sequence[DecryptionShareSimple],
+        decryption_shares: Sequence[DecryptionShareSimple],
 ) -> bytes:
     ...
 
 
 def combine_decryption_shares_precomputed(
-        shares: Sequence[DecryptionSharePrecomputed],
+        decryption_shares: Sequence[DecryptionSharePrecomputed],
 ) -> SharedSecret:
     ...
 

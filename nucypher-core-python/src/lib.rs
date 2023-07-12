@@ -749,7 +749,7 @@ impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
         ritual_id: u32,
-        variant: &str,
+        variant: FerveoVariant,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
@@ -762,7 +762,7 @@ impl ThresholdDecryptionRequest {
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
-                variant,
+                variant.into(),
             ),
         })
     }
@@ -796,8 +796,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn variant(&self) -> String {
-        self.backend.variant.to_string()
+    pub fn variant(&self) -> FerveoVariant {
+        self.backend.variant.into()
     }
 
     pub fn encrypt(

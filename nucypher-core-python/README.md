@@ -9,6 +9,13 @@ This repo contains the Python bindings for the [main Rust project][nucypher-core
 
 You will need to have `setuptools-rust` installed. Then, for development you can just do `pip install -e .` as usual.
 
+## Development
+
+Update `nucypher-core-python/stubtest-allowlist.txt` with:
+```bash
+cd umbral-pre-python
+python -m mypy.stubtest nucypher_core --generate-allowlist > stubtest-allowlist.txt
+```
 
 [pypi-image]: https://img.shields.io/pypi/v/nucypher-core
 [pypi-link]: https://pypi.org/project/nucypher-core/

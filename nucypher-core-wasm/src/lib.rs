@@ -12,7 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::{api::FerveoVariant, bindings_wasm::Ciphertext};
+use ferveo::bindings_wasm::{Ciphertext, FerveoVariant};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -664,7 +664,7 @@ impl ThresholdDecryptionRequest {
     #[wasm_bindgen(constructor)]
     pub fn new(
         ritual_id: u32,
-        variant: u8,
+        variant: &FerveoVariant,
         ciphertext: &Ciphertext,
         conditions: &OptionConditions,
         context: &OptionContext,
@@ -672,18 +672,12 @@ impl ThresholdDecryptionRequest {
         let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
         let typed_context = try_from_js_option::<Context>(context)?;
 
-        let ferveo_variant = match variant {
-            0 => FerveoVariant::Simple,
-            1 => FerveoVariant::Precomputed,
-            _ => return Err(Error::new("Invalid variant")),
-        };
-
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
             ciphertext.as_ref(),
             typed_conditions.as_ref().map(|conditions| &conditions.0),
             typed_context.as_ref().map(|context| &context.0),
-            ferveo_variant,
+            variant.clone().into(),
         )))
     }
 
@@ -693,11 +687,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn variant(&self) -> u8 {
-        match self.0.variant {
-            FerveoVariant::Simple => 0,
-            FerveoVariant::Precomputed => 1,
-        }
+    pub fn variant(&self) -> FerveoVariant {
+        self.0.variant.into()
     }
 
     #[wasm_bindgen(getter)]

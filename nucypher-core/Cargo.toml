@@ -10,8 +10,8 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-umbral-pre = { version = "0.10.0", features = ["serde"], git = "https://github.com/piotr-roslaniec/rust-umbral.git", ref = "4b28a85c494e4e2640abb131460da0680a74134d" }
-ferveo = { package = "ferveo-pre-release", git = "https://github.com/nucypher/ferveo.git", ref = "fbb97be59d991a263233a0b876da982143b2cbf2" }
+umbral-pre = { version = "0.10.0", features = ["serde"], git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "fd2e16f9304b9dab85c9a8947a61d962ff136131" }
+ferveo = { package = "ferveo-pre-release", git = "https://github.com/nucypher/ferveo.git", rev = "cea467e0bd48a096f70dd1c7ca24a7e4bd88b3d4" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", features = ["zeroize"] }
 sha3 = "0.10"
