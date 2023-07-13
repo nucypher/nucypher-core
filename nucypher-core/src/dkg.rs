@@ -277,8 +277,10 @@ pub mod session {
         }
     }
 
-    type SessionSecretFactorySeedSize = U32; // the size of the seed material for key derivation
-    type SessionSecretFactoryDerivedKeySize = U32; // the size of the derived key
+    type SessionSecretFactorySeedSize = U32;
+    // the size of the seed material for key derivation
+    type SessionSecretFactoryDerivedKeySize = U32;
+    // the size of the derived key
     type SessionSecretFactorySeed = GenericArray<u8, SessionSecretFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.
@@ -716,60 +718,65 @@ mod tests {
 
     #[test]
     fn threshold_decryption_request() {
-        let ritual_id = 0;
+        for variant in [FerveoVariant::Simple, FerveoVariant::Precomputed] {
+            let ritual_id = 0;
 
-        let service_secret = SessionStaticSecret::random();
+            let service_secret = SessionStaticSecret::random();
 
-        let requester_secret = SessionStaticSecret::random();
-        let requester_public_key = requester_secret.public_key();
+            let requester_secret = SessionStaticSecret::random();
+            let requester_public_key = requester_secret.public_key();
 
-        let dkg_pk = DkgPublicKey::random();
-        let message = "The Tyranny of Merit".as_bytes().to_vec();
-        let aad = "my-add".as_bytes();
-        let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
+            let dkg_pk = DkgPublicKey::random();
+            let message = "The Tyranny of Merit".as_bytes().to_vec();
+            let aad = "my-add".as_bytes();
+            let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
-        let request = ThresholdDecryptionRequest::new(
-            ritual_id,
-            &ciphertext,
-            Some(&Conditions::new("abcd")),
-            Some(&Context::new("efgh")),
-            FerveoVariant::Simple,
-        );
+            let request = ThresholdDecryptionRequest::new(
+                ritual_id,
+                &ciphertext,
+                Some(&Conditions::new("abcd")),
+                Some(&Context::new("efgh")),
+                variant,
+            );
 
-        // requester encrypts request to send to service
-        let service_public_key = service_secret.public_key();
-        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
-        let encrypted_request = request.encrypt(&requester_shared_secret, &requester_public_key);
+            // requester encrypts request to send to service
+            let service_public_key = service_secret.public_key();
+            let requester_shared_secret =
+                requester_secret.derive_shared_secret(&service_public_key);
+            let encrypted_request =
+                request.encrypt(&requester_shared_secret, &requester_public_key);
 
-        // mimic serialization/deserialization over the wire
-        let encrypted_request_bytes = encrypted_request.to_bytes();
-        let encrypted_request_from_bytes =
-            EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
+            // mimic serialization/deserialization over the wire
+            let encrypted_request_bytes = encrypted_request.to_bytes();
+            let encrypted_request_from_bytes =
+                EncryptedThresholdDecryptionRequest::from_bytes(&encrypted_request_bytes).unwrap();
 
-        assert_eq!(encrypted_request_from_bytes.ritual_id, ritual_id);
-        assert_eq!(
-            encrypted_request_from_bytes.requester_public_key,
-            requester_public_key
-        );
+            assert_eq!(encrypted_request_from_bytes.ritual_id, ritual_id);
+            assert_eq!(
+                encrypted_request_from_bytes.requester_public_key,
+                requester_public_key
+            );
 
-        // service decrypts request
-        let service_shared_secret =
-            service_secret.derive_shared_secret(&encrypted_request_from_bytes.requester_public_key);
-        assert_eq!(
-            service_shared_secret.as_bytes(),
-            requester_shared_secret.as_bytes()
-        );
-        let decrypted_request = encrypted_request_from_bytes
-            .decrypt(&service_shared_secret)
-            .unwrap();
-        assert_eq!(decrypted_request, request);
+            // service decrypts request
+            let service_shared_secret = service_secret
+                .derive_shared_secret(&encrypted_request_from_bytes.requester_public_key);
+            assert_eq!(
+                service_shared_secret.as_bytes(),
+                requester_shared_secret.as_bytes()
+            );
+            let decrypted_request = encrypted_request_from_bytes
+                .decrypt(&service_shared_secret)
+                .unwrap();
+            assert_eq!(decrypted_request, request);
 
-        // wrong shared key used
-        let random_secret_key = SessionStaticSecret::random();
-        let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
-        assert!(encrypted_request_from_bytes
-            .decrypt(&random_shared_secret)
-            .is_err());
+            // wrong shared key used
+            let random_secret_key = SessionStaticSecret::random();
+            let random_shared_secret =
+                random_secret_key.derive_shared_secret(&requester_public_key);
+            assert!(encrypted_request_from_bytes
+                .decrypt(&random_shared_secret)
+                .is_err());
+        }
     }
 
     #[test]
