@@ -277,10 +277,10 @@ pub mod session {
         }
     }
 
-    type SessionSecretFactorySeedSize = U32;
     // the size of the seed material for key derivation
-    type SessionSecretFactoryDerivedKeySize = U32;
+    type SessionSecretFactorySeedSize = U32;
     // the size of the derived key
+    type SessionSecretFactoryDerivedKeySize = U32;
     type SessionSecretFactorySeed = GenericArray<u8, SessionSecretFactorySeedSize>;
 
     /// Error thrown when invalid random seed provided for creating key factory.

@@ -195,10 +195,13 @@ class SharedSecret:
 
 @final
 class FerveoVariant:
-    simple: FerveoVariant
-    precomputed: FerveoVariant
+    Simple: FerveoVariant
+    Precomputed: FerveoVariant
 
     def __eq__(self, other: object) -> bool:
+        ...
+
+    def __hash__(self) -> int:
         ...
 
 
