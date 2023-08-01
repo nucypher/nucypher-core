@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 pyo3 = "0.18"
 nucypher-core = { path = "../nucypher-core" }
 umbral-pre = { version = "0.10.0", features = ["bindings-python"], git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "fd2e16f9304b9dab85c9a8947a61d962ff136131" }
-ferveo = { package = "ferveo-pre-release", features = ["bindings-python"], git = "https://github.com/nucypher/ferveo.git", rev = "0e7c5615a0660a69077e7b431dd24c5bb3d0f10d" }
+ferveo = { version = "0.2.1", package = "ferveo-pre-release", features = ["bindings-python"] }
 derive_more = { version = "0.99", default-features = false, features = ["from", "as_ref"] }
 
 [build-dependencies]

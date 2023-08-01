@@ -518,6 +518,8 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81b88f694e924a2878d4abf89b79df44cdee2e0670875aba885bb769ccd71be3"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -531,7 +533,9 @@ dependencies = [
 
 [[package]]
 name = "ferveo-pre-release"
-version = "0.2.0"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a34e97a82e328847d4abf9d5a4dfec06c693210fcb3e6e9feb78f225b8126464"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -634,6 +638,8 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ade4859b58171e6815b0641e23f615f5dab030ecf2376b069d652f323fa760b"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1389,6 +1395,8 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7331c4e4ab9b7c9ed4ad2e950e8760826622c7ab110d9f1b3f350e2005017eab"
 dependencies = [
  "anyhow",
  "ark-ec",
