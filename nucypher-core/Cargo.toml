@@ -10,7 +10,7 @@ readme = "README.md"
 categories = ["cryptography", "no-std"]
 
 [dependencies]
-umbral-pre = { version = "0.10.0", features = ["serde"], git = "https://github.com/piotr-roslaniec/rust-umbral.git", rev = "fd2e16f9304b9dab85c9a8947a61d962ff136131" }
+umbral-pre = { version = "0.11.0", features = ["serde"] }
 ferveo = { version = "0.2.1", package = "ferveo-pre-release" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", features = ["zeroize"] }
