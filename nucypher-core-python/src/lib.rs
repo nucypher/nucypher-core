@@ -7,7 +7,7 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 
-use ferveo::bindings_python::{Ciphertext, FerveoPublicKey};
+use ferveo::bindings_python::{Ciphertext, FerveoPublicKey, FerveoVariant};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -18,7 +18,6 @@ use umbral_pre::bindings_python::{
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
 
-use nucypher_core::FerveoVariant;
 use nucypher_core::ProtocolObject;
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
@@ -136,13 +135,6 @@ impl Context {
     pub fn new(context: &str) -> Self {
         Self {
             backend: nucypher_core::Context::new(context),
-        }
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(context: String) -> Self {
-        Self {
-            backend: context.into(),
         }
     }
 
@@ -757,21 +749,11 @@ impl ThresholdDecryptionRequest {
     #[new]
     pub fn new(
         ritual_id: u32,
-        variant: u8,
+        variant: FerveoVariant,
         ciphertext: &Ciphertext,
         conditions: Option<&Conditions>,
         context: Option<&Context>,
     ) -> PyResult<Self> {
-        let ferveo_variant = match variant {
-            0 => FerveoVariant::SIMPLE,
-            1 => FerveoVariant::PRECOMPUTED,
-            _ => {
-                return Err(PyValueError::new_err(
-                    "Invalid ThresholdDecryptionRequest variant",
-                ));
-            }
-        };
-
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 ritual_id,
@@ -780,7 +762,7 @@ impl ThresholdDecryptionRequest {
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
-                ferveo_variant,
+                variant.into(),
             ),
         })
     }
@@ -814,11 +796,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn variant(&self) -> u8 {
-        match self.backend.variant {
-            FerveoVariant::SIMPLE => 0,
-            FerveoVariant::PRECOMPUTED => 1,
-        }
+    pub fn variant(&self) -> FerveoVariant {
+        self.backend.variant.into()
     }
 
     pub fn encrypt(

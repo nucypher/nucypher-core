@@ -30,7 +30,7 @@ pub use conditions::{Conditions, Context};
 pub use dkg::{
     session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
     DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
-    EncryptionError, FerveoVariant, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    EncryptionError, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
 };
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;

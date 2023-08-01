@@ -29,7 +29,7 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            rust: 1.65 # MSRV
+            rust: 1.67 # MSRV
           - target: x86_64-unknown-linux-gnu
             rust: stable
 
@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.65 # MSRV
+          - 1.67 # MSRV
           - stable
         target:
           - wasm32-unknown-unknown
@@ -95,6 +95,38 @@ jobs:
       - uses: borales/actions-yarn@v3.0.0
         with:
           cmd: --cwd nucypher-core-wasm/examples/node test
+
+  python-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        python:
+          - "3.10"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: Install nucypher-core Python package
+        run: pip install -e .
+        working-directory: nucypher-core-python
+
+      - name: Install pip dependencies
+        run: pip install mypy
+
+      - name: Run mypy.stubtest
+        run: python -m mypy.stubtest nucypher_core --allowlist stubtest-allowlist.txt
+        working-directory: nucypher-core-python
 
   trigger-wheels:
     runs-on: ubuntu-latest
