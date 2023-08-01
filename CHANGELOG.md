@@ -5,14 +5,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2023-08-01
 
-### Added
-
-- Expose `FerveoVariant` from `ferveo-pre-release` in Python bindings. ([#72])
-
 ### Changed
 
 - Bumped `umbral-pre` version to 0.11.0 and `ferveo-pre-release` version to 0.2.1 ([#72])
 - Bumped MSRV to 1.67. ([#72])
+
+### Added
+
+- Expose `FerveoVariant` from `ferveo-pre-release` in Python bindings. ([#72])
 
 [#72]: https://github.com/nucypher/nucypher-core/pull/72
 
