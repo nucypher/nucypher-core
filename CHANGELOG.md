@@ -3,8 +3,20 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2023-08-01
 
-## 0.10.0 - 2023-06-23
+### Added
+
+- Expose `FerveoVariant` from `ferveo-pre-release` in Python bindings. ([#72])
+
+### Changed
+
+- Bumped `umbral-pre` version to 0.11.0 and `ferveo-pre-release` version to 0.2.1 ([#72])
+- Bumped MSRV to 1.67. ([#72])
+
+[#72]: https://github.com/nucypher/nucypher-core/pull/72
+
+## [0.10.0] - 2023-06-23
 
 ### Changed
 
@@ -314,7 +326,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release.
 
 
-[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/nucypher/nucypher-core/compare/v0.11.0...HEAD
 [0.0.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.1
 [0.0.2]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.2
 [0.0.3]: https://github.com/nucypher/nucypher-core/releases/tag/v0.0.3
@@ -332,3 +344,6 @@ Initial release.
 [0.6.1]: https://github.com/nucypher/nucypher-core/releases/tag/v0.6.1
 [0.7.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.7.0
 [0.8.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.8.0
+[0.9.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.9.0
+[0.10.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.10.0
+[0.11.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.11.0
