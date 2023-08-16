@@ -11,8 +11,9 @@ from .umbral import (
 )
 
 from .ferveo import (
-    FerveoPublicKey,
     Ciphertext,
+    DkgPublicKey,
+    FerveoPublicKey,
     FerveoVariant
 )
 
@@ -430,15 +431,33 @@ class MetadataResponse:
 
 
 @final
+class AccessControlPolicy:
+
+    def __init__(self, public_key: DkgPublicKey, conditions: Optional[Conditions], authorization: bytes):
+        ...
+
+    public_key: DkgPublicKey
+
+    conditions: Optional[Conditions]
+
+    authorization: bytes
+
+    @staticmethod
+    def from_bytes(data: bytes) -> AccessControlPolicy:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+@final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, conditions: Optional[Conditions],
-                 context: Optional[Context]):
+    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, acp: AccessControlPolicy, context: Optional[Context]):
         ...
 
     ritual_id: int
 
-    conditions: Optional[Conditions]
+    acp: AccessControlPolicy
 
     context: Optional[Context]
 

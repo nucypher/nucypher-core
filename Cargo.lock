@@ -518,8 +518,7 @@ dependencies = [
 [[package]]
 name = "ferveo-common-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81b88f694e924a2878d4abf89b79df44cdee2e0670875aba885bb769ccd71be3"
+source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#59875467165f9fff22c1decaad75ecf46006a5f2"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -534,8 +533,7 @@ dependencies = [
 [[package]]
 name = "ferveo-pre-release"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a34e97a82e328847d4abf9d5a4dfec06c693210fcb3e6e9feb78f225b8126464"
+source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#59875467165f9fff22c1decaad75ecf46006a5f2"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -638,8 +636,7 @@ dependencies = [
 [[package]]
 name = "group-threshold-cryptography-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ade4859b58171e6815b0641e23f615f5dab030ecf2376b069d652f323fa760b"
+source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#59875467165f9fff22c1decaad75ecf46006a5f2"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -869,7 +866,7 @@ checksum = "94c7128ba23c81f6471141b90f17654f89ef44a56e14b8a4dd0fddfccd655277"
 
 [[package]]
 name = "nucypher-core"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "chacha20poly1305",
  "ferveo-pre-release",
@@ -891,19 +888,19 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "derive_more",
  "ferveo-pre-release",
  "nucypher-core",
  "pyo3",
- "pyo3-build-config 0.19.1",
+ "pyo3-build-config",
  "umbral-pre",
 ]
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "console_error_panic_hook",
  "derive_more",
@@ -1033,7 +1030,7 @@ dependencies = [
  "libc",
  "memoffset",
  "parking_lot",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
@@ -1050,23 +1047,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyo3-build-config"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "554db24f0b3c180a9c0b1268f91287ab3f17c162e15b54caaae5a6b3773396b0"
-dependencies = [
- "once_cell",
- "target-lexicon",
-]
-
-[[package]]
 name = "pyo3-ffi"
 version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d7c5337821916ea2a1d21d1092e8443cf34879e53a0ac653fbb98f44ff65c"
 dependencies = [
  "libc",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
 ]
 
 [[package]]
@@ -1395,8 +1382,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7331c4e4ab9b7c9ed4ad2e950e8760826622c7ab110d9f1b3f350e2005017eab"
+source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#59875467165f9fff22c1decaad75ecf46006a5f2"
 dependencies = [
  "anyhow",
  "ark-ec",

@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+mod access_control;
 mod address;
 mod conditions;
 mod dkg;
@@ -24,6 +25,8 @@ mod versioning;
 
 /// Error returned by various `verify()` methods in the crate.
 pub struct VerificationError;
+
+pub use access_control::AccessControlPolicy;
 
 pub use address::Address;
 pub use conditions::{Conditions, Context};

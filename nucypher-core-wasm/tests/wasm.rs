@@ -702,11 +702,19 @@ fn threshold_decryption_request() {
     let message = "my-message".as_bytes();
     let ciphertext = ferveo_encrypt(message, conditions.as_bytes(), &dkg_pk).unwrap();
 
+    let authorization = b"we_dont_need_no_stinking_badges";
+    let acp = AccessControlPolicy::new(
+        &dkg_pk,
+        authorization,
+        &conditions_js.unchecked_into::<OptionConditions>(),
+    )
+    .unwrap();
+
     let request = ThresholdDecryptionRequest::new(
         ritual_id,
         &FerveoVariant::simple(),
         &ciphertext,
-        &conditions_js.unchecked_into::<OptionConditions>(),
+        &acp,
         &context.unchecked_into::<OptionContext>(),
     )
     .unwrap();
@@ -786,4 +794,32 @@ fn threshold_decryption_response() {
     assert!(encrypted_response_from_bytes
         .decrypt(&random_shared_secret)
         .is_err());
+}
+
+#[wasm_bindgen_test]
+fn access_control_policy() {
+    let dkg_pk = DkgPublicKey::random();
+
+    let conditions = "{'some': 'condition'}";
+    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+
+    let authorization = b"we_dont_need_no_stinking_badges";
+    let acp = AccessControlPolicy::new(
+        &dkg_pk,
+        authorization,
+        &conditions_js.unchecked_into::<OptionConditions>(),
+    )
+    .unwrap();
+
+    // mimic serialization/deserialization over the wire
+    let serialized_acp = acp.to_bytes();
+    let deserialized_acp = AccessControlPolicy::from_bytes(&serialized_acp).unwrap();
+    assert_eq!(
+        dkg_pk.to_bytes().unwrap(),
+        deserialized_acp.public_key().to_bytes().unwrap()
+    );
+    assert_eq!(
+        authorization.to_vec().into_boxed_slice(),
+        deserialized_acp.authorization()
+    );
 }

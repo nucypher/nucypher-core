@@ -12,7 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::{Ciphertext, FerveoVariant};
+use ferveo::bindings_wasm::{Ciphertext, DkgPublicKey, FerveoVariant};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -649,6 +649,55 @@ impl SessionSecretFactory {
 }
 
 //
+// AccessControlPolicy
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct AccessControlPolicy(nucypher_core::AccessControlPolicy);
+
+generate_from_bytes!(AccessControlPolicy);
+generate_equals!(AccessControlPolicy);
+
+#[wasm_bindgen]
+impl AccessControlPolicy {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        public_key: &DkgPublicKey,
+        authorization: &[u8],
+        conditions: &OptionConditions,
+    ) -> Result<AccessControlPolicy, Error> {
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+
+        Ok(Self(nucypher_core::AccessControlPolicy::new(
+            public_key.as_ref(),
+            authorization,
+            typed_conditions.as_ref().map(|conditions| &conditions.0),
+        )))
+    }
+
+    #[wasm_bindgen(getter, js_name = publicKey)]
+    pub fn public_key(&self) -> DkgPublicKey {
+        DkgPublicKey::from(self.0.public_key)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn authorization(&self) -> Box<[u8]> {
+        self.0.authorization.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 
@@ -666,16 +715,15 @@ impl ThresholdDecryptionRequest {
         ritual_id: u32,
         variant: &FerveoVariant,
         ciphertext: &Ciphertext,
-        conditions: &OptionConditions,
+        access_control_policy: &AccessControlPolicy,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
         let typed_context = try_from_js_option::<Context>(context)?;
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
             ciphertext.as_ref(),
-            typed_conditions.as_ref().map(|conditions| &conditions.0),
+            access_control_policy.as_ref(),
             typed_context.as_ref().map(|context| &context.0),
             variant.clone().into(),
         )))
@@ -694,6 +742,11 @@ impl ThresholdDecryptionRequest {
     #[wasm_bindgen(getter)]
     pub fn ciphertext(&self) -> Ciphertext {
         self.0.ciphertext.clone().into()
+    }
+
+    #[wasm_bindgen(getter, js_name = accessControlPolicy)]
+    pub fn access_control_policy(&self) -> AccessControlPolicy {
+        self.0.acp.clone().into()
     }
 
     pub fn encrypt(
