@@ -20,6 +20,7 @@ mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod secret_box;
+mod threshold_message_kit;
 mod treasure_map;
 mod versioning;
 
@@ -45,6 +46,7 @@ pub use node_metadata::{
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
+pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
 

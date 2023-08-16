@@ -698,6 +698,52 @@ impl AccessControlPolicy {
 }
 
 //
+// ThresholdMessageKit
+//
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct ThresholdMessageKit(nucypher_core::ThresholdMessageKit);
+
+generate_from_bytes!(ThresholdMessageKit);
+generate_equals!(ThresholdMessageKit);
+
+#[wasm_bindgen]
+impl ThresholdMessageKit {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        kem_ciphertext: &Ciphertext,
+        dem_ciphertext: &[u8],
+        acp: &AccessControlPolicy,
+    ) -> Self {
+        Self(nucypher_core::ThresholdMessageKit::new(
+            kem_ciphertext.as_ref(),
+            dem_ciphertext,
+            acp.as_ref(),
+        ))
+    }
+
+    #[wasm_bindgen(getter, js_name = kemCiphertext)]
+    pub fn kem_ciphertext(&self) -> Ciphertext {
+        self.0.kem_ciphertext.clone().into()
+    }
+
+    #[wasm_bindgen(getter, js_name = demCiphertext)]
+    pub fn dem_ciphertext(&self) -> Box<[u8]> {
+        self.0.dem_ciphertext.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = accessControlPolicy)]
+    pub fn access_control_policy(&self) -> AccessControlPolicy {
+        self.0.acp.clone().into()
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 

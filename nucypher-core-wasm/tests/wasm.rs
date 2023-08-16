@@ -823,3 +823,36 @@ fn access_control_policy() {
         deserialized_acp.authorization()
     );
 }
+
+#[wasm_bindgen_test]
+fn threshold_message_kit() {
+    let conditions = "{'some': 'condition'}";
+    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+
+    let dkg_pk = DkgPublicKey::random();
+    let symmetric_key = "The Tyranny of Merit".as_bytes();
+    let kem_ciphertext = ferveo_encrypt(symmetric_key, conditions.as_bytes(), &dkg_pk).unwrap();
+
+    let authorization = b"we_dont_need_no_stinking_badges";
+
+    let acp = AccessControlPolicy::new(
+        &dkg_pk,
+        authorization,
+        &conditions_js.unchecked_into::<OptionConditions>(),
+    )
+    .unwrap();
+
+    let dem_ciphertext = b"data_encapsulation";
+
+    let tmk = ThresholdMessageKit::new(&kem_ciphertext, dem_ciphertext, &acp);
+
+    // mimic serialization/deserialization over the wire
+    let serialized_tmk = tmk.to_bytes();
+    let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
+    assert_eq!(
+        dem_ciphertext.to_vec().into_boxed_slice(),
+        deserialized_tmk.dem_ciphertext()
+    );
+    assert_eq!(kem_ciphertext, deserialized_tmk.kem_ciphertext());
+    assert_eq!(acp, deserialized_tmk.access_control_policy());
+}

@@ -792,6 +792,57 @@ impl AccessControlPolicy {
 }
 
 //
+// ThresholdMessageKit
+//
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdMessageKit {
+    backend: nucypher_core::ThresholdMessageKit,
+}
+
+#[pymethods]
+impl ThresholdMessageKit {
+    #[new]
+    pub fn new(
+        kem_ciphertext: &Ciphertext,
+        dem_ciphertext: &[u8],
+        acp: &AccessControlPolicy,
+    ) -> Self {
+        Self {
+            backend: nucypher_core::ThresholdMessageKit::new(
+                kem_ciphertext.as_ref(),
+                dem_ciphertext,
+                acp.as_ref(),
+            ),
+        }
+    }
+
+    #[getter]
+    pub fn kem_ciphertext(&self) -> Ciphertext {
+        self.backend.kem_ciphertext.clone().into()
+    }
+
+    #[getter]
+    pub fn dem_ciphertext(&self) -> &[u8] {
+        self.backend.dem_ciphertext.as_ref()
+    }
+
+    #[getter]
+    pub fn acp(&self) -> AccessControlPolicy {
+        self.backend.acp.clone().into()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdMessageKit>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 

@@ -450,6 +450,26 @@ class AccessControlPolicy:
         ...
 
 @final
+class ThresholdMessageKit:
+
+    def __init__(self, kem_ciphertext: Ciphertext, dem_ciphertext: bytes, acp: AccessControlPolicy):
+        ...
+
+    kem_ciphertext: Ciphertext
+
+    dem_ciphertext: bytes
+
+    acp: AccessControlPolicy
+
+    @staticmethod
+    def from_bytes(data: bytes) -> ThresholdMessageKit:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
 class ThresholdDecryptionRequest:
 
     def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, acp: AccessControlPolicy, context: Optional[Context]):
