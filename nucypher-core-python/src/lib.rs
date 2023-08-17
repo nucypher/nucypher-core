@@ -1525,6 +1525,8 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<SessionStaticKey>()?;
     core_module.add_class::<SessionStaticSecret>()?;
     core_module.add_class::<SessionSecretFactory>()?;
+    core_module.add_class::<AccessControlPolicy>()?;
+    core_module.add_class::<ThresholdMessageKit>()?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
