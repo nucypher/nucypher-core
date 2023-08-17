@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use ferveo::api::DkgPublicKey;
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,16 @@ impl AccessControlPolicy {
             authorization: authorization.to_vec().into(),
             conditions: conditions.cloned(),
         }
+    }
+
+    /// Return the aad.
+    pub fn aad(&self) -> Box<[u8]> {
+        let public_key_bytes = self.public_key.to_bytes().unwrap();
+        let condition_bytes = self.conditions.as_ref().unwrap().as_ref().as_bytes();
+        let mut result = Vec::with_capacity(public_key_bytes.len() + condition_bytes.len());
+        result.extend(public_key_bytes);
+        result.extend(condition_bytes);
+        result.into_boxed_slice()
     }
 }
 
@@ -95,10 +106,18 @@ mod tests {
         let serialized_acp = acp.to_bytes();
         let deserialized_acp = AccessControlPolicy::from_bytes(&serialized_acp).unwrap();
         assert_eq!(dkg_pk, deserialized_acp.public_key);
-        // assert_eq!(conditions, deserialized_acp.conditions);
+        assert_eq!(conditions, deserialized_acp.conditions.unwrap());
         assert_eq!(
             authorization.to_vec().into_boxed_slice(),
             deserialized_acp.authorization
         );
+
+        // check aad; expected to be dkg public key + conditions
+        let aad = acp.aad();
+
+        let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
+        expected_aad.extend(conditions.as_ref().as_bytes());
+
+        assert_eq!(expected_aad.into_boxed_slice(), aad);
     }
 }

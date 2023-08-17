@@ -676,6 +676,10 @@ impl AccessControlPolicy {
         )))
     }
 
+    pub fn aad(&self) -> Box<[u8]> {
+        self.0.aad()
+    }
+
     #[wasm_bindgen(getter, js_name = publicKey)]
     pub fn public_key(&self) -> DkgPublicKey {
         DkgPublicKey::from(self.0.public_key)

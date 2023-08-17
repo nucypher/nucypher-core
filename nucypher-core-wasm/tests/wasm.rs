@@ -822,6 +822,18 @@ fn access_control_policy() {
         authorization.to_vec().into_boxed_slice(),
         deserialized_acp.authorization()
     );
+    assert_eq!(
+        conditions,
+        deserialized_acp.conditions().unwrap().to_string()
+    );
+
+    // check aad; expected to be dkg public key + conditions
+    let aad = acp.aad();
+
+    let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
+    expected_aad.extend(conditions.as_bytes());
+
+    assert_eq!(expected_aad.into_boxed_slice(), aad);
 }
 
 #[wasm_bindgen_test]

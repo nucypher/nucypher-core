@@ -761,6 +761,11 @@ impl AccessControlPolicy {
         }
     }
 
+    pub fn aad(&self, py: Python) -> PyObject {
+        let result = self.backend.aad();
+        PyBytes::new(py, result.as_ref()).into()
+    }
+
     #[getter]
     pub fn public_key(&self) -> DkgPublicKey {
         self.backend.public_key.into()

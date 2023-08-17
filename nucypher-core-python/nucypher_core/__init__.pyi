@@ -442,6 +442,9 @@ class AccessControlPolicy:
 
     authorization: bytes
 
+    def aad(self) -> bytes:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> AccessControlPolicy:
         ...
