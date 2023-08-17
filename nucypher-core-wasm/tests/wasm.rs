@@ -866,5 +866,5 @@ fn threshold_message_kit() {
         deserialized_tmk.payload()
     );
     assert_eq!(header, deserialized_tmk.header());
-    assert_eq!(acp, deserialized_tmk.access_control_policy());
+    assert_eq!(acp, deserialized_tmk.acp());
 }

@@ -732,8 +732,8 @@ impl ThresholdMessageKit {
         self.0.payload.clone()
     }
 
-    #[wasm_bindgen(getter, js_name = accessControlPolicy)]
-    pub fn access_control_policy(&self) -> AccessControlPolicy {
+    #[wasm_bindgen(getter)]
+    pub fn acp(&self) -> AccessControlPolicy {
         self.0.acp.clone().into()
     }
 
@@ -761,7 +761,7 @@ impl ThresholdDecryptionRequest {
         ritual_id: u32,
         variant: &FerveoVariant,
         ciphertext: &Ciphertext,
-        access_control_policy: &AccessControlPolicy,
+        acp: &AccessControlPolicy,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
         let typed_context = try_from_js_option::<Context>(context)?;
@@ -769,7 +769,7 @@ impl ThresholdDecryptionRequest {
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
             ciphertext.as_ref(),
-            access_control_policy.as_ref(),
+            acp.as_ref(),
             typed_context.as_ref().map(|context| &context.0),
             variant.clone().into(),
         )))
@@ -790,8 +790,8 @@ impl ThresholdDecryptionRequest {
         self.0.ciphertext.clone().into()
     }
 
-    #[wasm_bindgen(getter, js_name = accessControlPolicy)]
-    pub fn access_control_policy(&self) -> AccessControlPolicy {
+    #[wasm_bindgen(getter)]
+    pub fn acp(&self) -> AccessControlPolicy {
         self.0.acp.clone().into()
     }
 
