@@ -714,26 +714,22 @@ generate_equals!(ThresholdMessageKit);
 #[wasm_bindgen]
 impl ThresholdMessageKit {
     #[wasm_bindgen(constructor)]
-    pub fn new(
-        kem_ciphertext: &Ciphertext,
-        dem_ciphertext: &[u8],
-        acp: &AccessControlPolicy,
-    ) -> Self {
+    pub fn new(header: &Ciphertext, payload: &[u8], acp: &AccessControlPolicy) -> Self {
         Self(nucypher_core::ThresholdMessageKit::new(
-            kem_ciphertext.as_ref(),
-            dem_ciphertext,
+            header.as_ref(),
+            payload,
             acp.as_ref(),
         ))
     }
 
-    #[wasm_bindgen(getter, js_name = kemCiphertext)]
-    pub fn kem_ciphertext(&self) -> Ciphertext {
-        self.0.kem_ciphertext.clone().into()
+    #[wasm_bindgen(getter)]
+    pub fn header(&self) -> Ciphertext {
+        self.0.header.clone().into()
     }
 
-    #[wasm_bindgen(getter, js_name = demCiphertext)]
-    pub fn dem_ciphertext(&self) -> Box<[u8]> {
-        self.0.dem_ciphertext.clone()
+    #[wasm_bindgen(getter)]
+    pub fn payload(&self) -> Box<[u8]> {
+        self.0.payload.clone()
     }
 
     #[wasm_bindgen(getter, js_name = accessControlPolicy)]

@@ -843,7 +843,7 @@ fn threshold_message_kit() {
 
     let dkg_pk = DkgPublicKey::random();
     let symmetric_key = "The Tyranny of Merit".as_bytes();
-    let kem_ciphertext = ferveo_encrypt(symmetric_key, conditions.as_bytes(), &dkg_pk).unwrap();
+    let header = ferveo_encrypt(symmetric_key, conditions.as_bytes(), &dkg_pk).unwrap();
 
     let authorization = b"we_dont_need_no_stinking_badges";
 
@@ -854,17 +854,17 @@ fn threshold_message_kit() {
     )
     .unwrap();
 
-    let dem_ciphertext = b"data_encapsulation";
+    let payload = b"data_encapsulation";
 
-    let tmk = ThresholdMessageKit::new(&kem_ciphertext, dem_ciphertext, &acp);
+    let tmk = ThresholdMessageKit::new(&header, payload, &acp);
 
     // mimic serialization/deserialization over the wire
     let serialized_tmk = tmk.to_bytes();
     let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
     assert_eq!(
-        dem_ciphertext.to_vec().into_boxed_slice(),
-        deserialized_tmk.dem_ciphertext()
+        payload.to_vec().into_boxed_slice(),
+        deserialized_tmk.payload()
     );
-    assert_eq!(kem_ciphertext, deserialized_tmk.kem_ciphertext());
+    assert_eq!(header, deserialized_tmk.header());
     assert_eq!(acp, deserialized_tmk.access_control_policy());
 }

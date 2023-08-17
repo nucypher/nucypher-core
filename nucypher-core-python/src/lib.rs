@@ -808,28 +808,24 @@ pub struct ThresholdMessageKit {
 #[pymethods]
 impl ThresholdMessageKit {
     #[new]
-    pub fn new(
-        kem_ciphertext: &Ciphertext,
-        dem_ciphertext: &[u8],
-        acp: &AccessControlPolicy,
-    ) -> Self {
+    pub fn new(header: &Ciphertext, payload: &[u8], acp: &AccessControlPolicy) -> Self {
         Self {
             backend: nucypher_core::ThresholdMessageKit::new(
-                kem_ciphertext.as_ref(),
-                dem_ciphertext,
+                header.as_ref(),
+                payload,
                 acp.as_ref(),
             ),
         }
     }
 
     #[getter]
-    pub fn kem_ciphertext(&self) -> Ciphertext {
-        self.backend.kem_ciphertext.clone().into()
+    pub fn header(&self) -> Ciphertext {
+        self.backend.header.clone().into()
     }
 
     #[getter]
-    pub fn dem_ciphertext(&self) -> &[u8] {
-        self.backend.dem_ciphertext.as_ref()
+    pub fn payload(&self) -> &[u8] {
+        self.backend.payload.as_ref()
     }
 
     #[getter]

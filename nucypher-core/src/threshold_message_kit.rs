@@ -15,12 +15,12 @@ use crate::versioning::{
 /// Access control metadata for encrypted data.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdMessageKit {
-    /// The data encapsulation ciphertext (DEM).
-    pub kem_ciphertext: Ciphertext,
+    /// The key encapsulation ciphertext
+    pub header: Ciphertext,
 
-    /// The key encapsulation ciphertext (KEM).
+    /// The bulk data encapsulation ciphertext
     #[serde(with = "serde_bytes::as_base64")]
-    pub dem_ciphertext: Box<[u8]>,
+    pub payload: Box<[u8]>,
 
     /// The associated access control metadata.
     pub acp: AccessControlPolicy,
@@ -28,14 +28,10 @@ pub struct ThresholdMessageKit {
 
 impl ThresholdMessageKit {
     /// Creates a new threshold message kit.
-    pub fn new(
-        kem_ciphertext: &Ciphertext,
-        dem_ciphertext: &[u8],
-        acp: &AccessControlPolicy,
-    ) -> Self {
+    pub fn new(header: &Ciphertext, payload: &[u8], acp: &AccessControlPolicy) -> Self {
         ThresholdMessageKit {
-            kem_ciphertext: kem_ciphertext.clone(),
-            dem_ciphertext: dem_ciphertext.to_vec().into(),
+            header: header.clone(),
+            payload: payload.to_vec().into(),
             acp: acp.clone(),
         }
     }
@@ -78,23 +74,23 @@ mod tests {
         let dkg_pk = DkgPublicKey::random();
         let symmetric_key = "The Tyranny of Merit".as_bytes().to_vec();
         let aad = "my-add".as_bytes();
-        let kem_ciphertext = ferveo_encrypt(SecretBox::new(symmetric_key), aad, &dkg_pk).unwrap();
+        let header = ferveo_encrypt(SecretBox::new(symmetric_key), aad, &dkg_pk).unwrap();
 
         let authorization = b"we_dont_need_no_stinking_badges";
         let acp = AccessControlPolicy::new(&dkg_pk, authorization, Some(&Conditions::new("abcd")));
 
-        let dem_ciphertext = b"data_encapsulation";
+        let payload = b"data_encapsulation";
 
-        let tmk = ThresholdMessageKit::new(&kem_ciphertext, dem_ciphertext, &acp);
+        let tmk = ThresholdMessageKit::new(&header, payload, &acp);
 
         // mimic serialization/deserialization over the wire
         let serialized_tmk = tmk.to_bytes();
         let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
         assert_eq!(
-            dem_ciphertext.to_vec().into_boxed_slice(),
-            deserialized_tmk.dem_ciphertext
+            payload.to_vec().into_boxed_slice(),
+            deserialized_tmk.payload
         );
-        assert_eq!(kem_ciphertext, deserialized_tmk.kem_ciphertext);
+        assert_eq!(header, deserialized_tmk.header);
         assert_eq!(acp, deserialized_tmk.acp);
     }
 }

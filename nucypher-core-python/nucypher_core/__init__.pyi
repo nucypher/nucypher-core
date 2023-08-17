@@ -455,12 +455,12 @@ class AccessControlPolicy:
 @final
 class ThresholdMessageKit:
 
-    def __init__(self, kem_ciphertext: Ciphertext, dem_ciphertext: bytes, acp: AccessControlPolicy):
+    def __init__(self, header: Ciphertext, payload: bytes, acp: AccessControlPolicy):
         ...
 
-    kem_ciphertext: Ciphertext
+    header: Ciphertext
 
-    dem_ciphertext: bytes
+    payload: bytes
 
     acp: AccessControlPolicy
 
