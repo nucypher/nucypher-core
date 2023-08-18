@@ -136,6 +136,30 @@ pub trait ProtocolObjectInner<'a>: Serialize + Deserialize<'a> {
     fn unversioned_to_bytes(&self) -> Box<[u8]>;
 
     fn unversioned_from_bytes(minor_version: u16, bytes: &'a [u8]) -> Option<Result<Self, String>>;
+
+    /// Returns whether backwards incompatible changes (major version bumps) are allowed for
+    /// the object, and the frozen major version for which compatibility is frozen. If backwards
+    /// incompatible changes are allowed, simply return the current major version (default).
+    ///
+    /// There are legacy protocol object types that have already made major version changes
+    /// that should have remained backwards compatible; it's possible that it was versioned
+    /// during development but earlier versions were never released. This is the ONLY reason
+    /// why frozen major version is returned, but in most cases this value will be "1" i.e. the
+    /// first iteration of the type.
+    ///
+    /// Examples of where this is needed is for protocol objects that may be persisted
+    /// and then processed by later versions of the `nucypher-core` library eg. MessageKits
+    /// i.e. encrypted data. These protocol types need to be "perpetually" backwards compatible.
+    /// If any backwards incompatible changes are needed for types that are supposed to
+    /// always remain backwards compatible, then use a brand new type.
+    ///
+    /// NOTE: Underlying struct members for types that must remain backwards compatible should
+    /// also remain backwards compatible as well.
+    fn must_remain_backwards_compatible() -> (bool, u16) {
+        // default to allow incompatible changes
+        let (major_version, _) = <Self as ProtocolObjectInner>::version();
+        (false, major_version)
+    }
 }
 
 /// This is a versioned protocol object.
@@ -151,7 +175,15 @@ pub trait ProtocolObject<'a>: ProtocolObjectInner<'a> {
 
     /// Serializes the object.
     fn to_bytes(&self) -> Box<[u8]> {
-        let header_bytes = ProtocolObjectHeader::from_type::<Self>().to_bytes();
+        let reference_header = ProtocolObjectHeader::from_type::<Self>();
+        let (must_remain_backwards_compatible, frozen_major_version) =
+            <Self as ProtocolObjectInner>::must_remain_backwards_compatible();
+        if must_remain_backwards_compatible && reference_header.major_version > frozen_major_version
+        {
+            panic!("major version changes not allowed for this ProtocolObject to assure backwards compatibility")
+        }
+
+        let header_bytes = reference_header.to_bytes();
         let unversioned_bytes = Self::unversioned_to_bytes(self);
 
         let mut result = Vec::with_capacity(header_bytes.len() + unversioned_bytes.len());
