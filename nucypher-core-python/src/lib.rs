@@ -6,7 +6,9 @@
 extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
-use ferveo::bindings_python::{Ciphertext, DkgPublicKey, FerveoPublicKey, FerveoVariant};
+use ferveo::bindings_python::{
+    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoVariant,
+};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -808,24 +810,15 @@ pub struct ThresholdMessageKit {
 #[pymethods]
 impl ThresholdMessageKit {
     #[new]
-    pub fn new(header: &Ciphertext, payload: &[u8], acp: &AccessControlPolicy) -> Self {
+    pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
         Self {
-            backend: nucypher_core::ThresholdMessageKit::new(
-                header.as_ref(),
-                payload,
-                acp.as_ref(),
-            ),
+            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), acp.as_ref()),
         }
     }
 
     #[getter]
-    pub fn header(&self) -> Ciphertext {
-        self.backend.header.clone().into()
-    }
-
-    #[getter]
-    pub fn payload(&self) -> &[u8] {
-        self.backend.payload.as_ref()
+    pub fn ciphertext(&self) -> Ciphertext {
+        self.backend.ciphertext.clone().into()
     }
 
     #[getter]
@@ -859,14 +852,14 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         ritual_id: u32,
         variant: FerveoVariant,
-        ciphertext: &Ciphertext,
+        ciphertext_header: &CiphertextHeader,
         acp: &AccessControlPolicy,
         context: Option<&Context>,
     ) -> PyResult<Self> {
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 ritual_id,
-                ciphertext.as_ref(),
+                ciphertext_header.as_ref(),
                 acp.as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
                 variant.into(),
@@ -893,8 +886,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.backend.ciphertext.clone().into()
+    pub fn ciphertext_header(&self) -> CiphertextHeader {
+        self.backend.ciphertext_header.clone().into()
     }
 
     #[getter]

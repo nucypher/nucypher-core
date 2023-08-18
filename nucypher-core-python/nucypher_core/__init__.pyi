@@ -12,9 +12,10 @@ from .umbral import (
 
 from .ferveo import (
     Ciphertext,
+    CiphertextHeader,
     DkgPublicKey,
     FerveoPublicKey,
-    FerveoVariant
+    FerveoVariant,
 )
 
 
@@ -455,12 +456,10 @@ class AccessControlPolicy:
 @final
 class ThresholdMessageKit:
 
-    def __init__(self, header: Ciphertext, payload: bytes, acp: AccessControlPolicy):
+    def __init__(self, ciphertext: Ciphertext, acp: AccessControlPolicy):
         ...
 
-    header: Ciphertext
-
-    payload: bytes
+    ciphertext: Ciphertext
 
     acp: AccessControlPolicy
 
@@ -475,7 +474,7 @@ class ThresholdMessageKit:
 @final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, acp: AccessControlPolicy, context: Optional[Context]):
+    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext_header: CiphertextHeader, acp: AccessControlPolicy, context: Optional[Context]):
         ...
 
     ritual_id: int
@@ -486,7 +485,7 @@ class ThresholdDecryptionRequest:
 
     variant: FerveoVariant
 
-    ciphertext: Ciphertext
+    ciphertext_header: CiphertextHeader
 
     def encrypt(self, shared_secret: SessionSharedSecret,
                 requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:

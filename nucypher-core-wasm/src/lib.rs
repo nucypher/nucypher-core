@@ -12,7 +12,7 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::{Ciphertext, DkgPublicKey, FerveoVariant};
+use ferveo::bindings_wasm::{Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -714,22 +714,16 @@ generate_equals!(ThresholdMessageKit);
 #[wasm_bindgen]
 impl ThresholdMessageKit {
     #[wasm_bindgen(constructor)]
-    pub fn new(header: &Ciphertext, payload: &[u8], acp: &AccessControlPolicy) -> Self {
+    pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
         Self(nucypher_core::ThresholdMessageKit::new(
-            header.as_ref(),
-            payload,
+            ciphertext.as_ref(),
             acp.as_ref(),
         ))
     }
 
     #[wasm_bindgen(getter)]
-    pub fn header(&self) -> Ciphertext {
-        self.0.header.clone().into()
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn payload(&self) -> Box<[u8]> {
-        self.0.payload.clone()
+    pub fn ciphertext(&self) -> Ciphertext {
+        self.0.ciphertext.clone().into()
     }
 
     #[wasm_bindgen(getter)]
@@ -760,7 +754,7 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         ritual_id: u32,
         variant: &FerveoVariant,
-        ciphertext: &Ciphertext,
+        ciphertext_header: &CiphertextHeader,
         acp: &AccessControlPolicy,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
@@ -768,7 +762,7 @@ impl ThresholdDecryptionRequest {
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
-            ciphertext.as_ref(),
+            ciphertext_header.as_ref(),
             acp.as_ref(),
             typed_context.as_ref().map(|context| &context.0),
             variant.clone().into(),
@@ -785,9 +779,9 @@ impl ThresholdDecryptionRequest {
         self.0.variant.into()
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.0.ciphertext.clone().into()
+    #[wasm_bindgen(getter, js_name = ciphertextHeader)]
+    pub fn ciphertext_header(&self) -> CiphertextHeader {
+        self.0.ciphertext_header.clone().into()
     }
 
     #[wasm_bindgen(getter)]

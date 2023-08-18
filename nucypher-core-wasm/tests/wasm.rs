@@ -1,5 +1,3 @@
-use nucypher_core_wasm::*;
-
 use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, FerveoVariant, Keypair};
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
@@ -8,6 +6,8 @@ use umbral_pre::bindings_wasm::{
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
+
+use nucypher_core_wasm::*;
 
 //
 // Test utilities
@@ -699,9 +699,6 @@ fn threshold_decryption_request() {
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
     let dkg_pk = DkgPublicKey::random();
-    let message = "my-message".as_bytes();
-    let ciphertext = ferveo_encrypt(message, conditions.as_bytes(), &dkg_pk).unwrap();
-
     let authorization = b"we_dont_need_no_stinking_badges";
     let acp = AccessControlPolicy::new(
         &dkg_pk,
@@ -710,10 +707,14 @@ fn threshold_decryption_request() {
     )
     .unwrap();
 
+    let message = "my-message".as_bytes();
+    let ciphertext = ferveo_encrypt(message, &acp.aad(), &dkg_pk).unwrap();
+    let ciphertext_header = ciphertext.header().unwrap();
+
     let request = ThresholdDecryptionRequest::new(
         ritual_id,
         &FerveoVariant::simple(),
-        &ciphertext,
+        &ciphertext_header,
         &acp,
         &context.unchecked_into::<OptionContext>(),
     )
@@ -842,9 +843,6 @@ fn threshold_message_kit() {
     let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
 
     let dkg_pk = DkgPublicKey::random();
-    let symmetric_key = "The Tyranny of Merit".as_bytes();
-    let header = ferveo_encrypt(symmetric_key, conditions.as_bytes(), &dkg_pk).unwrap();
-
     let authorization = b"we_dont_need_no_stinking_badges";
 
     let acp = AccessControlPolicy::new(
@@ -854,17 +852,14 @@ fn threshold_message_kit() {
     )
     .unwrap();
 
-    let payload = b"data_encapsulation";
+    let data = "The Tyranny of Merit".as_bytes();
+    let ciphertext = ferveo_encrypt(data, &acp.aad(), &dkg_pk).unwrap();
 
-    let tmk = ThresholdMessageKit::new(&header, payload, &acp);
+    let tmk = ThresholdMessageKit::new(&ciphertext, &acp);
 
     // mimic serialization/deserialization over the wire
     let serialized_tmk = tmk.to_bytes();
     let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
-    assert_eq!(
-        payload.to_vec().into_boxed_slice(),
-        deserialized_tmk.payload()
-    );
-    assert_eq!(header, deserialized_tmk.header());
+    assert_eq!(ciphertext, deserialized_tmk.ciphertext());
     assert_eq!(acp, deserialized_tmk.acp());
 }

@@ -4,7 +4,7 @@ use core::fmt;
 
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-use ferveo::api::{Ciphertext, FerveoVariant};
+use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
 use serde::{Deserialize, Serialize};
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
@@ -354,7 +354,7 @@ pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u32,
     /// The ciphertext to generate a decryption share for.
-    pub ciphertext: Ciphertext,
+    pub ciphertext_header: CiphertextHeader,
     /// The associated access control metadata.
     pub acp: AccessControlPolicy,
     /// A blob of bytes containing context required to evaluate conditions.
@@ -367,14 +367,14 @@ impl ThresholdDecryptionRequest {
     /// Creates a new decryption request.
     pub fn new(
         ritual_id: u32,
-        ciphertext: &Ciphertext,
+        ciphertext_header: &CiphertextHeader,
         acp: &AccessControlPolicy,
         context: Option<&Context>,
         variant: FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
-            ciphertext: ciphertext.clone(),
+            ciphertext_header: ciphertext_header.clone(),
             acp: acp.clone(),
             context: context.cloned(),
             variant,
@@ -393,7 +393,7 @@ impl ThresholdDecryptionRequest {
 
 impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
-        (3, 0)
+        (4, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -594,13 +594,6 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 #[cfg(test)]
 mod tests {
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
-
-    use crate::{
-        EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
-        SessionSecretFactory, SessionStaticKey, ThresholdDecryptionRequest,
-        ThresholdDecryptionResponse,
-    };
-
     use generic_array::typenum::Unsigned;
     use rand_core::RngCore;
 
@@ -611,6 +604,11 @@ mod tests {
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
     use crate::versioning::{ProtocolObject, ProtocolObjectInner};
+    use crate::{
+        EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
+        SessionSecretFactory, SessionStaticKey, ThresholdDecryptionRequest,
+        ThresholdDecryptionResponse,
+    };
 
     #[test]
     fn decryption_with_shared_secret() {
@@ -736,9 +734,11 @@ mod tests {
             let acp =
                 AccessControlPolicy::new(&dkg_pk, authorization, Some(&Conditions::new("abcd")));
 
+            let ciphertext_header = ciphertext.header().unwrap();
+
             let request = ThresholdDecryptionRequest::new(
                 ritual_id,
-                &ciphertext,
+                &ciphertext_header,
                 &acp,
                 Some(&Context::new("efgh")),
                 variant,
