@@ -699,13 +699,13 @@ fn threshold_decryption_request() {
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
     let dkg_pk = DkgPublicKey::random();
+
+    let auth_data =
+        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
+            .unwrap();
+
     let authorization = b"we_dont_need_no_stinking_badges";
-    let acp = AccessControlPolicy::new(
-        &dkg_pk,
-        authorization,
-        &conditions_js.unchecked_into::<OptionConditions>(),
-    )
-    .unwrap();
+    let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
 
     let message = "my-message".as_bytes();
     let ciphertext = ferveo_encrypt(message, &acp.aad(), &dkg_pk).unwrap();
@@ -798,19 +798,63 @@ fn threshold_decryption_response() {
 }
 
 #[wasm_bindgen_test]
+fn authenticated_data() {
+    let dkg_pk = DkgPublicKey::random();
+
+    let conditions = "{'some': 'condition'}";
+    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+
+    let auth_data =
+        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
+            .unwrap();
+
+    assert_eq!(
+        auth_data.public_key().to_bytes().unwrap(),
+        dkg_pk.to_bytes().unwrap()
+    );
+    assert_eq!(auth_data.conditions().unwrap().to_string(), conditions);
+
+    let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
+    expected_aad.extend(conditions.as_bytes());
+
+    assert_eq!(auth_data.aad(), expected_aad.into_boxed_slice());
+
+    // mimic serialization/deserialization over the wire
+    let serialized_auth_data = auth_data.to_bytes();
+    let deserialized_auth_data = AuthenticatedData::from_bytes(&serialized_auth_data).unwrap();
+    assert_eq!(
+        deserialized_auth_data.public_key().to_bytes().unwrap(),
+        dkg_pk.to_bytes().unwrap()
+    );
+    assert_eq!(
+        deserialized_auth_data.conditions().unwrap().to_string(),
+        conditions,
+    );
+}
+
+#[wasm_bindgen_test]
 fn access_control_policy() {
     let dkg_pk = DkgPublicKey::random();
 
     let conditions = "{'some': 'condition'}";
     let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
 
+    let auth_data =
+        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
+            .unwrap();
+
     let authorization = b"we_dont_need_no_stinking_badges";
-    let acp = AccessControlPolicy::new(
-        &dkg_pk,
-        authorization,
-        &conditions_js.unchecked_into::<OptionConditions>(),
-    )
-    .unwrap();
+    let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
+
+    assert_eq!(
+        dkg_pk.to_bytes().unwrap(),
+        acp.public_key().to_bytes().unwrap()
+    );
+    assert_eq!(
+        authorization.to_vec().into_boxed_slice(),
+        acp.authorization()
+    );
+    assert_eq!(conditions, acp.conditions().unwrap().to_string());
 
     // mimic serialization/deserialization over the wire
     let serialized_acp = acp.to_bytes();
@@ -828,13 +872,8 @@ fn access_control_policy() {
         deserialized_acp.conditions().unwrap().to_string()
     );
 
-    // check aad; expected to be dkg public key + conditions
-    let aad = acp.aad();
-
-    let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
-    expected_aad.extend(conditions.as_bytes());
-
-    assert_eq!(expected_aad.into_boxed_slice(), aad);
+    // check aad; expected acp and auth_data acps to be the same
+    assert_eq!(deserialized_acp.aad(), auth_data.aad());
 }
 
 #[wasm_bindgen_test]
@@ -843,14 +882,13 @@ fn threshold_message_kit() {
     let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
 
     let dkg_pk = DkgPublicKey::random();
-    let authorization = b"we_dont_need_no_stinking_badges";
 
-    let acp = AccessControlPolicy::new(
-        &dkg_pk,
-        authorization,
-        &conditions_js.unchecked_into::<OptionConditions>(),
-    )
-    .unwrap();
+    let auth_data =
+        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
+            .unwrap();
+
+    let authorization = b"we_dont_need_no_stinking_badges";
+    let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
 
     let data = "The Tyranny of Merit".as_bytes();
     let ciphertext = ferveo_encrypt(data, &acp.aad(), &dkg_pk).unwrap();

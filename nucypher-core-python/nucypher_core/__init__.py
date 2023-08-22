@@ -18,6 +18,7 @@ from ._nucypher_core import (
     MetadataResponse,
     MetadataResponsePayload,
     AccessControlPolicy,
+    AuthenticatedData,
     ThresholdMessageKit,
     ThresholdDecryptionRequest,
     ThresholdDecryptionResponse,

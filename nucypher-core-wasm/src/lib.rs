@@ -649,29 +649,27 @@ impl SessionSecretFactory {
 }
 
 //
-// AccessControlPolicy
+// AuthenticatedData
 //
 
 #[wasm_bindgen]
 #[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
-pub struct AccessControlPolicy(nucypher_core::AccessControlPolicy);
+pub struct AuthenticatedData(nucypher_core::AuthenticatedData);
 
-generate_from_bytes!(AccessControlPolicy);
-generate_equals!(AccessControlPolicy);
+generate_from_bytes!(AuthenticatedData);
+generate_equals!(AuthenticatedData);
 
 #[wasm_bindgen]
-impl AccessControlPolicy {
+impl AuthenticatedData {
     #[wasm_bindgen(constructor)]
     pub fn new(
         public_key: &DkgPublicKey,
-        authorization: &[u8],
         conditions: &OptionConditions,
-    ) -> Result<AccessControlPolicy, Error> {
+    ) -> Result<AuthenticatedData, Error> {
         let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
 
-        Ok(Self(nucypher_core::AccessControlPolicy::new(
+        Ok(Self(nucypher_core::AuthenticatedData::new(
             public_key.as_ref(),
-            authorization,
             typed_conditions.as_ref().map(|conditions| &conditions.0),
         )))
     }
@@ -686,13 +684,57 @@ impl AccessControlPolicy {
     }
 
     #[wasm_bindgen(getter)]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
+    }
+
+    #[wasm_bindgen(js_name = toBytes)]
+    pub fn to_bytes(&self) -> Box<[u8]> {
+        to_bytes(self)
+    }
+}
+
+//
+// AccessControlPolicy
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct AccessControlPolicy(nucypher_core::AccessControlPolicy);
+
+generate_from_bytes!(AccessControlPolicy);
+generate_equals!(AccessControlPolicy);
+
+#[wasm_bindgen]
+impl AccessControlPolicy {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        auth_data: &AuthenticatedData,
+        authorization: &[u8],
+    ) -> Result<AccessControlPolicy, Error> {
+        Ok(Self(nucypher_core::AccessControlPolicy::new(
+            auth_data.as_ref(),
+            authorization,
+        )))
+    }
+
+    pub fn aad(&self) -> Box<[u8]> {
+        self.0.aad()
+    }
+
+    #[wasm_bindgen(getter, js_name = publicKey)]
+    pub fn public_key(&self) -> DkgPublicKey {
+        DkgPublicKey::from(self.0.auth_data.public_key)
+    }
+
+    #[wasm_bindgen(getter)]
     pub fn authorization(&self) -> Box<[u8]> {
         self.0.authorization.clone()
     }
 
     #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Option<Conditions> {
-        self.0.conditions.clone().map(Conditions)
+        self.0.auth_data.conditions.clone().map(Conditions)
     }
 
     #[wasm_bindgen(js_name = toBytes)]

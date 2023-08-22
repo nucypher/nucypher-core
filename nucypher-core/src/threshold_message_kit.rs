@@ -59,7 +59,7 @@ impl<'a> ProtocolObject<'a> for ThresholdMessageKit {}
 mod tests {
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, SecretBox};
 
-    use crate::access_control::AccessControlPolicy;
+    use crate::access_control::{AccessControlPolicy, AuthenticatedData};
     use crate::conditions::Conditions;
     use crate::threshold_message_kit::ThresholdMessageKit;
     use crate::versioning::ProtocolObject;
@@ -70,7 +70,10 @@ mod tests {
         let data = "The Tyranny of Merit".as_bytes().to_vec();
 
         let authorization = b"we_dont_need_no_stinking_badges";
-        let acp = AccessControlPolicy::new(&dkg_pk, authorization, Some(&Conditions::new("abcd")));
+        let acp = AccessControlPolicy::new(
+            &AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd"))),
+            authorization,
+        );
 
         let ciphertext = ferveo_encrypt(SecretBox::new(data), &acp.aad(), &dkg_pk).unwrap();
         let tmk = ThresholdMessageKit::new(&ciphertext, &acp);

@@ -432,9 +432,30 @@ class MetadataResponse:
 
 
 @final
+class AuthenticatedData:
+
+    def __init__(self, public_key: DkgPublicKey, conditions: Optional[Conditions]):
+        ...
+
+    public_key: DkgPublicKey
+
+    conditions: Optional[Conditions]
+
+    def aad(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> AuthenticatedData:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
 class AccessControlPolicy:
 
-    def __init__(self, public_key: DkgPublicKey, conditions: Optional[Conditions], authorization: bytes):
+    def __init__(self, auth_data: AuthenticatedData, authorization: bytes):
         ...
 
     public_key: DkgPublicKey

@@ -736,26 +736,21 @@ impl SessionSecretFactory {
 }
 
 //
-// Access control metadata for encrypted data.
+// Authenticated data.
 //
 #[pyclass(module = "nucypher_core")]
 #[derive(derive_more::From, derive_more::AsRef)]
-pub struct AccessControlPolicy {
-    backend: nucypher_core::AccessControlPolicy,
+pub struct AuthenticatedData {
+    backend: nucypher_core::AuthenticatedData,
 }
 
 #[pymethods]
-impl AccessControlPolicy {
+impl AuthenticatedData {
     #[new]
-    pub fn new(
-        public_key: &DkgPublicKey,
-        authorization: &[u8],
-        conditions: Option<&Conditions>,
-    ) -> Self {
+    pub fn new(public_key: &DkgPublicKey, conditions: Option<&Conditions>) -> Self {
         Self {
-            backend: nucypher_core::AccessControlPolicy::new(
+            backend: nucypher_core::AuthenticatedData::new(
                 public_key.as_ref(),
-                authorization,
                 conditions
                     .map(|conditions| conditions.backend.clone())
                     .as_ref(),
@@ -776,6 +771,55 @@ impl AccessControlPolicy {
     #[getter]
     pub fn conditions(&self) -> Option<Conditions> {
         self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::AuthenticatedData>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// Access control metadata for encrypted data.
+//
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct AccessControlPolicy {
+    backend: nucypher_core::AccessControlPolicy,
+}
+
+#[pymethods]
+impl AccessControlPolicy {
+    #[new]
+    pub fn new(auth_data: &AuthenticatedData, authorization: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::AccessControlPolicy::new(auth_data.as_ref(), authorization),
+        }
+    }
+
+    pub fn aad(&self, py: Python) -> PyObject {
+        let result = self.backend.auth_data.aad();
+        PyBytes::new(py, result.as_ref()).into()
+    }
+
+    #[getter]
+    pub fn public_key(&self) -> DkgPublicKey {
+        self.backend.auth_data.public_key.into()
+    }
+
+    #[getter]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .auth_data
             .conditions
             .clone()
             .map(|conditions| Conditions {
@@ -1518,6 +1562,7 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<SessionStaticKey>()?;
     core_module.add_class::<SessionStaticSecret>()?;
     core_module.add_class::<SessionSecretFactory>()?;
+    core_module.add_class::<AuthenticatedData>()?;
     core_module.add_class::<AccessControlPolicy>()?;
     core_module.add_class::<ThresholdMessageKit>()?;
 

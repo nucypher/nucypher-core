@@ -605,9 +605,9 @@ mod tests {
     };
     use crate::versioning::{ProtocolObject, ProtocolObjectInner};
     use crate::{
-        EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
-        SessionSecretFactory, SessionStaticKey, ThresholdDecryptionRequest,
-        ThresholdDecryptionResponse,
+        AuthenticatedData, EncryptedThresholdDecryptionRequest,
+        EncryptedThresholdDecryptionResponse, SessionSecretFactory, SessionStaticKey,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
 
     #[test]
@@ -730,9 +730,10 @@ mod tests {
             let aad = "my-add".as_bytes();
             let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
+            let auth_data = AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd")));
+
             let authorization = b"self_authorization";
-            let acp =
-                AccessControlPolicy::new(&dkg_pk, authorization, Some(&Conditions::new("abcd")));
+            let acp = AccessControlPolicy::new(&auth_data, authorization);
 
             let ciphertext_header = ciphertext.header().unwrap();
 
