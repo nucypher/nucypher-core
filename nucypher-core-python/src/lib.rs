@@ -7,7 +7,7 @@ extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use ferveo::bindings_python::{
-    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoVariant,
+    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
 };
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -789,6 +789,26 @@ impl AuthenticatedData {
 }
 
 //
+// Encrypt for DKG.
+//
+#[pyfunction]
+pub fn encrypt_for_dkg(
+    data: &[u8],
+    public_key: &DkgPublicKey,
+    conditions: Option<&Conditions>,
+) -> PyResult<(Ciphertext, AuthenticatedData)> {
+    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
+        data,
+        public_key.as_ref(),
+        conditions
+            .map(|conditions| conditions.backend.clone())
+            .as_ref(),
+    )
+    .map_err(FerveoPythonError::FerveoError)?;
+    Ok((ciphertext.into(), auth_data.into()))
+}
+
+//
 // Access control metadata for encrypted data.
 //
 #[pyclass(module = "nucypher_core")]
@@ -1565,6 +1585,7 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<AuthenticatedData>()?;
     core_module.add_class::<AccessControlPolicy>()?;
     core_module.add_class::<ThresholdMessageKit>()?;
+    core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;

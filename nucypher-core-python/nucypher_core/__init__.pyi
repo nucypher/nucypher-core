@@ -452,6 +452,10 @@ class AuthenticatedData:
         ...
 
 
+def encrypt_for_dkg(data: bytes, public_key: DkgPublicKey, conditions: Optional[Conditions]) -> Tuple[Ciphertext, AuthenticatedData]:
+    ...
+
+
 @final
 class AccessControlPolicy:
 

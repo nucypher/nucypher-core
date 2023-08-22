@@ -28,4 +28,5 @@ from ._nucypher_core import (
     SessionStaticKey,
     SessionStaticSecret,
     SessionSecretFactory,
+    encrypt_for_dkg,
 )

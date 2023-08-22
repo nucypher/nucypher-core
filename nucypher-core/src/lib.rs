@@ -27,7 +27,7 @@ mod versioning;
 /// Error returned by various `verify()` methods in the crate.
 pub struct VerificationError;
 
-pub use access_control::{AccessControlPolicy, AuthenticatedData};
+pub use access_control::{encrypt_for_dkg, AccessControlPolicy, AuthenticatedData};
 
 pub use address::Address;
 pub use conditions::{Conditions, Context};

@@ -194,6 +194,9 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "[Address, EncryptedKeyFrag]")]
     pub type VerifiedRevocationOrder;
+
+    #[wasm_bindgen(typescript_type = "[Ciphertext, AuthenticatedData]")]
+    pub type DkgEncryptionResult;
 }
 
 //
@@ -692,6 +695,28 @@ impl AuthenticatedData {
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
     }
+}
+
+//
+// Encrypt for dkg
+//
+#[wasm_bindgen(js_name = "encryptForDkg")]
+pub fn encrypt_for_dkg(
+    data: &[u8],
+    public_key: &DkgPublicKey,
+    conditions: &OptionConditions,
+) -> Result<DkgEncryptionResult, Error> {
+    let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
+        data,
+        public_key.as_ref(),
+        typed_conditions.as_ref().map(|conditions| &conditions.0),
+    )
+    .map_err(map_js_err)?;
+    Ok(into_js_array([
+        JsValue::from(Ciphertext::from(ciphertext)),
+        JsValue::from(AuthenticatedData::from(auth_data)),
+    ]))
 }
 
 //

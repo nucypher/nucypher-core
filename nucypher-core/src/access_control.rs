@@ -2,7 +2,8 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use ferveo::api::DkgPublicKey;
+use ferveo::api::{encrypt, Ciphertext, DkgPublicKey, SecretBox};
+use ferveo::Error;
 use serde::{Deserialize, Serialize};
 use umbral_pre::serde_bytes;
 
@@ -73,6 +74,21 @@ impl<'a> ProtocolObjectInner<'a> for AuthenticatedData {
 }
 
 impl<'a> ProtocolObject<'a> for AuthenticatedData {}
+
+/// Encrypt data based on conditions and dkg public key.
+pub fn encrypt_for_dkg(
+    data: &[u8],
+    public_key: &DkgPublicKey,
+    conditions: Option<&Conditions>,
+) -> Result<(Ciphertext, AuthenticatedData), Error> {
+    let auth_data = AuthenticatedData::new(public_key, conditions);
+    let ciphertext = encrypt(
+        SecretBox::new(data.to_vec()),
+        auth_data.aad().as_ref(),
+        public_key,
+    )?;
+    Ok((ciphertext, auth_data))
+}
 
 /// Access control policy data for encrypted data.
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize, Clone)]
