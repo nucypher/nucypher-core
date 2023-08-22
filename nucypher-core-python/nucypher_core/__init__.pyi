@@ -15,7 +15,7 @@ from .ferveo import (
     CiphertextHeader,
     DkgPublicKey,
     FerveoPublicKey,
-    FerveoVariant,
+    FerveoVariant, SharedSecret,
 )
 
 
@@ -484,9 +484,12 @@ class ThresholdMessageKit:
     def __init__(self, ciphertext: Ciphertext, acp: AccessControlPolicy):
         ...
 
-    ciphertext: Ciphertext
-
     acp: AccessControlPolicy
+
+    ciphertext_header: CiphertextHeader
+
+    def decrypt_with_shared_secret(self, shared_secret: SharedSecret):
+        ...
 
     @staticmethod
     def from_bytes(data: bytes) -> ThresholdMessageKit:

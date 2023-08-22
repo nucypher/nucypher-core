@@ -898,6 +898,9 @@ fn threshold_message_kit() {
     // mimic serialization/deserialization over the wire
     let serialized_tmk = tmk.to_bytes();
     let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
-    assert_eq!(ciphertext, deserialized_tmk.ciphertext());
+    assert_eq!(
+        ciphertext.header().unwrap(),
+        deserialized_tmk.ciphertext_header().unwrap()
+    );
     assert_eq!(acp, deserialized_tmk.acp());
 }

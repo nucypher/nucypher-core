@@ -12,7 +12,9 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::{Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant};
+use ferveo::bindings_wasm::{
+    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant, JsResult, SharedSecret,
+};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -788,14 +790,22 @@ impl ThresholdMessageKit {
         ))
     }
 
-    #[wasm_bindgen(getter)]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.0.ciphertext.clone().into()
+    #[wasm_bindgen(getter, js_name=ciphertextHeader)]
+    pub fn ciphertext_header(&self) -> JsResult<CiphertextHeader> {
+        let header = self.0.ciphertext_header().map_err(map_js_err)?;
+        Ok(CiphertextHeader::from(header))
     }
 
     #[wasm_bindgen(getter)]
     pub fn acp(&self) -> AccessControlPolicy {
         self.0.acp.clone().into()
+    }
+
+    #[wasm_bindgen(js_name = decryptWithSharedSecret)]
+    pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> JsResult<Vec<u8>> {
+        self.0
+            .decrypt_with_shared_secret(shared_secret.as_ref())
+            .map_err(map_js_err)
     }
 
     #[wasm_bindgen(js_name = toBytes)]

@@ -8,6 +8,7 @@ extern crate alloc;
 use alloc::collections::{BTreeMap, BTreeSet};
 use ferveo::bindings_python::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
+    SharedSecret,
 };
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -881,13 +882,23 @@ impl ThresholdMessageKit {
     }
 
     #[getter]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.backend.ciphertext.clone().into()
+    pub fn ciphertext_header(&self) -> PyResult<CiphertextHeader> {
+        let header = self
+            .backend
+            .ciphertext_header()
+            .map_err(FerveoPythonError::from)?;
+        Ok(CiphertextHeader::from(header))
     }
 
     #[getter]
     pub fn acp(&self) -> AccessControlPolicy {
         self.backend.acp.clone().into()
+    }
+
+    pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> PyResult<Vec<u8>> {
+        self.backend
+            .decrypt_with_shared_secret(shared_secret.as_ref())
+            .map_err(|err| FerveoPythonError::FerveoError(err).into())
     }
 
     #[staticmethod]

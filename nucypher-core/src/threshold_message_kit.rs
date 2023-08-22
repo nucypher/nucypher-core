@@ -1,7 +1,9 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 
-use ferveo::api::Ciphertext;
+use ferveo::api::{Ciphertext, CiphertextHeader, SharedSecret};
+use ferveo::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::access_control::AccessControlPolicy;
@@ -28,6 +30,23 @@ impl ThresholdMessageKit {
             ciphertext: ciphertext.clone(),
             acp: acp.clone(),
         }
+    }
+
+    /// Returns ciphertext header.
+    pub fn ciphertext_header(&self) -> Result<CiphertextHeader, Error> {
+        self.ciphertext.header()
+    }
+
+    /// Decrypts encrypted data.
+    pub fn decrypt_with_shared_secret(
+        &self,
+        shared_secret: &SharedSecret,
+    ) -> Result<Vec<u8>, Error> {
+        ferveo::api::decrypt_with_shared_secret(
+            &self.ciphertext,
+            self.acp.aad().as_ref(),
+            shared_secret,
+        )
     }
 }
 
@@ -81,7 +100,10 @@ mod tests {
         // mimic serialization/deserialization over the wire
         let serialized_tmk = tmk.to_bytes();
         let deserialized_tmk = ThresholdMessageKit::from_bytes(&serialized_tmk).unwrap();
-        assert_eq!(ciphertext, deserialized_tmk.ciphertext);
+        assert_eq!(
+            ciphertext.header().unwrap(),
+            deserialized_tmk.ciphertext_header().unwrap()
+        );
         assert_eq!(acp, deserialized_tmk.acp);
     }
 }
