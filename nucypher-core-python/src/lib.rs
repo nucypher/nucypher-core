@@ -793,6 +793,7 @@ impl AuthenticatedData {
 // Encrypt for DKG.
 //
 #[pyfunction]
+#[pyo3(signature = (data, public_key, conditions))]
 pub fn encrypt_for_dkg(
     data: &[u8],
     public_key: &DkgPublicKey,
