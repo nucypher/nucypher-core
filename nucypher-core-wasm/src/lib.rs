@@ -662,6 +662,7 @@ impl SessionSecretFactory {
 pub struct AuthenticatedData(nucypher_core::AuthenticatedData);
 
 generate_from_bytes!(AuthenticatedData);
+generate_to_bytes!(AuthenticatedData);
 generate_equals!(AuthenticatedData);
 
 #[wasm_bindgen]
@@ -691,11 +692,6 @@ impl AuthenticatedData {
     #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Option<Conditions> {
         self.0.conditions.clone().map(Conditions)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
     }
 }
 
@@ -730,6 +726,7 @@ pub fn encrypt_for_dkg(
 pub struct AccessControlPolicy(nucypher_core::AccessControlPolicy);
 
 generate_from_bytes!(AccessControlPolicy);
+generate_to_bytes!(AccessControlPolicy);
 generate_equals!(AccessControlPolicy);
 
 #[wasm_bindgen]
@@ -763,11 +760,6 @@ impl AccessControlPolicy {
     pub fn conditions(&self) -> Option<Conditions> {
         self.0.auth_data.conditions.clone().map(Conditions)
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -778,6 +770,7 @@ impl AccessControlPolicy {
 pub struct ThresholdMessageKit(nucypher_core::ThresholdMessageKit);
 
 generate_from_bytes!(ThresholdMessageKit);
+generate_to_bytes!(ThresholdMessageKit);
 generate_equals!(ThresholdMessageKit);
 
 #[wasm_bindgen]
@@ -807,11 +800,6 @@ impl ThresholdMessageKit {
             .decrypt_with_shared_secret(shared_secret.as_ref())
             .map_err(map_js_err)
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -823,6 +811,7 @@ impl ThresholdMessageKit {
 pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest);
 
 generate_from_bytes!(ThresholdDecryptionRequest);
+generate_to_bytes!(ThresholdDecryptionRequest);
 generate_equals!(ThresholdDecryptionRequest);
 
 #[wasm_bindgen]
@@ -876,11 +865,6 @@ impl ThresholdDecryptionRequest {
                 .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
         )
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -892,6 +876,7 @@ impl ThresholdDecryptionRequest {
 pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThresholdDecryptionRequest);
 
 generate_from_bytes!(EncryptedThresholdDecryptionRequest);
+generate_to_bytes!(EncryptedThresholdDecryptionRequest);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
@@ -914,11 +899,6 @@ impl EncryptedThresholdDecryptionRequest {
             .map_err(map_js_err)
             .map(ThresholdDecryptionRequest)
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -930,6 +910,7 @@ impl EncryptedThresholdDecryptionRequest {
 pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionResponse);
 
 generate_from_bytes!(ThresholdDecryptionResponse);
+generate_to_bytes!(ThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl ThresholdDecryptionResponse {
@@ -960,11 +941,6 @@ impl ThresholdDecryptionResponse {
     ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -978,6 +954,7 @@ pub struct EncryptedThresholdDecryptionResponse(
 );
 
 generate_from_bytes!(EncryptedThresholdDecryptionResponse);
+generate_to_bytes!(EncryptedThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
@@ -994,11 +971,6 @@ impl EncryptedThresholdDecryptionResponse {
             .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
             .map(ThresholdDecryptionResponse)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
     }
 }
 
