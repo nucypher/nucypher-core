@@ -11,8 +11,6 @@ use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
 };
 
-// TODO should this be in umbral?
-
 /// Access control metadata for encrypted data.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdMessageKit {

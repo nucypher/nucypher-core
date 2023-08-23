@@ -44,8 +44,7 @@ impl AuthenticatedData {
 
 impl PartialEq for AuthenticatedData {
     fn eq(&self, other: &Self) -> bool {
-        self.public_key.to_bytes().unwrap() == other.public_key.to_bytes().unwrap()
-            && self.conditions == other.conditions
+        self.public_key == other.public_key && self.conditions == other.conditions
     }
 }
 
