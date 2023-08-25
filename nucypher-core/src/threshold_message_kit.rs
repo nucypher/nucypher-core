@@ -42,7 +42,7 @@ impl ThresholdMessageKit {
     ) -> Result<Vec<u8>, Error> {
         ferveo::api::decrypt_with_shared_secret(
             &self.ciphertext,
-            self.acp.aad().as_ref(),
+            self.acp.aad()?.as_ref(),
             shared_secret,
         )
     }
@@ -92,7 +92,8 @@ mod tests {
             authorization,
         );
 
-        let ciphertext = ferveo_encrypt(SecretBox::new(data), &acp.aad(), &dkg_pk).unwrap();
+        let ciphertext =
+            ferveo_encrypt(SecretBox::new(data), &acp.aad().unwrap(), &dkg_pk).unwrap();
         let tmk = ThresholdMessageKit::new(&ciphertext, &acp);
 
         // mimic serialization/deserialization over the wire

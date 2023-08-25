@@ -1,6 +1,5 @@
 use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::Vec;
 
 use ferveo::api::{encrypt, Ciphertext, DkgPublicKey, SecretBox};
 use ferveo::Error;
@@ -13,7 +12,7 @@ use crate::versioning::{
 };
 
 /// Authenticated data for encrypted data.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct AuthenticatedData {
     /// The public key for the encrypted data
     pub public_key: DkgPublicKey,
@@ -21,6 +20,8 @@ pub struct AuthenticatedData {
     /// The conditions associated with the encrypted data
     pub conditions: Option<Conditions>,
 }
+
+impl Eq for AuthenticatedData {}
 
 impl AuthenticatedData {
     /// Creates a new access control policy.
@@ -32,23 +33,19 @@ impl AuthenticatedData {
     }
 
     /// Return the aad.
-    pub fn aad(&self) -> Box<[u8]> {
-        let public_key_bytes = self.public_key.to_bytes().unwrap();
-        let condition_bytes = self.conditions.as_ref().unwrap().as_ref().as_bytes();
-        let mut result = Vec::with_capacity(public_key_bytes.len() + condition_bytes.len());
-        result.extend(public_key_bytes);
-        result.extend(condition_bytes);
-        result.into_boxed_slice()
+    pub fn aad(&self) -> Result<Box<[u8]>, Error> {
+        Ok([
+            self.public_key.to_bytes()?.to_vec(),
+            self.conditions
+                .as_ref()
+                .map(|c| c.as_ref().as_bytes())
+                .unwrap_or_default()
+                .to_vec(),
+        ]
+        .concat()
+        .into_boxed_slice())
     }
 }
-
-impl PartialEq for AuthenticatedData {
-    fn eq(&self, other: &Self) -> bool {
-        self.public_key == other.public_key && self.conditions == other.conditions
-    }
-}
-
-impl Eq for AuthenticatedData {}
 
 impl<'a> ProtocolObjectInner<'a> for AuthenticatedData {
     fn version() -> (u16, u16) {
@@ -83,7 +80,7 @@ pub fn encrypt_for_dkg(
     let auth_data = AuthenticatedData::new(public_key, conditions);
     let ciphertext = encrypt(
         SecretBox::new(data.to_vec()),
-        auth_data.aad().as_ref(),
+        auth_data.aad()?.as_ref(),
         public_key,
     )?;
     Ok((ciphertext, auth_data))
@@ -110,7 +107,7 @@ impl AccessControlPolicy {
     }
 
     /// Return the aad.
-    pub fn aad(&self) -> Box<[u8]> {
+    pub fn aad(&self) -> Result<Box<[u8]>, Error> {
         self.auth_data.aad()
     }
 
@@ -167,7 +164,7 @@ mod tests {
         // check aad for auth data; expected to be dkg public key + conditions
         let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
         expected_aad.extend(conditions.as_ref().as_bytes());
-        let auth_data_aad = auth_data.aad();
+        let auth_data_aad = auth_data.aad().unwrap();
         assert_eq!(expected_aad.into_boxed_slice(), auth_data_aad);
 
         assert_eq!(auth_data.public_key, dkg_pk);
@@ -193,7 +190,7 @@ mod tests {
         let acp = AccessControlPolicy::new(&auth_data, authorization);
 
         // check that aad for auth_data and acp are the same
-        assert_eq!(auth_data.aad(), acp.aad());
+        assert_eq!(auth_data.aad().unwrap(), acp.aad().unwrap());
 
         // mimic serialization/deserialization over the wire
         let serialized_acp = acp.to_bytes();

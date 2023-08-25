@@ -708,7 +708,7 @@ fn threshold_decryption_request() {
     let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
 
     let message = "my-message".as_bytes();
-    let ciphertext = ferveo_encrypt(message, &acp.aad(), &dkg_pk).unwrap();
+    let ciphertext = ferveo_encrypt(message, &acp.aad().unwrap(), &dkg_pk).unwrap();
     let ciphertext_header = ciphertext.header().unwrap();
 
     let request = ThresholdDecryptionRequest::new(
@@ -817,7 +817,7 @@ fn authenticated_data() {
     let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
     expected_aad.extend(conditions.as_bytes());
 
-    assert_eq!(auth_data.aad(), expected_aad.into_boxed_slice());
+    assert_eq!(auth_data.aad().unwrap(), expected_aad.into_boxed_slice());
 
     // mimic serialization/deserialization over the wire
     let serialized_auth_data = auth_data.to_bytes();
@@ -891,7 +891,7 @@ fn threshold_message_kit() {
     let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
 
     let data = "The Tyranny of Merit".as_bytes();
-    let ciphertext = ferveo_encrypt(data, &acp.aad(), &dkg_pk).unwrap();
+    let ciphertext = ferveo_encrypt(data, &acp.aad().unwrap(), &dkg_pk).unwrap();
 
     let tmk = ThresholdMessageKit::new(&ciphertext, &acp);
 

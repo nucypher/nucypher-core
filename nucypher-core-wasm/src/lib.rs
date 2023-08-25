@@ -680,8 +680,8 @@ impl AuthenticatedData {
         )))
     }
 
-    pub fn aad(&self) -> Box<[u8]> {
-        self.0.aad()
+    pub fn aad(&self) -> Result<Box<[u8]>, Error> {
+        self.0.aad().map_err(map_js_err)
     }
 
     #[wasm_bindgen(getter, js_name = publicKey)]
@@ -742,8 +742,8 @@ impl AccessControlPolicy {
         )))
     }
 
-    pub fn aad(&self) -> Box<[u8]> {
-        self.0.aad()
+    pub fn aad(&self) -> Result<Box<[u8]>, Error> {
+        self.0.aad().map_err(map_js_err)
     }
 
     #[wasm_bindgen(getter, js_name = publicKey)]
