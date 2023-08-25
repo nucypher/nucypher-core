@@ -580,7 +580,7 @@ impl ReencryptionResponse {
         ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
                 signer.as_ref(),
-                capsules_backend.iter().zip(vcfrags_backend.into_iter()),
+                capsules_backend.iter().zip(vcfrags_backend),
             ),
         }
     }

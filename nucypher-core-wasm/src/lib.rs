@@ -1101,7 +1101,7 @@ impl ReencryptionResponse {
 
         Ok(Self(nucypher_core::ReencryptionResponse::new(
             signer.as_ref(),
-            backend_capsules.iter().zip(backend_vcfrags.into_iter()),
+            backend_capsules.iter().zip(backend_vcfrags),
         )))
     }
 
