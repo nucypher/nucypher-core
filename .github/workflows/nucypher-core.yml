@@ -63,7 +63,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-      - run: cargo install wasm-opt wasm-pack
+      - run: cargo install wasm-opt wasm-pack@0.12.0
       - run: cd ../nucypher-core-wasm && wasm-pack test --node
 
   yarn-test:
