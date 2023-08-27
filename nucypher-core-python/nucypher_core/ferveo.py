@@ -35,3 +35,4 @@ InvalidTranscriptAggregate = _ferveo.InvalidTranscriptAggregate
 ValidatorsNotSorted = _ferveo.ValidatorsNotSorted
 ValidatorPublicKeyMismatch = _ferveo.ValidatorPublicKeyMismatch
 SerializationError = _ferveo.SerializationError
+CiphertextHeader = _ferveo.CiphertextHeader

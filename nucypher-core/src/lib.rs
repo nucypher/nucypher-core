@@ -7,6 +7,7 @@
 
 extern crate alloc;
 
+mod access_control;
 mod address;
 mod conditions;
 mod dkg;
@@ -19,11 +20,14 @@ mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod secret_box;
+mod threshold_message_kit;
 mod treasure_map;
 mod versioning;
 
 /// Error returned by various `verify()` methods in the crate.
 pub struct VerificationError;
+
+pub use access_control::{encrypt_for_dkg, AccessControlPolicy, AuthenticatedData};
 
 pub use address::Address;
 pub use conditions::{Conditions, Context};
@@ -42,6 +46,7 @@ pub use node_metadata::{
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
+pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
 

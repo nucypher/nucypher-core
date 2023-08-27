@@ -1,22 +1,21 @@
 use alloc::boxed::Box;
 use alloc::string::String;
 use core::fmt;
-use ferveo::api::{Ciphertext, FerveoVariant};
-use generic_array::typenum::Unsigned;
 
+use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
+use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use ferveo::api::{CiphertextHeader, FerveoVariant};
+use generic_array::typenum::Unsigned;
 use serde::{Deserialize, Serialize};
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
 
+use crate::access_control::AccessControlPolicy;
+use crate::conditions::Context;
+use crate::dkg::session::{SessionSharedSecret, SessionStaticKey};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
     ProtocolObjectInner,
 };
-
-use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
-use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-
-use crate::conditions::{Conditions, Context};
-use crate::dkg::session::{SessionSharedSecret, SessionStaticKey};
 
 /// Errors during encryption.
 #[derive(Debug)]
@@ -105,6 +104,7 @@ pub mod session {
     use alloc::boxed::Box;
     use alloc::string::String;
     use core::fmt;
+
     use generic_array::{
         typenum::{Unsigned, U32},
         GenericArray,
@@ -115,10 +115,9 @@ pub mod session {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use umbral_pre::serde_bytes;
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
-
-    use crate::secret_box::{kdf, SecretBox};
     use zeroize::ZeroizeOnDrop;
 
+    use crate::secret_box::{kdf, SecretBox};
     use crate::versioning::{
         messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
     };
@@ -355,9 +354,9 @@ pub struct ThresholdDecryptionRequest {
     /// The ID of the ritual.
     pub ritual_id: u32,
     /// The ciphertext to generate a decryption share for.
-    pub ciphertext: Ciphertext,
-    /// A blob of bytes containing decryption conditions for this message.
-    pub conditions: Option<Conditions>,
+    pub ciphertext_header: CiphertextHeader,
+    /// The associated access control metadata.
+    pub acp: AccessControlPolicy,
     /// A blob of bytes containing context required to evaluate conditions.
     pub context: Option<Context>,
     /// The ferveo variant to use for the decryption share derivation.
@@ -368,15 +367,15 @@ impl ThresholdDecryptionRequest {
     /// Creates a new decryption request.
     pub fn new(
         ritual_id: u32,
-        ciphertext: &Ciphertext,
-        conditions: Option<&Conditions>,
+        ciphertext_header: &CiphertextHeader,
+        acp: &AccessControlPolicy,
         context: Option<&Context>,
         variant: FerveoVariant,
     ) -> Self {
         Self {
             ritual_id,
-            ciphertext: ciphertext.clone(),
-            conditions: conditions.cloned(),
+            ciphertext_header: ciphertext_header.clone(),
+            acp: acp.clone(),
             context: context.cloned(),
             variant,
         }
@@ -394,7 +393,7 @@ impl ThresholdDecryptionRequest {
 
 impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
-        (2, 0)
+        (4, 0)
     }
 
     fn brand() -> [u8; 4] {
@@ -595,21 +594,21 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 #[cfg(test)]
 mod tests {
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
-
-    use crate::{
-        Conditions, Context, EncryptedThresholdDecryptionRequest,
-        EncryptedThresholdDecryptionResponse, ProtocolObject, SessionSecretFactory,
-        SessionStaticKey, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
-    };
-
     use generic_array::typenum::Unsigned;
     use rand_core::RngCore;
 
+    use crate::access_control::AccessControlPolicy;
+    use crate::conditions::{Conditions, Context};
     use crate::dkg::session::SessionStaticSecret;
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
-    use crate::versioning::ProtocolObjectInner;
+    use crate::versioning::{ProtocolObject, ProtocolObjectInner};
+    use crate::{
+        AuthenticatedData, EncryptedThresholdDecryptionRequest,
+        EncryptedThresholdDecryptionResponse, SessionSecretFactory, SessionStaticKey,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    };
 
     #[test]
     fn decryption_with_shared_secret() {
@@ -731,10 +730,17 @@ mod tests {
             let aad = "my-add".as_bytes();
             let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
+            let auth_data = AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd")));
+
+            let authorization = b"self_authorization";
+            let acp = AccessControlPolicy::new(&auth_data, authorization);
+
+            let ciphertext_header = ciphertext.header().unwrap();
+
             let request = ThresholdDecryptionRequest::new(
                 ritual_id,
-                &ciphertext,
-                Some(&Conditions::new("abcd")),
+                &ciphertext_header,
+                &acp,
                 Some(&Context::new("efgh")),
                 variant,
             );

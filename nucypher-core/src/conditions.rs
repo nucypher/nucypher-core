@@ -3,7 +3,7 @@ use core::fmt;
 
 use serde::{Deserialize, Serialize};
 
-/// Reencryption conditions.
+/// Access control conditions.
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct Conditions(String);
 

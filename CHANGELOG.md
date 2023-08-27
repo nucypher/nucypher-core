@@ -3,6 +3,24 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.12.0] - Unreleased
+
+### Changed
+
+- Modified `ThresholdDecryptionResponse`  to use `CiphertextHeader` and `AccessControlPolicy` to utilize encapsulation now provided by `ferveo`. ([#74])
+
+### Added
+
+- Added `ThresholdMessageKit` which is the representation of data encrypted via `ferveo` that utilizes data encapsulation and ephemeral symmetric key. ([#74])
+- Added `AccessControlPolicy` which contains access metadata (conditions, public key, authorization etc.) which forms part of the `ThresholdMessageKit`. ([#74])
+- Added `AuthenticatedData` which forms part of the `AccessControlPolicy` and is needed to ensure that the aad is consistent during encryption process and during decryption process. ([#74])
+- Added `encrypt_for_dkg` method for generation of `ferveo` `Ciphertext` and `AuthenticatedData`. ([#74])
+
+
+[#74]: https://github.com/nucypher/nucypher-core/pull/74
+
+
 ## [0.11.0] - 2023-08-01
 
 ### Changed

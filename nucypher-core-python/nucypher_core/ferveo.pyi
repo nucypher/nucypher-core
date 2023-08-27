@@ -119,8 +119,21 @@ class Dkg:
 
 @final
 class Ciphertext:
+    header: CiphertextHeader
+    payload: bytes
+
     @staticmethod
     def from_bytes(data: bytes) -> Ciphertext:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
+class CiphertextHeader:
+    @staticmethod
+    def from_bytes(data: bytes) -> CiphertextHeader:
         ...
 
     def __bytes__(self) -> bytes:
@@ -159,7 +172,7 @@ class AggregatedTranscript:
     def create_decryption_share_simple(
             self,
             dkg: Dkg,
-            ciphertext: Ciphertext,
+            ciphertext_header: CiphertextHeader,
             aad: bytes,
             validator_keypair: Keypair
     ) -> DecryptionShareSimple:
@@ -168,7 +181,7 @@ class AggregatedTranscript:
     def create_decryption_share_precomputed(
             self,
             dkg: Dkg,
-            ciphertext: Ciphertext,
+            ciphertext_header: CiphertextHeader,
             aad: bytes,
             validator_keypair: Keypair
     ) -> DecryptionSharePrecomputed:

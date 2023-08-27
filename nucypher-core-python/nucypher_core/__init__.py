@@ -17,6 +17,9 @@ from ._nucypher_core import (
     MetadataRequest,
     MetadataResponse,
     MetadataResponsePayload,
+    AccessControlPolicy,
+    AuthenticatedData,
+    ThresholdMessageKit,
     ThresholdDecryptionRequest,
     ThresholdDecryptionResponse,
     EncryptedThresholdDecryptionRequest,
@@ -25,4 +28,5 @@ from ._nucypher_core import (
     SessionStaticKey,
     SessionStaticSecret,
     SessionSecretFactory,
+    encrypt_for_dkg,
 )

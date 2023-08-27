@@ -12,7 +12,9 @@ use alloc::{
 };
 use core::fmt;
 
-use ferveo::bindings_wasm::{Ciphertext, FerveoVariant};
+use ferveo::bindings_wasm::{
+    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant, JsResult, SharedSecret,
+};
 use js_sys::Error;
 use umbral_pre::bindings_wasm::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerifiedCapsuleFrag,
@@ -194,6 +196,9 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "[Address, EncryptedKeyFrag]")]
     pub type VerifiedRevocationOrder;
+
+    #[wasm_bindgen(typescript_type = "[Ciphertext, AuthenticatedData]")]
+    pub type DkgEncryptionResult;
 }
 
 //
@@ -649,6 +654,155 @@ impl SessionSecretFactory {
 }
 
 //
+// AuthenticatedData
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct AuthenticatedData(nucypher_core::AuthenticatedData);
+
+generate_from_bytes!(AuthenticatedData);
+generate_to_bytes!(AuthenticatedData);
+generate_equals!(AuthenticatedData);
+
+#[wasm_bindgen]
+impl AuthenticatedData {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        public_key: &DkgPublicKey,
+        conditions: &OptionConditions,
+    ) -> Result<AuthenticatedData, Error> {
+        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+
+        Ok(Self(nucypher_core::AuthenticatedData::new(
+            public_key.as_ref(),
+            typed_conditions.as_ref().map(|conditions| &conditions.0),
+        )))
+    }
+
+    pub fn aad(&self) -> Box<[u8]> {
+        self.0.aad()
+    }
+
+    #[wasm_bindgen(getter, js_name = publicKey)]
+    pub fn public_key(&self) -> DkgPublicKey {
+        DkgPublicKey::from(self.0.public_key)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.conditions.clone().map(Conditions)
+    }
+}
+
+//
+// Encrypt for dkg
+//
+#[wasm_bindgen(js_name = "encryptForDkg")]
+pub fn encrypt_for_dkg(
+    data: &[u8],
+    public_key: &DkgPublicKey,
+    conditions: &OptionConditions,
+) -> Result<DkgEncryptionResult, Error> {
+    let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
+        data,
+        public_key.as_ref(),
+        typed_conditions.as_ref().map(|conditions| &conditions.0),
+    )
+    .map_err(map_js_err)?;
+    Ok(into_js_array([
+        JsValue::from(Ciphertext::from(ciphertext)),
+        JsValue::from(AuthenticatedData::from(auth_data)),
+    ]))
+}
+
+//
+// AccessControlPolicy
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct AccessControlPolicy(nucypher_core::AccessControlPolicy);
+
+generate_from_bytes!(AccessControlPolicy);
+generate_to_bytes!(AccessControlPolicy);
+generate_equals!(AccessControlPolicy);
+
+#[wasm_bindgen]
+impl AccessControlPolicy {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        auth_data: &AuthenticatedData,
+        authorization: &[u8],
+    ) -> Result<AccessControlPolicy, Error> {
+        Ok(Self(nucypher_core::AccessControlPolicy::new(
+            auth_data.as_ref(),
+            authorization,
+        )))
+    }
+
+    pub fn aad(&self) -> Box<[u8]> {
+        self.0.aad()
+    }
+
+    #[wasm_bindgen(getter, js_name = publicKey)]
+    pub fn public_key(&self) -> DkgPublicKey {
+        DkgPublicKey::from(self.0.auth_data.public_key)
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn authorization(&self) -> Box<[u8]> {
+        self.0.authorization.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.0.auth_data.conditions.clone().map(Conditions)
+    }
+}
+
+//
+// ThresholdMessageKit
+//
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct ThresholdMessageKit(nucypher_core::ThresholdMessageKit);
+
+generate_from_bytes!(ThresholdMessageKit);
+generate_to_bytes!(ThresholdMessageKit);
+generate_equals!(ThresholdMessageKit);
+
+#[wasm_bindgen]
+impl ThresholdMessageKit {
+    #[wasm_bindgen(constructor)]
+    pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
+        Self(nucypher_core::ThresholdMessageKit::new(
+            ciphertext.as_ref(),
+            acp.as_ref(),
+        ))
+    }
+
+    #[wasm_bindgen(getter, js_name=ciphertextHeader)]
+    pub fn ciphertext_header(&self) -> JsResult<CiphertextHeader> {
+        let header = self.0.ciphertext_header().map_err(map_js_err)?;
+        Ok(CiphertextHeader::from(header))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn acp(&self) -> AccessControlPolicy {
+        self.0.acp.clone().into()
+    }
+
+    #[wasm_bindgen(js_name = decryptWithSharedSecret)]
+    pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> JsResult<Vec<u8>> {
+        self.0
+            .decrypt_with_shared_secret(shared_secret.as_ref())
+            .map_err(map_js_err)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 
@@ -657,6 +811,7 @@ impl SessionSecretFactory {
 pub struct ThresholdDecryptionRequest(nucypher_core::ThresholdDecryptionRequest);
 
 generate_from_bytes!(ThresholdDecryptionRequest);
+generate_to_bytes!(ThresholdDecryptionRequest);
 generate_equals!(ThresholdDecryptionRequest);
 
 #[wasm_bindgen]
@@ -665,17 +820,16 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         ritual_id: u32,
         variant: &FerveoVariant,
-        ciphertext: &Ciphertext,
-        conditions: &OptionConditions,
+        ciphertext_header: &CiphertextHeader,
+        acp: &AccessControlPolicy,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
         let typed_context = try_from_js_option::<Context>(context)?;
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
-            ciphertext.as_ref(),
-            typed_conditions.as_ref().map(|conditions| &conditions.0),
+            ciphertext_header.as_ref(),
+            acp.as_ref(),
             typed_context.as_ref().map(|context| &context.0),
             variant.clone().into(),
         )))
@@ -691,9 +845,14 @@ impl ThresholdDecryptionRequest {
         self.0.variant.into()
     }
 
+    #[wasm_bindgen(getter, js_name = ciphertextHeader)]
+    pub fn ciphertext_header(&self) -> CiphertextHeader {
+        self.0.ciphertext_header.clone().into()
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.0.ciphertext.clone().into()
+    pub fn acp(&self) -> AccessControlPolicy {
+        self.0.acp.clone().into()
     }
 
     pub fn encrypt(
@@ -706,11 +865,6 @@ impl ThresholdDecryptionRequest {
                 .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
         )
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -722,6 +876,7 @@ impl ThresholdDecryptionRequest {
 pub struct EncryptedThresholdDecryptionRequest(nucypher_core::EncryptedThresholdDecryptionRequest);
 
 generate_from_bytes!(EncryptedThresholdDecryptionRequest);
+generate_to_bytes!(EncryptedThresholdDecryptionRequest);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionRequest {
@@ -744,11 +899,6 @@ impl EncryptedThresholdDecryptionRequest {
             .map_err(map_js_err)
             .map(ThresholdDecryptionRequest)
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -760,6 +910,7 @@ impl EncryptedThresholdDecryptionRequest {
 pub struct ThresholdDecryptionResponse(nucypher_core::ThresholdDecryptionResponse);
 
 generate_from_bytes!(ThresholdDecryptionResponse);
+generate_to_bytes!(ThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl ThresholdDecryptionResponse {
@@ -790,11 +941,6 @@ impl ThresholdDecryptionResponse {
     ) -> EncryptedThresholdDecryptionResponse {
         EncryptedThresholdDecryptionResponse(self.0.encrypt(shared_secret.as_ref()))
     }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
-    }
 }
 
 //
@@ -808,6 +954,7 @@ pub struct EncryptedThresholdDecryptionResponse(
 );
 
 generate_from_bytes!(EncryptedThresholdDecryptionResponse);
+generate_to_bytes!(EncryptedThresholdDecryptionResponse);
 
 #[wasm_bindgen]
 impl EncryptedThresholdDecryptionResponse {
@@ -824,11 +971,6 @@ impl EncryptedThresholdDecryptionResponse {
             .decrypt(shared_secret.as_ref())
             .map_err(map_js_err)
             .map(ThresholdDecryptionResponse)
-    }
-
-    #[wasm_bindgen(js_name = toBytes)]
-    pub fn to_bytes(&self) -> Box<[u8]> {
-        to_bytes(self)
     }
 }
 

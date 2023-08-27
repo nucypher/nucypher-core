@@ -6,8 +6,10 @@
 extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
-
-use ferveo::bindings_python::{Ciphertext, FerveoPublicKey, FerveoVariant};
+use ferveo::bindings_python::{
+    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
+    SharedSecret,
+};
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -735,6 +737,182 @@ impl SessionSecretFactory {
 }
 
 //
+// Authenticated data.
+//
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct AuthenticatedData {
+    backend: nucypher_core::AuthenticatedData,
+}
+
+#[pymethods]
+impl AuthenticatedData {
+    #[new]
+    pub fn new(public_key: &DkgPublicKey, conditions: Option<&Conditions>) -> Self {
+        Self {
+            backend: nucypher_core::AuthenticatedData::new(
+                public_key.as_ref(),
+                conditions
+                    .map(|conditions| conditions.backend.clone())
+                    .as_ref(),
+            ),
+        }
+    }
+
+    pub fn aad(&self, py: Python) -> PyObject {
+        let result = self.backend.aad();
+        PyBytes::new(py, result.as_ref()).into()
+    }
+
+    #[getter]
+    pub fn public_key(&self) -> DkgPublicKey {
+        self.backend.public_key.into()
+    }
+
+    #[getter]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::AuthenticatedData>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// Encrypt for DKG.
+//
+#[pyfunction]
+#[pyo3(signature = (data, public_key, conditions))]
+pub fn encrypt_for_dkg(
+    data: &[u8],
+    public_key: &DkgPublicKey,
+    conditions: Option<&Conditions>,
+) -> PyResult<(Ciphertext, AuthenticatedData)> {
+    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
+        data,
+        public_key.as_ref(),
+        conditions
+            .map(|conditions| conditions.backend.clone())
+            .as_ref(),
+    )
+    .map_err(FerveoPythonError::FerveoError)?;
+    Ok((ciphertext.into(), auth_data.into()))
+}
+
+//
+// Access control metadata for encrypted data.
+//
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct AccessControlPolicy {
+    backend: nucypher_core::AccessControlPolicy,
+}
+
+#[pymethods]
+impl AccessControlPolicy {
+    #[new]
+    pub fn new(auth_data: &AuthenticatedData, authorization: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::AccessControlPolicy::new(auth_data.as_ref(), authorization),
+        }
+    }
+
+    pub fn aad(&self, py: Python) -> PyObject {
+        let result = self.backend.auth_data.aad();
+        PyBytes::new(py, result.as_ref()).into()
+    }
+
+    #[getter]
+    pub fn public_key(&self) -> DkgPublicKey {
+        self.backend.auth_data.public_key.into()
+    }
+
+    #[getter]
+    pub fn conditions(&self) -> Option<Conditions> {
+        self.backend
+            .auth_data
+            .conditions
+            .clone()
+            .map(|conditions| Conditions {
+                backend: conditions,
+            })
+    }
+
+    #[getter]
+    pub fn authorization(&self) -> &[u8] {
+        self.backend.authorization.as_ref()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::AccessControlPolicy>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// ThresholdMessageKit
+//
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct ThresholdMessageKit {
+    backend: nucypher_core::ThresholdMessageKit,
+}
+
+#[pymethods]
+impl ThresholdMessageKit {
+    #[new]
+    pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
+        Self {
+            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), acp.as_ref()),
+        }
+    }
+
+    #[getter]
+    pub fn ciphertext_header(&self) -> PyResult<CiphertextHeader> {
+        let header = self
+            .backend
+            .ciphertext_header()
+            .map_err(FerveoPythonError::from)?;
+        Ok(CiphertextHeader::from(header))
+    }
+
+    #[getter]
+    pub fn acp(&self) -> AccessControlPolicy {
+        self.backend.acp.clone().into()
+    }
+
+    pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> PyResult<Vec<u8>> {
+        self.backend
+            .decrypt_with_shared_secret(shared_secret.as_ref())
+            .map_err(|err| FerveoPythonError::FerveoError(err).into())
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::ThresholdMessageKit>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
 // Threshold Decryption Request
 //
 
@@ -750,17 +928,15 @@ impl ThresholdDecryptionRequest {
     pub fn new(
         ritual_id: u32,
         variant: FerveoVariant,
-        ciphertext: &Ciphertext,
-        conditions: Option<&Conditions>,
+        ciphertext_header: &CiphertextHeader,
+        acp: &AccessControlPolicy,
         context: Option<&Context>,
     ) -> PyResult<Self> {
         Ok(Self {
             backend: nucypher_core::ThresholdDecryptionRequest::new(
                 ritual_id,
-                ciphertext.as_ref(),
-                conditions
-                    .map(|conditions| conditions.backend.clone())
-                    .as_ref(),
+                ciphertext_header.as_ref(),
+                acp.as_ref(),
                 context.map(|context| context.backend.clone()).as_ref(),
                 variant.into(),
             ),
@@ -773,13 +949,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn conditions(&self) -> Option<Conditions> {
-        self.backend
-            .conditions
-            .clone()
-            .map(|conditions| Conditions {
-                backend: conditions,
-            })
+    pub fn acp(&self) -> AccessControlPolicy {
+        self.backend.acp.clone().into()
     }
 
     #[getter]
@@ -791,8 +962,8 @@ impl ThresholdDecryptionRequest {
     }
 
     #[getter]
-    pub fn ciphertext(&self) -> Ciphertext {
-        self.backend.ciphertext.clone().into()
+    pub fn ciphertext_header(&self) -> CiphertextHeader {
+        self.backend.ciphertext_header.clone().into()
     }
 
     #[getter]
@@ -1423,6 +1594,10 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<SessionStaticKey>()?;
     core_module.add_class::<SessionStaticSecret>()?;
     core_module.add_class::<SessionSecretFactory>()?;
+    core_module.add_class::<AuthenticatedData>()?;
+    core_module.add_class::<AccessControlPolicy>()?;
+    core_module.add_class::<ThresholdMessageKit>()?;
+    core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;

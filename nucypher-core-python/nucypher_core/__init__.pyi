@@ -11,9 +11,11 @@ from .umbral import (
 )
 
 from .ferveo import (
-    FerveoPublicKey,
     Ciphertext,
-    FerveoVariant
+    CiphertextHeader,
+    DkgPublicKey,
+    FerveoPublicKey,
+    FerveoVariant, SharedSecret,
 )
 
 
@@ -430,21 +432,88 @@ class MetadataResponse:
 
 
 @final
+class AuthenticatedData:
+
+    def __init__(self, public_key: DkgPublicKey, conditions: Optional[Conditions]):
+        ...
+
+    public_key: DkgPublicKey
+
+    conditions: Optional[Conditions]
+
+    def aad(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> AuthenticatedData:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+def encrypt_for_dkg(data: bytes, public_key: DkgPublicKey, conditions: Optional[Conditions]) -> Tuple[Ciphertext, AuthenticatedData]:
+    ...
+
+
+@final
+class AccessControlPolicy:
+
+    def __init__(self, auth_data: AuthenticatedData, authorization: bytes):
+        ...
+
+    public_key: DkgPublicKey
+
+    conditions: Optional[Conditions]
+
+    authorization: bytes
+
+    def aad(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> AccessControlPolicy:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+@final
+class ThresholdMessageKit:
+
+    def __init__(self, ciphertext: Ciphertext, acp: AccessControlPolicy):
+        ...
+
+    acp: AccessControlPolicy
+
+    ciphertext_header: CiphertextHeader
+
+    def decrypt_with_shared_secret(self, shared_secret: SharedSecret):
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> ThresholdMessageKit:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext: Ciphertext, conditions: Optional[Conditions],
-                 context: Optional[Context]):
+    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext_header: CiphertextHeader, acp: AccessControlPolicy, context: Optional[Context]):
         ...
 
     ritual_id: int
 
-    conditions: Optional[Conditions]
+    acp: AccessControlPolicy
 
     context: Optional[Context]
 
     variant: FerveoVariant
 
-    ciphertext: Ciphertext
+    ciphertext_header: CiphertextHeader
 
     def encrypt(self, shared_secret: SessionSharedSecret,
                 requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:
