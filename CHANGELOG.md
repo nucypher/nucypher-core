@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added `ThresholdMessageKit` which is the representation of data encrypted via `ferveo` that utilizes data encapsulation and ephemeral symmetric key. ([#74])
-- Added `AccessControlPolicy` which contains access metadata (conditions, public key, authorization etc.) which forms part of the `ThresholdMessageKit`. ([#74])
-- Added `AuthenticatedData` which forms part of the `AccessControlPolicy` and is needed to ensure that the aad is consistent during encryption process and during decryption process. ([#74])
+- Added `ThresholdMessageKit` which is the representation of data encrypted via `ferveo` that utilizes data encapsulation and an ephemeral symmetric key. ([#74])
+- Added `AccessControlPolicy` which contains access metadata (conditions, public key, authorization, etc.) that forms part of the `ThresholdMessageKit`. ([#74])
+- Added `AuthenticatedData` which forms part of the `AccessControlPolicy` and is needed to ensure that the aad is consistent during the encryption process and during the decryption process. ([#74])
 - Added `encrypt_for_dkg` method for generation of `ferveo` `Ciphertext` and `AuthenticatedData`. ([#74])
 
 
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Custom (de)serialization of `SessionStaticKey` to bytestring instead of vector of integers. ([#63])
+- Custom (de)serialization of `SessionStaticKey` to bytestring instead of a vector of integers. ([#63])
 - Replaced raw tuples with `ValidatorMessage` in Python bindings. ([#65])
 - Removed `DkgPublicParams` from bindings. ([#66])
 
@@ -365,3 +365,4 @@ Initial release.
 [0.9.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.9.0
 [0.10.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.10.0
 [0.11.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.11.0
+[0.12.0]: https://github.com/nucypher/nucypher-core/releases/tag/v0.12.0
