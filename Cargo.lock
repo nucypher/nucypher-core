@@ -517,8 +517,9 @@ dependencies = [
 
 [[package]]
 name = "ferveo-common-pre-release"
-version = "0.1.0"
-source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#c3fe68a3214b398db617e687e5244371661a77f7"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3ec25c111a857ff86fad4f4214daf6b9daaa6c33aad1c92ff578ae385b3b73b"
 dependencies = [
  "ark-ec",
  "ark-serialize",
@@ -532,8 +533,9 @@ dependencies = [
 
 [[package]]
 name = "ferveo-pre-release"
-version = "0.2.1"
-source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#c3fe68a3214b398db617e687e5244371661a77f7"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1273a751e54f24768074f15ef0a07c15b21100052ffc2984b108165fd039199"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -635,8 +637,9 @@ dependencies = [
 
 [[package]]
 name = "group-threshold-cryptography-pre-release"
-version = "0.1.0"
-source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#c3fe68a3214b398db617e687e5244371661a77f7"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff63951ebc5caa2041b96f4725832c181c0e3b762cf28f0932d41cf9c05fbded"
 dependencies = [
  "ark-bls12-381",
  "ark-ec",
@@ -1382,7 +1385,8 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 [[package]]
 name = "subproductdomain-pre-release"
 version = "0.1.0"
-source = "git+https://github.com/derekpierre/nucypher-ferveo.git?branch=acp#c3fe68a3214b398db617e687e5244371661a77f7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7331c4e4ab9b7c9ed4ad2e950e8760826622c7ab110d9f1b3f350e2005017eab"
 dependencies = [
  "anyhow",
  "ark-ec",
