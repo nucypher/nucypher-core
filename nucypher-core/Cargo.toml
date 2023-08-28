@@ -1,6 +1,6 @@
 [package]
 name = "nucypher-core"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Bogdan Opanchuk <bogdan@opanchuk.net>"]
 edition = "2021"
 license = "GPL-3.0-only"
@@ -11,7 +11,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 umbral-pre = { version = "0.11.0", features = ["serde"] }
-ferveo = { package = "ferveo-pre-release", git = "https://github.com/derekpierre/nucypher-ferveo.git", branch = "acp" }
+ferveo = { package = "ferveo-pre-release", version = "0.3.0" }
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", features = ["zeroize"] }
 sha3 = "0.10"
