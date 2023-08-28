@@ -71,7 +71,6 @@ where
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
     })
 }
-
 #[pyclass(module = "nucypher_core")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, derive_more::AsRef)]
 pub struct Address {
@@ -581,7 +580,7 @@ impl ReencryptionResponse {
         ReencryptionResponse {
             backend: nucypher_core::ReencryptionResponse::new(
                 signer.as_ref(),
-                capsules_backend.iter().zip(vcfrags_backend.into_iter()),
+                capsules_backend.iter().zip(vcfrags_backend),
             ),
         }
     }
@@ -759,9 +758,12 @@ impl AuthenticatedData {
         }
     }
 
-    pub fn aad(&self, py: Python) -> PyObject {
-        let result = self.backend.aad();
-        PyBytes::new(py, result.as_ref()).into()
+    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
+        let result = self
+            .backend
+            .aad()
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(PyBytes::new(py, &result).into())
     }
 
     #[getter]
@@ -828,9 +830,12 @@ impl AccessControlPolicy {
         }
     }
 
-    pub fn aad(&self, py: Python) -> PyObject {
-        let result = self.backend.auth_data.aad();
-        PyBytes::new(py, result.as_ref()).into()
+    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
+        let result = self
+            .backend
+            .aad()
+            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+        Ok(PyBytes::new(py, &result).into())
     }
 
     #[getter]

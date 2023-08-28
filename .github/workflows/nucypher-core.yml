@@ -20,6 +20,8 @@ defaults:
 env:
   CARGO_INCREMENTAL: 0
   RUSTFLAGS: "-Dwarnings"
+  WASM_PACK_VERSION: 0.12.0
+  WASM_OPT_VERSION: 0.114.1
 
 jobs:
 
@@ -50,8 +52,8 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.67 # MSRV
-          - stable
+          - 1.71 # MSRV for wasm-opt & wasm-pack
+#          - stable
         target:
           - wasm32-unknown-unknown
 
@@ -63,7 +65,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-      - run: cargo install wasm-opt wasm-pack
+      - run: cargo install wasm-opt@${{ env.WASM_OPT_VERSION }} wasm-pack@${{ env.WASM_PACK_VERSION }}
       - run: cd ../nucypher-core-wasm && wasm-pack test --node
 
   yarn-test:
@@ -83,7 +85,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-      - run: cargo install wasm-opt wasm-pack
+      - run: cargo install wasm-opt@${{ env.WASM_OPT_VERSION }} wasm-pack@${{ env.WASM_PACK_VERSION }}
       - run: make
         working-directory: nucypher-core-wasm
       - uses: borales/actions-yarn@v3.0.0
