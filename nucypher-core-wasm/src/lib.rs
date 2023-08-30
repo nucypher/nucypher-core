@@ -205,7 +205,7 @@ extern "C" {
 // Conditions
 //
 
-#[derive(Clone, TryFromJsValue)]
+#[derive(Clone, TryFromJsValue, derive_more::From, derive_more::AsRef)]
 #[wasm_bindgen]
 pub struct Conditions(nucypher_core::Conditions);
 
@@ -670,13 +670,11 @@ impl AuthenticatedData {
     #[wasm_bindgen(constructor)]
     pub fn new(
         public_key: &DkgPublicKey,
-        conditions: &OptionConditions,
+        conditions: &Conditions,
     ) -> Result<AuthenticatedData, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
-
         Ok(Self(nucypher_core::AuthenticatedData::new(
             public_key.as_ref(),
-            typed_conditions.as_ref().map(|conditions| &conditions.0),
+            conditions.as_ref(),
         )))
     }
 
@@ -690,8 +688,8 @@ impl AuthenticatedData {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn conditions(&self) -> Option<Conditions> {
-        self.0.conditions.clone().map(Conditions)
+    pub fn conditions(&self) -> Conditions {
+        Conditions::from(self.0.conditions.clone())
     }
 }
 
@@ -702,15 +700,11 @@ impl AuthenticatedData {
 pub fn encrypt_for_dkg(
     data: &[u8],
     public_key: &DkgPublicKey,
-    conditions: &OptionConditions,
+    conditions: &Conditions,
 ) -> Result<DkgEncryptionResult, Error> {
-    let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
-    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
-        data,
-        public_key.as_ref(),
-        typed_conditions.as_ref().map(|conditions| &conditions.0),
-    )
-    .map_err(map_js_err)?;
+    let (ciphertext, auth_data) =
+        nucypher_core::encrypt_for_dkg(data, public_key.as_ref(), conditions.as_ref())
+            .map_err(map_js_err)?;
     Ok(into_js_array([
         JsValue::from(Ciphertext::from(ciphertext)),
         JsValue::from(AuthenticatedData::from(auth_data)),
@@ -757,8 +751,8 @@ impl AccessControlPolicy {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn conditions(&self) -> Option<Conditions> {
-        self.0.auth_data.conditions.clone().map(Conditions)
+    pub fn conditions(&self) -> Conditions {
+        Conditions::from(self.0.auth_data.conditions.clone())
     }
 }
 

@@ -18,17 +18,17 @@ pub struct AuthenticatedData {
     pub public_key: DkgPublicKey,
 
     /// The conditions associated with the encrypted data
-    pub conditions: Option<Conditions>,
+    pub conditions: Conditions,
 }
 
 impl Eq for AuthenticatedData {}
 
 impl AuthenticatedData {
     /// Creates a new access control policy.
-    pub fn new(public_key: &DkgPublicKey, conditions: Option<&Conditions>) -> Self {
+    pub fn new(public_key: &DkgPublicKey, conditions: &Conditions) -> Self {
         AuthenticatedData {
             public_key: *public_key,
-            conditions: conditions.cloned(),
+            conditions: conditions.clone(),
         }
     }
 
@@ -36,11 +36,7 @@ impl AuthenticatedData {
     pub fn aad(&self) -> Result<Box<[u8]>, Error> {
         Ok([
             self.public_key.to_bytes()?.to_vec(),
-            self.conditions
-                .as_ref()
-                .map(|c| c.as_ref().as_bytes())
-                .unwrap_or_default()
-                .to_vec(),
+            self.conditions.as_ref().as_bytes().to_vec(),
         ]
         .concat()
         .into_boxed_slice())
@@ -75,7 +71,7 @@ impl<'a> ProtocolObject<'a> for AuthenticatedData {}
 pub fn encrypt_for_dkg(
     data: &[u8],
     public_key: &DkgPublicKey,
-    conditions: Option<&Conditions>,
+    conditions: &Conditions,
 ) -> Result<(Ciphertext, AuthenticatedData), Error> {
     let auth_data = AuthenticatedData::new(public_key, conditions);
     let ciphertext = encrypt(
@@ -117,7 +113,7 @@ impl AccessControlPolicy {
     }
 
     /// Return the conditions
-    pub fn conditions(&self) -> Option<Conditions> {
+    pub fn conditions(&self) -> Conditions {
         self.auth_data.conditions.clone()
     }
 }
@@ -159,7 +155,7 @@ mod tests {
         let dkg_pk = DkgPublicKey::random();
         let conditions = Conditions::new("abcd");
 
-        let auth_data = AuthenticatedData::new(&dkg_pk, Some(&conditions));
+        let auth_data = AuthenticatedData::new(&dkg_pk, &conditions);
 
         // check aad for auth data; expected to be dkg public key + conditions
         let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
@@ -168,9 +164,9 @@ mod tests {
         assert_eq!(expected_aad.into_boxed_slice(), auth_data_aad);
 
         assert_eq!(auth_data.public_key, dkg_pk);
-        assert_eq!(auth_data.conditions, Some(conditions));
+        assert_eq!(auth_data.conditions, conditions);
 
-        let auth_data_2 = AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd")));
+        let auth_data_2 = AuthenticatedData::new(&dkg_pk, &conditions);
         assert_eq!(auth_data, auth_data_2);
 
         // mimic serialization/deserialization over the wire
@@ -185,7 +181,7 @@ mod tests {
         let dkg_pk = DkgPublicKey::random();
         let conditions = Conditions::new("abcd");
 
-        let auth_data = AuthenticatedData::new(&dkg_pk, Some(&conditions));
+        let auth_data = AuthenticatedData::new(&dkg_pk, &conditions);
         let authorization = b"we_dont_need_no_stinking_badges";
         let acp = AccessControlPolicy::new(&auth_data, authorization);
 

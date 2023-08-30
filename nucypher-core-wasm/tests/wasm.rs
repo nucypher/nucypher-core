@@ -694,15 +694,12 @@ fn threshold_decryption_request() {
 
     let requester_secret = SessionStaticSecret::random();
 
-    let conditions = "{'some': 'condition'}";
-    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+    let conditions = Conditions::new("{'some': 'condition'}");
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
     let dkg_pk = DkgPublicKey::random();
 
-    let auth_data =
-        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
-            .unwrap();
+    let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 
     let authorization = b"we_dont_need_no_stinking_badges";
     let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
@@ -801,21 +798,18 @@ fn threshold_decryption_response() {
 fn authenticated_data() {
     let dkg_pk = DkgPublicKey::random();
 
-    let conditions = "{'some': 'condition'}";
-    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+    let conditions = Conditions::new("{'some': 'condition'}");
 
-    let auth_data =
-        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
-            .unwrap();
+    let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 
     assert_eq!(
         auth_data.public_key().to_bytes().unwrap(),
         dkg_pk.to_bytes().unwrap()
     );
-    assert_eq!(auth_data.conditions().unwrap().to_string(), conditions);
+    assert!(auth_data.conditions().equals(&conditions));
 
     let mut expected_aad = dkg_pk.to_bytes().unwrap().to_vec();
-    expected_aad.extend(conditions.as_bytes());
+    expected_aad.extend(conditions.to_string().as_bytes());
 
     assert_eq!(auth_data.aad().unwrap(), expected_aad.into_boxed_slice());
 
@@ -826,22 +820,16 @@ fn authenticated_data() {
         deserialized_auth_data.public_key().to_bytes().unwrap(),
         dkg_pk.to_bytes().unwrap()
     );
-    assert_eq!(
-        deserialized_auth_data.conditions().unwrap().to_string(),
-        conditions,
-    );
+    assert!(deserialized_auth_data.conditions().equals(&conditions));
 }
 
 #[wasm_bindgen_test]
 fn access_control_policy() {
     let dkg_pk = DkgPublicKey::random();
 
-    let conditions = "{'some': 'condition'}";
-    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+    let conditions = Conditions::new("{'some': 'condition'}");
 
-    let auth_data =
-        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
-            .unwrap();
+    let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 
     let authorization = b"we_dont_need_no_stinking_badges";
     let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();
@@ -854,7 +842,7 @@ fn access_control_policy() {
         authorization.to_vec().into_boxed_slice(),
         acp.authorization()
     );
-    assert_eq!(conditions, acp.conditions().unwrap().to_string());
+    assert!(acp.conditions().equals(&conditions));
 
     // mimic serialization/deserialization over the wire
     let serialized_acp = acp.to_bytes();
@@ -867,10 +855,7 @@ fn access_control_policy() {
         authorization.to_vec().into_boxed_slice(),
         deserialized_acp.authorization()
     );
-    assert_eq!(
-        conditions,
-        deserialized_acp.conditions().unwrap().to_string()
-    );
+    assert!(deserialized_acp.conditions().equals(&conditions));
 
     // check aad; expected acp and auth_data acps to be the same
     assert_eq!(deserialized_acp.aad(), auth_data.aad());
@@ -878,14 +863,11 @@ fn access_control_policy() {
 
 #[wasm_bindgen_test]
 fn threshold_message_kit() {
-    let conditions = "{'some': 'condition'}";
-    let conditions_js: JsValue = Some(Conditions::new(conditions)).into();
+    let conditions = Conditions::new("{'some': 'condition'}");
 
     let dkg_pk = DkgPublicKey::random();
 
-    let auth_data =
-        AuthenticatedData::new(&dkg_pk, &conditions_js.unchecked_into::<OptionConditions>())
-            .unwrap();
+    let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 
     let authorization = b"we_dont_need_no_stinking_badges";
     let acp = AccessControlPolicy::new(&auth_data, authorization).unwrap();

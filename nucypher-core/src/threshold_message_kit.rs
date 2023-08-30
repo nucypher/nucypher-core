@@ -88,7 +88,7 @@ mod tests {
 
         let authorization = b"we_dont_need_no_stinking_badges";
         let acp = AccessControlPolicy::new(
-            &AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd"))),
+            &AuthenticatedData::new(&dkg_pk, &Conditions::new("abcd")),
             authorization,
         );
 
