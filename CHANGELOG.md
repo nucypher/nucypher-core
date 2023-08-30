@@ -4,11 +4,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.13.0] - Unreleased
+
+### Changed
+
+- `Conditions` should not be optional as it pertains to `AuthenticatedData` and `AccessControlPolicy` types since conditions-based decryption (CBD) requires conditions. ([#80])
+
+[#80]: https://github.com/nucypher/nucypher-core/pull/78
+
+
 ## [0.12.0] - 2023-08-28
 
 ### Changed
 
-- Modified `ThresholdDecryptionResponse`  to use `CiphertextHeader` and `AccessControlPolicy` to utilize encapsulation now provided by `ferveo`. ([#74])
+- Modified `ThresholdDecryptionRequest`  to use `CiphertextHeader` and `AccessControlPolicy` to utilize encapsulation now provided by `ferveo`. ([#74])
 
 ### Added
 
