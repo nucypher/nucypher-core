@@ -684,12 +684,12 @@ impl AuthenticatedData {
 
     #[wasm_bindgen(getter, js_name = publicKey)]
     pub fn public_key(&self) -> DkgPublicKey {
-        DkgPublicKey::from(self.0.public_key)
+        self.0.public_key.into()
     }
 
     #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Conditions {
-        Conditions::from(self.0.conditions.clone())
+        self.0.conditions.clone().into()
     }
 }
 
@@ -742,7 +742,7 @@ impl AccessControlPolicy {
 
     #[wasm_bindgen(getter, js_name = publicKey)]
     pub fn public_key(&self) -> DkgPublicKey {
-        DkgPublicKey::from(self.0.auth_data.public_key)
+        self.0.auth_data.public_key.into()
     }
 
     #[wasm_bindgen(getter)]
@@ -752,7 +752,7 @@ impl AccessControlPolicy {
 
     #[wasm_bindgen(getter)]
     pub fn conditions(&self) -> Conditions {
-        Conditions::from(self.0.auth_data.conditions.clone())
+        self.0.auth_data.conditions.clone().into()
     }
 }
 
