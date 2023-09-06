@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Conditions` should not be optional as it pertains to `AuthenticatedData` and `AccessControlPolicy` types since conditions-based decryption (CBD) requires conditions. ([#80])
 
-[#80]: https://github.com/nucypher/nucypher-core/pull/78
+[#80]: https://github.com/nucypher/nucypher-core/pull/80
 
 
 ## [0.12.0] - 2023-08-28
