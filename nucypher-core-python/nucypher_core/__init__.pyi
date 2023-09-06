@@ -434,12 +434,12 @@ class MetadataResponse:
 @final
 class AuthenticatedData:
 
-    def __init__(self, public_key: DkgPublicKey, conditions: Optional[Conditions]):
+    def __init__(self, public_key: DkgPublicKey, conditions: Conditions):
         ...
 
     public_key: DkgPublicKey
 
-    conditions: Optional[Conditions]
+    conditions: Conditions
 
     def aad(self) -> bytes:
         ...
@@ -452,7 +452,7 @@ class AuthenticatedData:
         ...
 
 
-def encrypt_for_dkg(data: bytes, public_key: DkgPublicKey, conditions: Optional[Conditions]) -> Tuple[Ciphertext, AuthenticatedData]:
+def encrypt_for_dkg(data: bytes, public_key: DkgPublicKey, conditions: Conditions) -> Tuple[Ciphertext, AuthenticatedData]:
     ...
 
 
@@ -464,7 +464,7 @@ class AccessControlPolicy:
 
     public_key: DkgPublicKey
 
-    conditions: Optional[Conditions]
+    conditions: Conditions
 
     authorization: bytes
 

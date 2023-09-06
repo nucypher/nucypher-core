@@ -100,6 +100,7 @@ impl Address {
 }
 
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct Conditions {
     backend: nucypher_core::Conditions,
 }
@@ -747,13 +748,11 @@ pub struct AuthenticatedData {
 #[pymethods]
 impl AuthenticatedData {
     #[new]
-    pub fn new(public_key: &DkgPublicKey, conditions: Option<&Conditions>) -> Self {
+    pub fn new(public_key: &DkgPublicKey, conditions: &Conditions) -> Self {
         Self {
             backend: nucypher_core::AuthenticatedData::new(
                 public_key.as_ref(),
-                conditions
-                    .map(|conditions| conditions.backend.clone())
-                    .as_ref(),
+                conditions.as_ref(),
             ),
         }
     }
@@ -772,13 +771,8 @@ impl AuthenticatedData {
     }
 
     #[getter]
-    pub fn conditions(&self) -> Option<Conditions> {
-        self.backend
-            .conditions
-            .clone()
-            .map(|conditions| Conditions {
-                backend: conditions,
-            })
+    pub fn conditions(&self) -> Conditions {
+        self.backend.conditions.clone().into()
     }
 
     #[staticmethod]
@@ -799,16 +793,11 @@ impl AuthenticatedData {
 pub fn encrypt_for_dkg(
     data: &[u8],
     public_key: &DkgPublicKey,
-    conditions: Option<&Conditions>,
+    conditions: &Conditions,
 ) -> PyResult<(Ciphertext, AuthenticatedData)> {
-    let (ciphertext, auth_data) = nucypher_core::encrypt_for_dkg(
-        data,
-        public_key.as_ref(),
-        conditions
-            .map(|conditions| conditions.backend.clone())
-            .as_ref(),
-    )
-    .map_err(FerveoPythonError::FerveoError)?;
+    let (ciphertext, auth_data) =
+        nucypher_core::encrypt_for_dkg(data, public_key.as_ref(), conditions.as_ref())
+            .map_err(FerveoPythonError::FerveoError)?;
     Ok((ciphertext.into(), auth_data.into()))
 }
 
@@ -844,14 +833,8 @@ impl AccessControlPolicy {
     }
 
     #[getter]
-    pub fn conditions(&self) -> Option<Conditions> {
-        self.backend
-            .auth_data
-            .conditions
-            .clone()
-            .map(|conditions| Conditions {
-                backend: conditions,
-            })
+    pub fn conditions(&self) -> Conditions {
+        self.backend.auth_data.conditions.clone().into()
     }
 
     #[getter]

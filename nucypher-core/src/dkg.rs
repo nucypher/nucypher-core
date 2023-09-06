@@ -730,7 +730,7 @@ mod tests {
             let aad = "my-add".as_bytes();
             let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
 
-            let auth_data = AuthenticatedData::new(&dkg_pk, Some(&Conditions::new("abcd")));
+            let auth_data = AuthenticatedData::new(&dkg_pk, &Conditions::new("abcd"));
 
             let authorization = b"self_authorization";
             let acp = AccessControlPolicy::new(&auth_data, authorization);
