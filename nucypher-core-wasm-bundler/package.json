@@ -1,5 +1,6 @@
 {
-  "name": "@nucypher/nucypher-core-wasm",
+  "name": "@nucypher/nucypher-core",
+  "version": "0.13.0-alpha.0",
   "license": "GPL-3.0-only",
   "sideEffects": false,
   "type": "module",
