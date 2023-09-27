@@ -488,7 +488,7 @@ class ThresholdMessageKit:
 
     ciphertext_header: CiphertextHeader
 
-    def decrypt_with_shared_secret(self, shared_secret: SharedSecret):
+    def decrypt_with_shared_secret(self, shared_secret: SharedSecret) -> bytes:
         ...
 
     @staticmethod
