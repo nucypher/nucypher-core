@@ -4,23 +4,28 @@
   "license": "GPL-3.0-only",
   "sideEffects": false,
   "type": "module",
-  "main": "./dist/umd/index.js",
-  "module": "./dist/es/index.js",
-  "types": "./dist/types/index.d.ts",
+  "main": "./dist/umd/index_fat.js",
+  "module": "./dist/es/index_fat.js",
+  "types": "./dist/types/index_fat.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/es/index.js",
-      "default": "./dist/cjs/index.cjs"
-    }
+      "types": "./dist/types/index_fat.d.ts",
+      "node": "./dist/node/index_node.cjs",
+      "import": "./dist/es/index_fat.js",
+      "default": "./dist/cjs/index_fat.cjs"
+    },
+    "./nucypher_core.wasm": "./dist/nucypher_core_wasm_bg.wasm",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "wasm-pack build -t web --out-dir ../nucypher-core-wasm-bundler/src/pkg ../nucypher-core-wasm && rm -rf dist/ && rollup -c",
-    "build:minify": "npm run build && npx terser@latest --compress --mangle --output dist/cjs/index.cjs -- dist/cjs/index.cjs",
-    "format": "npx prettier@latest --write src/ tests/ package.json rollup.config.js tsconfig.json vite.config.ts cli.js"
+    "pretest": "npm run build",
+    "build:minify": "npm run build && npx terser@latest --compress --mangle --output dist/cjs/index_fat.cjs -- dist/cjs/index_fat.cjs",
+    "test": "vitest run",
+    "format": "npx prettier@latest --write src/ tests/ package.json rollup.config.js tsconfig.json"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.3",
@@ -28,6 +33,7 @@
     "@types/node": "^20.5.6",
     "rollup": "^3.29.2",
     "tslib": "^2.6.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.5"
   }
 }

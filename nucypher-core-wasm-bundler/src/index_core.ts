@@ -1,1 +1,1 @@
-export * from "./pkg/nucypher_core_wasm.js";
+export * from "./wasm.js";

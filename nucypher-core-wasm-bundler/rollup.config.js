@@ -12,7 +12,7 @@ const outDir = (fmt, env) => {
 };
 
 const rolls = (fmt, env) => ({
-  input: env !== "slim" ? "src/index.ts" : "src/index_slim.ts",
+  input: `src/index_${env}.ts`,
   output: {
     dir: `dist`,
     format: fmt,
@@ -20,6 +20,7 @@ const rolls = (fmt, env) => ({
       outDir(fmt, env) + `/[name].` + (fmt === "cjs" ? "cjs" : "js"),
     name: "@nucypher/nucypher-core-wasm",
   },
+  external: ["node:crypto"],
   plugins: [
     env !== "slim" &&
       wasm(
@@ -30,7 +31,7 @@ const rolls = (fmt, env) => ({
               publicPath: "../",
               fileName: "[name][extname]",
             }
-          : { targetEnv: "auto-inline" }
+          : { targetEnv: "auto-inline" },
       ),
     typescript({
       target: fmt === "es" ? "ES2022" : "ES2017",
@@ -44,7 +45,7 @@ const rolls = (fmt, env) => ({
         fs.mkdirSync(`./dist/types/pkg`, { recursive: true });
         fs.copyFileSync(
           path.resolve("./src/pkg/nucypher_core_wasm.d.ts"),
-          path.resolve(`./dist/types/pkg/nucypher_core_wasm.d.ts`)
+          path.resolve("./dist/types/pkg/nucypher_core_wasm.d.ts"),
         );
       },
     },
@@ -55,8 +56,7 @@ export default [
   rolls("umd", "fat"),
   rolls("es", "fat"),
   rolls("cjs", "fat"),
-  // TODO: No support a separate node build ATM
-  // rolls("cjs", "node"),
+  rolls("cjs", "node"),
   // TODO: Slim build is not supported ATM
   // rolls("es", "slim"),
   // rolls("cjs", "slim"),
