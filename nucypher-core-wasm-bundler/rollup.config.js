@@ -57,7 +57,7 @@ export default [
   rolls("es", "fat"),
   rolls("cjs", "fat"),
   rolls("cjs", "node"),
-  // TODO: Slim build is not supported ATM
+  // TODO: Slim build is not supported ATM - See #85 
   // rolls("es", "slim"),
   // rolls("cjs", "slim"),
 ];
