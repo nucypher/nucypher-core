@@ -96,6 +96,31 @@ jobs:
         with:
           cmd: --cwd nucypher-core-wasm/examples/node test
 
+  rebundle-wasm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+        target:
+          - wasm32-unknown-unknown
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: nucypher-core-wasm-bundler
+          node-version: '16.x'
+      - run: npm run build
+        working-directory: nucypher-core-wasm-bundler
+
   python-test:
     runs-on: ubuntu-latest
     strategy:
