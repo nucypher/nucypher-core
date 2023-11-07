@@ -147,10 +147,14 @@ jobs:
         working-directory: nucypher-core-python
 
       - name: Install pip dependencies
-        run: pip install mypy
+        run: pip install mypy ruff
 
       - name: Run mypy.stubtest
         run: python -m mypy.stubtest nucypher_core --allowlist stubtest-allowlist.txt
+        working-directory: nucypher-core-python
+
+      - name: Run ruff
+        run: ruff check nucypher_core
         working-directory: nucypher-core-python
 
   trigger-wheels:

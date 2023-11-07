@@ -1,23 +1,22 @@
-from typing import List, Dict, Sequence, Optional, Mapping, Tuple, Set, final
-
-from .umbral import (
-    SecretKey,
-    PublicKey,
-    Signer,
-    Capsule,
-    VerifiedKeyFrag,
-    VerifiedCapsuleFrag,
-    RecoverableSignature
-)
+from typing import Dict, List, Mapping, Optional, Sequence, Set, Tuple, final
 
 from .ferveo import (
     Ciphertext,
     CiphertextHeader,
     DkgPublicKey,
     FerveoPublicKey,
-    FerveoVariant, SharedSecret,
+    FerveoVariant,
+    SharedSecret,
 )
-
+from .umbral import (
+    Capsule,
+    PublicKey,
+    RecoverableSignature,
+    SecretKey,
+    Signer,
+    VerifiedCapsuleFrag,
+    VerifiedKeyFrag,
+)
 
 @final
 class Address:
@@ -235,7 +234,12 @@ class ReencryptionRequest:
 @final
 class ReencryptionResponse:
 
-    def __init__(self, signer: Signer, capsules_and_vcfrags: Sequence[Tuple[Capsule, VerifiedCapsuleFrag]]):
+    def __init__(
+            self,
+            signer: Signer,
+            capsules_and_vcfrags:
+            Sequence[Tuple[Capsule, VerifiedCapsuleFrag]]
+    ):
         ...
 
     def verify(
@@ -374,7 +378,11 @@ class NodeMetadata:
 @final
 class FleetStateChecksum:
 
-    def __init__(self, other_nodes: Sequence[NodeMetadata], this_node: Optional[NodeMetadata]):
+    def __init__(
+            self,
+            other_nodes: Sequence[NodeMetadata],
+            this_node: Optional[NodeMetadata]
+    ):
         ...
 
     def __bytes__(self) -> bytes:
@@ -452,7 +460,12 @@ class AuthenticatedData:
         ...
 
 
-def encrypt_for_dkg(data: bytes, public_key: DkgPublicKey, conditions: Conditions) -> Tuple[Ciphertext, AuthenticatedData]:
+def encrypt_for_dkg(
+        data: bytes,
+        public_key: DkgPublicKey,
+        conditions: Conditions
+) -> Tuple[
+    Ciphertext, AuthenticatedData]:
     ...
 
 
@@ -478,6 +491,7 @@ class AccessControlPolicy:
     def __bytes__(self) -> bytes:
         ...
 
+
 @final
 class ThresholdMessageKit:
 
@@ -502,7 +516,14 @@ class ThresholdMessageKit:
 @final
 class ThresholdDecryptionRequest:
 
-    def __init__(self, ritual_id: int, variant: FerveoVariant, ciphertext_header: CiphertextHeader, acp: AccessControlPolicy, context: Optional[Context]):
+    def __init__(
+            self,
+            ritual_id: int,
+            variant: FerveoVariant,
+            ciphertext_header: CiphertextHeader,
+            acp: AccessControlPolicy,
+            context: Optional[Context]
+    ):
         ...
 
     ritual_id: int
@@ -515,8 +536,11 @@ class ThresholdDecryptionRequest:
 
     ciphertext_header: CiphertextHeader
 
-    def encrypt(self, shared_secret: SessionSharedSecret,
-                requester_public_key: SessionStaticKey) -> EncryptedThresholdDecryptionRequest:
+    def encrypt(
+            self,
+            shared_secret: SessionSharedSecret,
+            requester_public_key: SessionStaticKey
+    ) -> EncryptedThresholdDecryptionRequest:
         ...
 
     @staticmethod
@@ -557,7 +581,10 @@ class ThresholdDecryptionResponse:
 
     ritual_id: int
 
-    def encrypt(self, shared_secret: SessionSharedSecret) -> EncryptedThresholdDecryptionResponse:
+    def encrypt(
+            self,
+            shared_secret: SessionSharedSecret
+    ) -> EncryptedThresholdDecryptionResponse:
         ...
 
     @staticmethod
@@ -612,7 +639,10 @@ class SessionStaticSecret:
     def public_key(self) -> SessionStaticKey:
         ...
 
-    def derive_shared_secret(self, their_public_key: SessionStaticKey) -> SessionSharedSecret:
+    def derive_shared_secret(
+            self,
+            their_public_key: SessionStaticKey
+    ) -> SessionSharedSecret:
         ...
 
 
