@@ -1,6 +1,5 @@
 from typing import Sequence, final
 
-
 @final
 class Keypair:
     @staticmethod
@@ -113,7 +112,10 @@ class Dkg:
     def generate_transcript(self) -> Transcript:
         ...
 
-    def aggregate_transcripts(self, messages: Sequence[ValidatorMessage]) -> AggregatedTranscript:
+    def aggregate_transcripts(
+            self,
+            messages: Sequence[ValidatorMessage]
+    ) -> AggregatedTranscript:
         ...
 
 
