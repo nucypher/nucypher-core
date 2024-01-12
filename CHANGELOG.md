@@ -8,14 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Fixed Python typings for `ThresholdMessageKit.decrypt_with_shared_secret()` and `combine_decryption_shares_simple()` ([#84])
 - Inlined WASM modules to simplify packaging for WASM users ([#83])
 
 ### Added
 
 - Support for Python 3.11-3.12  ([#87])
 
+### Fixed
+
+- Fixed Python typings for `ThresholdMessageKit.decrypt_with_shared_secret()` and `combine_decryption_shares_simple()` ([#84])
+
+
 [#84]: https://github.com/nucypher/nucypher-core/pull/84
+[#83]: https://github.com/nucypher/nucypher-core/pull/83
 [#87]: https://github.com/nucypher/nucypher-core/pull/87
 
 
