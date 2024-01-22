@@ -38,12 +38,12 @@ Gitub Actions are configured to take care of this automatically.
 
 ## NPM package
 
-In `nucypher-core-wasm` dir:
+In `nucypher-core-wasm-bundler` directory:
 
-- `rm -rf pkg`.
-- `make`.
-- `wasm-pack login`.
-- `cd pkg`.
-- `npm publish --access=public`.
+```bash
+npm install
+npm build
+npm publish --access=public
+```
 
 See see https://rustwasm.github.io/docs/wasm-pack/tutorials/npm-browser-packages/packaging-and-publishing.html for more info on publishing.

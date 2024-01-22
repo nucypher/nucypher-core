@@ -4,6 +4,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.14.0] - 2024-01-12
+
+### Changed
+
+- Inlined WASM modules to simplify packaging for WASM users ([#83])
+
+### Added
+
+- Support for Python 3.11-3.12  ([#87])
+
+### Fixed
+
+- Fixed Python typings for `ThresholdMessageKit.decrypt_with_shared_secret()` and `combine_decryption_shares_simple()` ([#84])
+
+
+[#84]: https://github.com/nucypher/nucypher-core/pull/84
+[#83]: https://github.com/nucypher/nucypher-core/pull/83
+[#87]: https://github.com/nucypher/nucypher-core/pull/87
+
+
 ## [0.13.0] - 2023-09-06
 
 ### Changed
