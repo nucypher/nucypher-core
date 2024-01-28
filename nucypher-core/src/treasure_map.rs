@@ -46,7 +46,7 @@ impl TreasureMap {
         assigned_kfrags: impl IntoIterator<Item = (Address, (PublicKey, VerifiedKeyFrag))>,
         threshold: u8,
     ) -> Self {
-        // Panic here since violation of theis condition indicates a bug on the caller's side.
+        // Panic here since violation of this condition indicates a bug on the caller's side.
         assert!(threshold != 0, "threshold must be non-zero");
 
         // Encrypt each kfrag for an Ursula.
@@ -60,7 +60,7 @@ impl TreasureMap {
                 .is_some()
             {
                 // This means there are repeating addresses in the mapping.
-                // Panic here since violation of theis condition indicates a bug on the caller's side.
+                // Panic here since violation of this condition indicates a bug on the caller's side.
                 panic!(
                     "{}",
                     format!("Repeating address in assigned_kfrags: {:?}", ursula_address)
@@ -68,7 +68,7 @@ impl TreasureMap {
             };
         }
 
-        // Panic here since violation of theis condition indicates a bug on the caller's side.
+        // Panic here since violation of this condition indicates a bug on the caller's side.
         assert!(
             destinations.len() >= threshold as usize,
             "threshold cannot be larger than the total number of shares"
