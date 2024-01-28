@@ -26,7 +26,7 @@ pub struct RetrievalKit {
 }
 
 impl RetrievalKit {
-    /// Creates a new retrival kit from a message kit.
+    /// Creates a new retrieval kit from a message kit.
     pub fn from_message_kit(message_kit: &MessageKit) -> Self {
         Self {
             capsule: message_kit.capsule.clone(),
