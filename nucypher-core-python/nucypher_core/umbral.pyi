@@ -260,3 +260,7 @@ class ReencryptionEvidence:
 
     kfrag_validity_message_hash: bytes
     kfrag_signature_v: bool
+
+
+class VerificationError(Exception):
+    pass
