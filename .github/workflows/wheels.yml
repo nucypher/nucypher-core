@@ -20,7 +20,7 @@ jobs:
        CIBW_SKIP: "cp36-* pp* *-win32 *musllinux*" # only using manylinux to build
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@v1
         with:
@@ -75,7 +75,7 @@ jobs:
     name: Build source distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v2
         name: Install Python
