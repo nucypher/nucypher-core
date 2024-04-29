@@ -2,11 +2,6 @@ name: nucypher-core
 
 on:
   pull_request:
-    paths:
-      - "nucypher-core/**"
-      - "nucypher-core-python/**"
-      - "nucypher-core-wasm/**"
-      - "Cargo.*"
   push:
     branches:
       - main
@@ -123,6 +118,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - run: yarn install
+        working-directory: nucypher-core-wasm/examples/node
       - run: yarn test
         working-directory: nucypher-core-wasm/examples/node
 
