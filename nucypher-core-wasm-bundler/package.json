@@ -21,6 +21,7 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "rm -rf dist",
     "build": "wasm-pack build -t web --out-dir ../nucypher-core-wasm-bundler/src/pkg ../nucypher-core-wasm && rm -rf dist/ && rollup -c",
     "pretest": "npm run build",
     "build:minify": "npm run build && npx terser@latest --compress --mangle --output dist/cjs/index_fat.cjs -- dist/cjs/index_fat.cjs",
