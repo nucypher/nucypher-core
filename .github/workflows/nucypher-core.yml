@@ -2,11 +2,6 @@ name: nucypher-core
 
 on:
   pull_request:
-    paths:
-      - "nucypher-core/**"
-      - "nucypher-core-python/**"
-      - "nucypher-core-wasm/**"
-      - "Cargo.*"
   push:
     branches:
       - main
@@ -66,29 +61,31 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        node-version: [18, 20, 22]
         rust:
           - stable
         target:
           - wasm32-unknown-unknown
-
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
           targets: ${{ matrix.target }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Yarn
+        run: npm install -g yarn
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: make
         working-directory: nucypher-core-wasm
-      - uses: borales/actions-yarn@v3.0.0
-        with:
-          cmd: --cwd nucypher-core-wasm/examples/node install
-      - uses: borales/actions-yarn@v3.0.0
-        with:
-          cmd: --cwd nucypher-core-wasm/examples/node build
-      - uses: borales/actions-yarn@v3.0.0
-        with:
-          cmd: --cwd nucypher-core-wasm/examples/node test
+      - run: yarn install
+        working-directory: nucypher-core-wasm/examples/node
+      - run: yarn build
+        working-directory: nucypher-core-wasm/examples/node
+      - run: yarn test
+        working-directory: nucypher-core-wasm/examples/node
 
   rebundle-wasm:
     runs-on: ubuntu-latest
