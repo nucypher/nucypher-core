@@ -87,42 +87,6 @@ jobs:
       - run: yarn test
         working-directory: nucypher-core-wasm/examples/node
 
-  # Tests for compatibility across different versions of Node.js
-  yarn-test-node-22:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ 18, 20, 22 ]
-        rust:
-          - stable
-        target:
-          - wasm32-unknown-unknown
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          targets: ${{ matrix.target }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install Yarn
-        run: npm install -g yarn
-      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      - run: make
-        working-directory: nucypher-core-wasm
-      - run: yarn install
-        working-directory: nucypher-core-wasm/examples/node
-      - run: yarn build
-        working-directory: nucypher-core-wasm/examples/node
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - run: yarn install
-        working-directory: nucypher-core-wasm/examples/node
-      - run: yarn test
-        working-directory: nucypher-core-wasm/examples/node
-
   rebundle-wasm:
     runs-on: ubuntu-latest
     strategy:
