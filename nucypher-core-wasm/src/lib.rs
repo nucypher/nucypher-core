@@ -1,6 +1,7 @@
 #![no_std]
 // Disable false-positive warnings caused by `#[wasm-bindgen]` on struct impls
 #![allow(clippy::unused_unit)]
+#![allow(clippy::empty_docs)]
 
 extern crate alloc;
 
