@@ -67,7 +67,7 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           path: ./nucypher-core-python/wheelhouse/*.whl
 
@@ -104,7 +104,7 @@ jobs:
         working-directory: ./nucypher-core-python
         run: python replace_version.py published-to-relative
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           path: ./nucypher-core-python/dist/*.tar.gz
 
