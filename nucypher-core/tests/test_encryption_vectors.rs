@@ -1,16 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use chacha20poly1305::aead::Aead;
-    use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
-    use rand::rngs::OsRng;
-    use rand::RngCore; // Add this import for the fill_bytes method
+    use chacha20poly1305::{Key, KeyInit, Nonce};
+    use nucypher_core::{
+        decrypt_with_shared_secret, encrypt_with_shared_secret, SessionSharedSecret,
+    };
     use serde::{Deserialize, Serialize};
     use serde_json::{json, Value};
     use std::fs;
     use std::path::Path;
-
-    // Since the dkg module is private, we reimplement the encryption/decryption functions here
-    // based on the implementation in src/dkg.rs
 
     // Structure that matches the JSON test vector format
     #[derive(Serialize, Deserialize)]
@@ -30,51 +27,36 @@ mod tests {
         test_vectors: Vec<TestVector>,
     }
 
-    // Implementation of encrypt_with_shared_secret as found in dkg.rs
-    fn encrypt_with_shared_secret(
+    // Wrapper for encrypt_with_shared_secret that takes raw bytes for compatibility with test vectors
+    fn test_encrypt_with_shared_secret(
         shared_secret: &[u8],
         plaintext: &[u8],
     ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let key = Key::from_slice(shared_secret);
-        let cipher = ChaCha20Poly1305::new(key);
+        // Create SessionSharedSecret from raw bytes
+        let shared_secret_obj = SessionSharedSecret::from_test_vector(shared_secret);
 
-        // Generate random nonce
-        let mut nonce_bytes = [0u8; 12];
-        OsRng.fill_bytes(&mut nonce_bytes);
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        // Use the actual library function
+        let result = encrypt_with_shared_secret(&shared_secret_obj, plaintext).map_err(|e| {
+            Box::<dyn std::error::Error>::from(format!("Encryption error: {:?}", e))
+        })?;
 
-        // Create result with nonce
-        let mut result = nonce_bytes.to_vec();
-
-        // Encrypt plaintext
-        let ciphertext = cipher
-            .encrypt(nonce, plaintext)
-            .map_err(|_| "Encryption failed: plaintext too large")?;
-
-        // Append ciphertext to nonce
-        result.extend(ciphertext);
-
-        Ok(result)
+        Ok(result.to_vec())
     }
 
-    // Implementation of decrypt_with_shared_secret as found in dkg.rs
-    fn decrypt_with_shared_secret(
+    // Wrapper for decrypt_with_shared_secret that takes raw bytes for compatibility with test vectors
+    fn test_decrypt_with_shared_secret(
         shared_secret: &[u8],
         ciphertext: &[u8],
     ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        if ciphertext.len() <= 12 {
-            return Err("The ciphertext must include the nonce".into());
-        }
+        // Create SessionSharedSecret from raw bytes
+        let shared_secret_obj = SessionSharedSecret::from_test_vector(shared_secret);
 
-        let key = Key::from_slice(shared_secret);
-        let cipher = ChaCha20Poly1305::new(key);
+        // Use the actual library function
+        let result = decrypt_with_shared_secret(&shared_secret_obj, ciphertext).map_err(|e| {
+            Box::<dyn std::error::Error>::from(format!("Decryption error: {:?}", e))
+        })?;
 
-        let nonce = Nonce::from_slice(&ciphertext[..12]);
-        let decrypt_result = cipher
-            .decrypt(nonce, &ciphertext[12..])
-            .map_err(|_| "Decryption of ciphertext failed")?;
-
-        Ok(decrypt_result)
+        Ok(result.to_vec())
     }
 
     // Function to encrypt with fixed nonce for test vector generation
@@ -83,21 +65,22 @@ mod tests {
         plaintext: &[u8],
         fixed_nonce: &[u8],
     ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        use chacha20poly1305::aead::Aead;
+
+        // Create key from shared secret bytes
         let key = Key::from_slice(shared_secret);
-        let cipher = ChaCha20Poly1305::new(key);
+        let cipher = chacha20poly1305::ChaCha20Poly1305::new(key);
 
         // Use the provided fixed nonce
         let nonce = Nonce::from_slice(fixed_nonce);
 
-        // Create the result starting with the nonce
-        let mut result = fixed_nonce.to_vec();
-
         // Encrypt the plaintext with the fixed nonce
         let ciphertext = cipher
-            .encrypt(nonce, plaintext)
+            .encrypt(nonce, plaintext.as_ref())
             .map_err(|_| "Encryption failed: plaintext too large")?;
 
-        // Append the ciphertext to the nonce
+        // Format the result as nonce + ciphertext, matching the library format
+        let mut result = fixed_nonce.to_vec();
         result.extend(ciphertext);
 
         Ok(result)
@@ -154,7 +137,7 @@ mod tests {
                 println!("Creating vector3 with Rust-generated ciphertext");
                 // Standard encryption with random nonce
                 let ciphertext =
-                    encrypt_with_shared_secret(&shared_secret_bytes, plaintext).unwrap();
+                    test_encrypt_with_shared_secret(&shared_secret_bytes, plaintext).unwrap();
                 let ciphertext_vec = ciphertext.to_vec();
 
                 // Add the Rust-generated ciphertext to the vector
@@ -262,7 +245,7 @@ mod tests {
 
                 let expected_plaintext = vector["expected_plaintext"].as_str().unwrap();
 
-                match decrypt_with_shared_secret(&shared_secret_bytes, &ciphertext) {
+                match test_decrypt_with_shared_secret(&shared_secret_bytes, &ciphertext) {
                     Ok(decrypted) => {
                         let decrypted_str = String::from_utf8_lossy(&decrypted);
                         assert_eq!(
@@ -284,7 +267,7 @@ mod tests {
                 let ciphertext = hex::decode(ciphertext_hex).unwrap();
                 let plaintext = vector["plaintext"].as_str().unwrap().as_bytes();
 
-                match decrypt_with_shared_secret(&shared_secret_bytes, &ciphertext) {
+                match test_decrypt_with_shared_secret(&shared_secret_bytes, &ciphertext) {
                     Ok(decrypted) => {
                         assert_eq!(
                             &decrypted, plaintext,
