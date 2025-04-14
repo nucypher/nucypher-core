@@ -1,11 +1,22 @@
+// Include the test_utils module at the crate root level
+mod test_utils {
+    pub mod cross_impl_test_vectors;
+}
+
 #[cfg(test)]
 mod tests {
+    // Import the test utilities for TypeScript project paths
+    use crate::test_utils::cross_impl_test_vectors;
+
+    // json file name
+    const JSON_FILE_NAME: &str = "shared-secret-vectors.json";
+
     use chacha20poly1305::{Key, KeyInit, Nonce};
     use nucypher_core::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, SessionSharedSecret,
     };
     use serde::{Deserialize, Serialize};
-    use serde_json::{json, Value};
+    use serde_json::Value;
     use std::fs;
     use std::path::Path;
 
@@ -15,10 +26,15 @@ mod tests {
         id: String,
         description: String,
         shared_secret: Vec<u8>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         plaintext: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         fixed_nonce: Option<Vec<u8>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         expected_ciphertext: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         rust_generated_ciphertext: Option<Vec<u8>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
         expected_plaintext: Option<String>,
     }
 
@@ -90,100 +106,104 @@ mod tests {
     fn generate_test_vectors() {
         println!("Generating encryption test vectors for TypeScript compatibility...");
 
-        // Define test vectors
-        let vectors = vec![
-            // Vector 1: Basic encryption/decryption with fixed nonce
-            json!({
-                "id": "vector1",
-                "description": "Basic encryption/decryption compatibility",
-                "shared_secret": (0..32).collect::<Vec<u8>>(),
-                "plaintext": "This is a fixed test message",
-                "fixed_nonce": vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            }),
-            // Vector 2: Empty plaintext with fixed nonce
-            json!({
-                "id": "vector2",
-                "description": "Empty plaintext compatibility",
-                "shared_secret": (32..64).collect::<Vec<u8>>(),
-                "plaintext": "",
-                "fixed_nonce": vec![16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192],
-            }),
-            // Vector 3: For Rust-generated ciphertext compatibility using normal encryption
-            json!({
-                "id": "vector3",
-                "description": "Rust-generated ciphertext for TypeScript compatibility check",
-                "shared_secret": (0..32).collect::<Vec<u8>>(),
-                "expected_plaintext": "This is a message encrypted by the Rust implementation",
-            }),
-        ];
+        // Define test vectors directly as TestVector structs
+        let mut test_vectors = Vec::new();
 
-        // Process each vector to add encryption outputs
-        let mut processed_vectors = Vec::new();
+        // Vector 1: Known plaintext + fixed nonce -> expected ciphertext
+        let shared_secret1: Vec<u8> = (0..32).collect();
+        let plaintext1 = "This is a test message";
+        let fixed_nonce1: Vec<u8> = vec![0; 12]; // 12 zeros
 
-        for vector in vectors {
-            let mut processed = vector.clone();
+        println!("Processing vector1 with fixed nonce");
+        let mut vector1 = TestVector {
+            id: "vector1".to_string(),
+            description: "Fixed nonce encryption with known plaintext".to_string(),
+            shared_secret: shared_secret1.clone(),
+            plaintext: Some(plaintext1.to_string()),
+            fixed_nonce: Some(fixed_nonce1.clone()),
+            expected_ciphertext: None,
+            rust_generated_ciphertext: None,
+            expected_plaintext: None,
+        };
 
-            // Extract shared secret
-            let shared_secret = vector["shared_secret"].as_array().unwrap();
-            let shared_secret_bytes: Vec<u8> = shared_secret
-                .iter()
-                .map(|v| v.as_u64().unwrap() as u8)
-                .collect();
-
-            // Handle vector3 - generate ciphertext with standard Rust implementation
-            if vector["id"].as_str().unwrap() == "vector3" {
-                let plaintext = vector["expected_plaintext"].as_str().unwrap().as_bytes();
-
-                println!("Creating vector3 with Rust-generated ciphertext");
-                // Standard encryption with random nonce
-                let ciphertext =
-                    test_encrypt_with_shared_secret(&shared_secret_bytes, plaintext).unwrap();
-                let ciphertext_vec = ciphertext.to_vec();
-
-                // Add the Rust-generated ciphertext to the vector
-                processed["rust_generated_ciphertext"] = json!(ciphertext_vec);
-                processed_vectors.push(processed);
-                continue;
+        // Generate ciphertext with fixed nonce for vector1
+        match encrypt_with_fixed_nonce(&shared_secret1, plaintext1.as_bytes(), &fixed_nonce1) {
+            Ok(ciphertext) => {
+                // Convert ciphertext to hex string
+                let ciphertext_hex = hex::encode(&ciphertext);
+                vector1.expected_ciphertext = Some(ciphertext_hex);
+                println!("  ✓ Successfully generated ciphertext with fixed nonce");
             }
-
-            // For vectors 1 & 2, use fixed nonces
-            if let (Some(plaintext_str), Some(fixed_nonce)) = (
-                vector["plaintext"].as_str(),
-                vector["fixed_nonce"].as_array(),
-            ) {
-                let plaintext = plaintext_str.as_bytes();
-                let fixed_nonce_bytes: Vec<u8> = fixed_nonce
-                    .iter()
-                    .map(|v| v.as_u64().unwrap() as u8)
-                    .collect();
-
-                println!("Processing vector {} with fixed nonce", vector["id"]);
-
-                // Generate ciphertext with fixed nonce
-                match encrypt_with_fixed_nonce(&shared_secret_bytes, plaintext, &fixed_nonce_bytes)
-                {
-                    Ok(ciphertext) => {
-                        // Convert ciphertext to hex string for expected_ciphertext
-                        let ciphertext_hex = hex::encode(&ciphertext);
-                        processed["expected_ciphertext"] = json!(ciphertext_hex);
-                        println!("  ✓ Successfully generated ciphertext with fixed nonce");
-                    }
-                    Err(e) => {
-                        eprintln!("Error encrypting vector {}: {}", vector["id"], e);
-                    }
-                }
+            Err(e) => {
+                eprintln!("Error encrypting vector1: {}", e);
             }
-
-            processed_vectors.push(processed);
         }
+        test_vectors.push(vector1);
 
-        // Create the final JSON structure with camelCase keys for TypeScript
-        let final_json = json!({
-            "testVectors": processed_vectors
-        });
+        // Vector 2: Known plaintext + fixed nonce -> expected ciphertext (different values)
+        let shared_secret2: Vec<u8> = (0..32).rev().collect(); // Reversed range
+        let plaintext2 = ""; // Empty plaintext for testing empty message encryption
+        let fixed_nonce2: Vec<u8> = vec![1; 12]; // 12 ones
+
+        println!("Processing vector2 with fixed nonce");
+        let mut vector2 = TestVector {
+            id: "vector2".to_string(),
+            description: "Fixed nonce encryption with alternative values".to_string(),
+            shared_secret: shared_secret2.clone(),
+            plaintext: Some(plaintext2.to_string()),
+            fixed_nonce: Some(fixed_nonce2.clone()),
+            expected_ciphertext: None,
+            rust_generated_ciphertext: None,
+            expected_plaintext: None,
+        };
+
+        // Generate ciphertext with fixed nonce for vector2
+        match encrypt_with_fixed_nonce(&shared_secret2, plaintext2.as_bytes(), &fixed_nonce2) {
+            Ok(ciphertext) => {
+                // Convert ciphertext to hex string
+                let ciphertext_hex = hex::encode(&ciphertext);
+                vector2.expected_ciphertext = Some(ciphertext_hex);
+                println!("  ✓ Successfully generated ciphertext with fixed nonce");
+            }
+            Err(e) => {
+                eprintln!("Error encrypting vector2: {}", e);
+            }
+        }
+        test_vectors.push(vector2);
+
+        // Vector 3: For Rust-generated ciphertext compatibility using normal encryption
+        let shared_secret3: Vec<u8> = (0..32).collect();
+        let plaintext3 = "This is a message encrypted by the Rust implementation";
+
+        println!("Creating vector3 with Rust-generated ciphertext");
+        let mut vector3 = TestVector {
+            id: "vector3".to_string(),
+            description: "Rust-generated ciphertext for TypeScript compatibility check".to_string(),
+            shared_secret: shared_secret3.clone(),
+            plaintext: None,
+            fixed_nonce: None,
+            expected_ciphertext: None,
+            rust_generated_ciphertext: None,
+            expected_plaintext: Some(plaintext3.to_string()),
+        };
+
+        // Standard encryption with random nonce
+        match test_encrypt_with_shared_secret(&shared_secret3, plaintext3.as_bytes()) {
+            Ok(ciphertext) => {
+                vector3.rust_generated_ciphertext = Some(ciphertext);
+                println!("  ✓ Successfully generated ciphertext for vector3");
+            }
+            Err(e) => {
+                eprintln!("Error encrypting vector3: {}", e);
+            }
+        }
+        test_vectors.push(vector3);
+
+        // Create the complete test vectors structure
+        let test_vectors_output = TestVectors { test_vectors };
 
         // Format the JSON with pretty-printing
-        let formatted_json = serde_json::to_string_pretty(&final_json).unwrap();
+        let formatted_json = serde_json::to_string_pretty(&test_vectors_output).unwrap();
 
         // Path for the output file
         let output_dir = Path::new("tests/fixtures");
@@ -196,34 +216,30 @@ mod tests {
         fs::write(&output_file, &formatted_json).expect("Unable to write test vectors file");
         println!("Test vectors saved to {:?}", output_file);
 
-        // Also save to TypeScript project if path exists
-        let ts_path =
-            Path::new("../taco-web/packages/shared/test/fixtures/shared-secret-vectors.json");
-        if let Ok(()) = fs::write(ts_path, &formatted_json) {
-            println!(
-                "Test vectors also copied to TypeScript project: {:?}",
-                ts_path
-            );
-        } else {
-            println!(
-                "Note: Couldn't copy to TypeScript project. You'll need to manually copy the file."
-            );
-        }
+        // Write test vectors to TypeScript project
+        cross_impl_test_vectors::write_to_ts_project_path(
+            JSON_FILE_NAME,
+            &formatted_json,
+            &output_file,
+        );
 
         // Verify vectors by decrypting
-        verify_test_vectors(&final_json);
+        // Parse the JSON string back to a Value before passing to verify_test_vectors
+        let test_vectors_value: Value = serde_json::from_str(&formatted_json).unwrap();
+        verify_test_vectors(&test_vectors_value);
 
         println!("\nInstructions for manually copying test vectors:");
         println!("1. The file has been saved to: {:?}", output_file);
         println!(
-            "2. Copy it to: ../taco-web/packages/shared/test/fixtures/shared-secret-vectors.json"
+            "2. Copy it to: {}",
+            cross_impl_test_vectors::get_ts_project_path(JSON_FILE_NAME)
         );
         println!("3. Run the TypeScript tests to verify compatibility");
     }
 
     fn verify_test_vectors(test_vectors_json: &Value) {
         println!("\nVerifying test vectors...");
-        let vectors = test_vectors_json["testVectors"].as_array().unwrap();
+        let vectors = test_vectors_json["test_vectors"].as_array().unwrap();
 
         for vector in vectors {
             let id = vector["id"].as_str().unwrap();

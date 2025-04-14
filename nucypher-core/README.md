@@ -17,6 +17,19 @@ Bindings for several languages are available:
 * [JavaScript](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-wasm) (WASM-based)
 * [Python](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-python)
 
+## Cross-Implementation Testing
+
+This library tests generate test vectors for ensuring compatibility between different implementations. The test vector generators automatically produce JSON files in both the Rust project and the TypeScript project.
+
+### Setting Custom Path for TypeScript Test Vectors
+
+By default, the test vector generators will look for the TypeScript project at a relative path. If your project structure is different, you can customize the TypeScript project path using an environment variable:
+
+```bash
+# Generate shared secret test vectors with custom TypeScript project path
+TS_PROJECT_TEST_VECTORS_PATH=/path/to/taco-web/packages/shared/test/fixtures/ cargo test -p nucypher-core --test generate_shared_secret_vectors
+```
+
 [crate-image]: https://img.shields.io/crates/v/nucypher-core.svg
 [crate-link]: https://crates.io/crates/nucypher-core
 [docs-image]: https://docs.rs/nucypher-core/badge.svg
