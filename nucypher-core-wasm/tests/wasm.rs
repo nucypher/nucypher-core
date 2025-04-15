@@ -612,7 +612,7 @@ fn fleet_state_checksum_to_bytes() {
     let fleet_state_checksum = make_fleet_state_checksum();
 
     assert!(
-        fleet_state_checksum.to_bytes().len() > 0,
+        !fleet_state_checksum.to_bytes().is_empty(),
         "FleetStateChecksum does not serialize to bytes"
     );
 }

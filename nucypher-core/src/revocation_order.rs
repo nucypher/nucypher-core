@@ -59,7 +59,7 @@ impl RevocationOrder {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for RevocationOrder {
+impl ProtocolObjectInner<'_> for RevocationOrder {
     fn brand() -> [u8; 4] {
         *b"Revo"
     }
@@ -81,4 +81,4 @@ impl<'a> ProtocolObjectInner<'a> for RevocationOrder {
     }
 }
 
-impl<'a> ProtocolObject<'a> for RevocationOrder {}
+impl ProtocolObject<'_> for RevocationOrder {}

@@ -43,7 +43,7 @@ impl AuthenticatedData {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for AuthenticatedData {
+impl ProtocolObjectInner<'_> for AuthenticatedData {
     fn version() -> (u16, u16) {
         (1, 0)
     }
@@ -65,7 +65,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthenticatedData {
     }
 }
 
-impl<'a> ProtocolObject<'a> for AuthenticatedData {}
+impl ProtocolObject<'_> for AuthenticatedData {}
 
 /// Encrypt data based on conditions and dkg public key.
 pub fn encrypt_for_dkg(
@@ -118,7 +118,7 @@ impl AccessControlPolicy {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for AccessControlPolicy {
+impl ProtocolObjectInner<'_> for AccessControlPolicy {
     fn version() -> (u16, u16) {
         (1, 0)
     }
@@ -140,7 +140,7 @@ impl<'a> ProtocolObjectInner<'a> for AccessControlPolicy {
     }
 }
 
-impl<'a> ProtocolObject<'a> for AccessControlPolicy {}
+impl ProtocolObject<'_> for AccessControlPolicy {}
 
 #[cfg(test)]
 mod tests {

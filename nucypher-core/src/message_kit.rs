@@ -67,7 +67,7 @@ impl MessageKit {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for MessageKit {
+impl ProtocolObjectInner<'_> for MessageKit {
     fn brand() -> [u8; 4] {
         *b"MKit"
     }
@@ -89,4 +89,4 @@ impl<'a> ProtocolObjectInner<'a> for MessageKit {
     }
 }
 
-impl<'a> ProtocolObject<'a> for MessageKit {}
+impl ProtocolObject<'_> for MessageKit {}

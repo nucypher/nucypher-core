@@ -55,7 +55,7 @@ impl ReencryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
+impl ProtocolObjectInner<'_> for ReencryptionRequest {
     fn brand() -> [u8; 4] {
         *b"ReRq"
     }
@@ -77,7 +77,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ReencryptionRequest {}
+impl ProtocolObject<'_> for ReencryptionRequest {}
 
 /// A response from Ursula with reencrypted capsule frags.
 #[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
@@ -169,7 +169,7 @@ impl ReencryptionResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
+impl ProtocolObjectInner<'_> for ReencryptionResponse {
     fn brand() -> [u8; 4] {
         *b"ReRs"
     }
@@ -191,7 +191,7 @@ impl<'a> ProtocolObjectInner<'a> for ReencryptionResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ReencryptionResponse {}
+impl ProtocolObject<'_> for ReencryptionResponse {}
 
 #[cfg(test)]
 mod tests {

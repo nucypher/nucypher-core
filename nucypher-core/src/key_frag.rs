@@ -52,7 +52,7 @@ impl AuthorizedKeyFrag {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for AuthorizedKeyFrag {
+impl ProtocolObjectInner<'_> for AuthorizedKeyFrag {
     fn brand() -> [u8; 4] {
         *b"AKFr"
     }
@@ -74,7 +74,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedKeyFrag {
     }
 }
 
-impl<'a> ProtocolObject<'a> for AuthorizedKeyFrag {}
+impl ProtocolObject<'_> for AuthorizedKeyFrag {}
 
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug)]
@@ -144,7 +144,7 @@ impl EncryptedKeyFrag {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedKeyFrag {
+impl ProtocolObjectInner<'_> for EncryptedKeyFrag {
     fn brand() -> [u8; 4] {
         *b"EKFr"
     }
@@ -166,4 +166,4 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedKeyFrag {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedKeyFrag {}
+impl ProtocolObject<'_> for EncryptedKeyFrag {}

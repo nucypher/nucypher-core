@@ -221,7 +221,7 @@ pub mod session {
         }
     }
 
-    impl<'a> ProtocolObjectInner<'a> for SessionStaticKey {
+    impl ProtocolObjectInner<'_> for SessionStaticKey {
         fn version() -> (u16, u16) {
             (2, 0)
         }
@@ -246,7 +246,7 @@ pub mod session {
         }
     }
 
-    impl<'a> ProtocolObject<'a> for SessionStaticKey {}
+    impl ProtocolObject<'_> for SessionStaticKey {}
 
     /// A session secret key.
     #[derive(ZeroizeOnDrop)]
@@ -402,7 +402,7 @@ impl ThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
+impl ProtocolObjectInner<'_> for ThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
         (4, 0)
     }
@@ -424,7 +424,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
+impl ProtocolObject<'_> for ThresholdDecryptionRequest {}
 
 /// An encrypted request for an Ursula to derive a decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -467,7 +467,7 @@ impl EncryptedThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
+impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -489,7 +489,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionRequest {}
+impl ProtocolObject<'_> for EncryptedThresholdDecryptionRequest {}
 
 /// A response from Ursula with a derived decryption share.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
@@ -520,7 +520,7 @@ impl ThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
+impl ProtocolObjectInner<'_> for ThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -542,7 +542,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ThresholdDecryptionResponse {}
+impl ProtocolObject<'_> for ThresholdDecryptionResponse {}
 
 /// An encrypted response from Ursula with a derived decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -578,7 +578,7 @@ impl EncryptedThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
+impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -600,7 +600,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
+impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
@@ -856,7 +856,7 @@ mod tests {
         let public_key_b = PublicKey::from(&static_secret_b);
         let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
         let session_shared_secret = SessionSharedSecret::new(shared_secret);
-        
+
         let plaintext = b"test data";
 
         // Use a seeded RNG for deterministic testing on encryption

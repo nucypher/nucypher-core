@@ -122,7 +122,7 @@ impl NodeMetadata {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
+impl ProtocolObjectInner<'_> for NodeMetadata {
     fn brand() -> [u8; 4] {
         *b"NdMd"
     }
@@ -148,7 +148,7 @@ impl<'a> ProtocolObjectInner<'a> for NodeMetadata {
     }
 }
 
-impl<'a> ProtocolObject<'a> for NodeMetadata {}
+impl ProtocolObject<'_> for NodeMetadata {}
 
 /// A request for metadata exchange.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
@@ -169,7 +169,7 @@ impl MetadataRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
+impl ProtocolObjectInner<'_> for MetadataRequest {
     fn brand() -> [u8; 4] {
         *b"MdRq"
     }
@@ -191,7 +191,7 @@ impl<'a> ProtocolObjectInner<'a> for MetadataRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for MetadataRequest {}
+impl ProtocolObject<'_> for MetadataRequest {}
 
 /// Payload of the metadata response.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
@@ -250,7 +250,7 @@ impl MetadataResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
+impl ProtocolObjectInner<'_> for MetadataResponse {
     fn brand() -> [u8; 4] {
         *b"MdRs"
     }
@@ -277,4 +277,4 @@ impl<'a> ProtocolObjectInner<'a> for MetadataResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for MetadataResponse {}
+impl ProtocolObject<'_> for MetadataResponse {}
