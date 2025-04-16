@@ -638,6 +638,10 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use serde_json;
     use x25519_dalek::{PublicKey, StaticSecret};
+    #[cfg(feature = "deterministic_encryption")]
+    use alloc::string::String;
+    #[cfg(feature = "deterministic_encryption")]
+    use alloc::format;
 
     use crate::access_control::AccessControlPolicy;
     use crate::conditions::Context;
@@ -906,6 +910,16 @@ mod tests {
         }
         
         test_vectors
+    }
+
+    #[cfg(feature = "deterministic_encryption")]
+    pub fn serialize_test_vector_to_json(vector: &TestVector) -> String {
+        serde_json::to_string(vector).expect("Failed to serialize test vector to JSON")
+    }
+
+    #[cfg(feature = "deterministic_encryption")]
+    pub fn deserialize_test_vector_from_json(json: &str) -> TestVector {
+        serde_json::from_str(json).expect("Failed to deserialize test vector from JSON")
     }
 
     #[test]
