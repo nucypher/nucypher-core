@@ -869,17 +869,10 @@ mod tests {
 
     #[cfg(feature = "deterministic_encryption")]
     pub fn generate_test_vectors() -> Vec<TestVector> {
-        use rand_core::SeedableRng;
-        use rand::rngs::StdRng;
-        use x25519_dalek::{PublicKey, StaticSecret};
-        use crate::dkg::session::SessionSharedSecret;
-
         let mut test_vectors = Vec::new();
         
         // Generate test vectors with different seeds
         for seed in 0..3 {
-            let mut rng = <StdRng as SeedableRng>::from_seed([seed as u8; 32]);
-            
             // Generate test plaintexts
             let plaintexts = vec![
                 b"test data".to_vec(),
@@ -889,14 +882,7 @@ mod tests {
             
             // Generate ciphertexts for each plaintext
             for plaintext in plaintexts {
-                // Generate static secrets for each plaintext
-                let static_secret_a = StaticSecret::random_from_rng(&mut rng);
-                let static_secret_b = StaticSecret::random_from_rng(&mut rng);
-                let public_key_b = PublicKey::from(&static_secret_b);
-                
-                // Create shared secret
-                let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
-                let session_shared_secret = SessionSharedSecret::new(shared_secret);
+                let session_shared_secret = create_session_shared_secret_from_seed(seed);
                 
                 let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
                     .expect("Encryption failed");
@@ -940,6 +926,20 @@ mod tests {
         assert_eq!(ciphertext1, ciphertext2);
     }
 
+    #[cfg(feature = "deterministic_encryption")]
+    fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
+        use rand_core::SeedableRng;
+        use rand::rngs::StdRng;
+        use x25519_dalek::{PublicKey, StaticSecret};
+
+        let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
+        let static_secret_a = StaticSecret::random_from_rng(&mut rng);
+        let static_secret_b = StaticSecret::random_from_rng(&mut rng);
+        let public_key_b = PublicKey::from(&static_secret_b);
+        let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
+        SessionSharedSecret::new(shared_secret)
+    }
+
     #[test]
     #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_vectors() {
@@ -947,13 +947,15 @@ mod tests {
         
         // Verify each test vector
         for vector in test_vectors {
+            let session_shared_secret = create_session_shared_secret_from_seed(vector.seed);
+            
             // Verify decryption works
-            let decrypted = decrypt_with_shared_secret(&vector.session_shared_secret, &vector.ciphertext)
+            let decrypted = decrypt_with_shared_secret(&session_shared_secret, &vector.ciphertext)
                 .expect("Decryption failed");
             assert_eq!(decrypted.as_ref(), vector.plaintext.as_slice());
             
             // Verify encryption is deterministic
-            let new_ciphertext = encrypt_with_shared_secret(&vector.session_shared_secret, &vector.plaintext)
+            let new_ciphertext = encrypt_with_shared_secret(&session_shared_secret, &vector.plaintext)
                 .expect("Encryption failed");
             assert_eq!(new_ciphertext, vector.ciphertext);
         }
