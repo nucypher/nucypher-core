@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 use core::fmt;
 
-use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
+use chacha20poly1305::aead::{Aead, AeadCore, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
@@ -66,11 +66,24 @@ impl fmt::Display for DecryptionError {
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
 /// Encrypts data using a shared secret with the default OS RNG.
+#[cfg(not(all(test, feature = "deterministic_encryption")))]
 fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
+    use chacha20poly1305::aead::OsRng;
     encrypt_with_shared_secret_with_rng(shared_secret, plaintext, &mut OsRng)
+}
+
+#[cfg(all(test, feature = "deterministic_encryption"))]
+fn encrypt_with_shared_secret(
+    shared_secret: &SessionSharedSecret,
+    plaintext: &[u8],
+) -> Result<Box<[u8]>, EncryptionError> {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+    let mut rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
+    encrypt_with_shared_secret_with_rng(shared_secret, plaintext, &mut rng)
 }
 
 /// Encrypts data using a shared secret with a custom RNG.
@@ -606,16 +619,13 @@ impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 mod tests {
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
-    use rand::rngs::StdRng;
-    use rand_core::{RngCore, SeedableRng};
-    use x25519_dalek::{PublicKey, StaticSecret};
+    use rand_core::RngCore;
 
     use crate::access_control::AccessControlPolicy;
     use crate::conditions::{Conditions, Context};
-    use crate::dkg::session::{SessionSharedSecret, SessionStaticSecret};
+    use crate::dkg::session::SessionStaticSecret;
     use crate::dkg::{
-        decrypt_with_shared_secret, encrypt_with_shared_secret,
-        encrypt_with_shared_secret_with_rng, DecryptionError, NonceSize,
+        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
     use crate::versioning::{ProtocolObject, ProtocolObjectInner};
     use crate::{
@@ -848,7 +858,13 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_deterministic() {
+        use rand_core::SeedableRng;
+        use rand::rngs::StdRng;
+        use x25519_dalek::{PublicKey, StaticSecret};
+        use crate::dkg::session::SessionSharedSecret;
+
         // Create a test session_shared_secret and test plaintext
         let mut rng0 = <StdRng as SeedableRng>::from_seed([0u8; 32]);
         let static_secret_a = StaticSecret::random_from_rng(&mut rng0);
@@ -860,16 +876,10 @@ mod tests {
         let plaintext = b"test data";
 
         // Use a seeded RNG for deterministic testing on encryption
-        let mut rng1 = <StdRng as SeedableRng>::from_seed([0u8; 32]);
-        let ciphertext1 =
-            encrypt_with_shared_secret_with_rng(&session_shared_secret, plaintext, &mut rng1)
-                .unwrap();
+        let ciphertext1 = encrypt_with_shared_secret(&session_shared_secret, plaintext).unwrap();
 
         // Reset the RNG with the same seed
-        let mut rng2 = <StdRng as SeedableRng>::from_seed([0u8; 32]);
-        let ciphertext2 =
-            encrypt_with_shared_secret_with_rng(&session_shared_secret, plaintext, &mut rng2)
-                .unwrap();
+        let ciphertext2 = encrypt_with_shared_secret(&session_shared_secret, plaintext).unwrap();
 
         // The ciphertexts will be identical because we used the same seed
         assert_eq!(ciphertext1, ciphertext2);

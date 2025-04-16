@@ -26,3 +26,7 @@ zeroize = { version = "1.6.0", features = ["derive"] }
 rand_core = "0.6.4"
 rand_chacha = "0.3.1"
 rand = "0.8.5"
+
+[features]
+default = ["deterministic_encryption"]
+deterministic_encryption = []
