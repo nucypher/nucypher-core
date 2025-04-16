@@ -64,7 +64,10 @@ impl fmt::Display for DecryptionError {
 
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
-fn encrypt_with_shared_secret(
+/// Encrypt data using the provided shared secret.
+///
+/// The ciphertext consists of a randomly generated nonce followed by the encrypted data.
+pub fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
@@ -79,7 +82,10 @@ fn encrypt_with_shared_secret(
     Ok(result.into_boxed_slice())
 }
 
-fn decrypt_with_shared_secret(
+/// Decrypt data using the provided shared secret.
+///
+/// The ciphertext is expected to start with a nonce, followed by the encrypted data.
+pub fn decrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     ciphertext: &[u8],
 ) -> Result<Box<[u8]>, DecryptionError> {
@@ -136,6 +142,31 @@ pub mod session {
             let derived_key = kdf::<U32>(shared_secret.as_bytes(), Some(info));
             let derived_bytes = <[u8; 32]>::try_from(derived_key.as_secret().as_slice()).unwrap();
             Self { derived_bytes }
+        }
+
+        /// Create a shared secret directly from raw bytes for testing purposes.
+        ///
+        /// This bypasses the normal key derivation process and should only be used for
+        /// testing with known byte vectors.
+        #[cfg(test)]
+        pub fn from_bytes(bytes: &[u8]) -> Self {
+            let mut array = [0u8; 32];
+            array.copy_from_slice(&bytes[0..32]);
+            Self {
+                derived_bytes: array,
+            }
+        }
+
+        /// Create a shared secret directly from raw bytes for test vectors.
+        ///
+        /// This is a public API only intended for use in test vectors. It bypasses
+        /// the normal key derivation process to allow for deterministic tests.
+        pub fn from_test_vector(bytes: &[u8]) -> Self {
+            let mut array = [0u8; 32];
+            array.copy_from_slice(&bytes[0..32]);
+            Self {
+                derived_bytes: array,
+            }
         }
 
         /// View this shared secret as a byte array.

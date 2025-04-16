@@ -32,6 +32,7 @@ pub use access_control::{encrypt_for_dkg, AccessControlPolicy, AuthenticatedData
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
+    decrypt_with_shared_secret, encrypt_with_shared_secret,
     session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
     DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
     EncryptionError, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
