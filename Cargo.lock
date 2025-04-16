@@ -915,6 +915,7 @@ dependencies = [
  "rand_core 0.6.4",
  "rmp-serde",
  "serde",
+ "serde_json",
  "serde_with 1.14.0",
  "sha2",
  "sha3",
