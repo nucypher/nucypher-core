@@ -863,7 +863,6 @@ mod tests {
     #[cfg(feature = "deterministic_encryption")]
     pub struct TestVector {
         pub seed: u8,
-        pub session_shared_secret: SessionSharedSecret,
         pub plaintext: Vec<u8>,
         pub ciphertext: Box<[u8]>,
     }
@@ -904,7 +903,6 @@ mod tests {
                 
                 test_vectors.push(TestVector {
                     seed,
-                    session_shared_secret,
                     plaintext,
                     ciphertext,
                 });
