@@ -1,5 +1,6 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::fmt;
 
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit};
@@ -7,12 +8,13 @@ use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
 use rand_core::{CryptoRng, RngCore};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json;
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
 
 use crate::access_control::AccessControlPolicy;
 use crate::conditions::Context;
-use crate::dkg::session::{SessionSharedSecret, SessionStaticKey};
+use crate::dkg::session::{SessionSharedSecret, SessionStaticKey, SessionSecretFactory};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
     ProtocolObjectInner,
@@ -617,25 +619,40 @@ impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
+    use crate::dkg::session::{SessionSharedSecret, SessionStaticSecret, SessionSecretFactory, SessionStaticKey};
+    use crate::dkg::{
+        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
+        ThresholdDecryptionRequest, EncryptedThresholdDecryptionRequest,
+        ThresholdDecryptionResponse, EncryptedThresholdDecryptionResponse,
+    };
+    use crate::{AuthenticatedData, Conditions};
     use alloc::vec;
     use alloc::vec::Vec;
     use alloc::boxed::Box;
-    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
+    use core::clone::Clone;
+    use ferveo::api::{DkgPublicKey, FerveoVariant, SecretBox, encrypt as ferveo_encrypt};
     use generic_array::typenum::Unsigned;
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
     use rand_core::RngCore;
+    use serde::{Deserialize, Serialize};
+    use serde_json;
+    use x25519_dalek::{PublicKey, StaticSecret};
 
     use crate::access_control::AccessControlPolicy;
-    use crate::conditions::{Conditions, Context};
-    use crate::dkg::session::{SessionSharedSecret, SessionStaticSecret};
-    use crate::dkg::{
-        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
+    use crate::conditions::Context;
+    use crate::versioning::{
+        messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
+        ProtocolObjectInner,
     };
-    use crate::versioning::{ProtocolObject, ProtocolObjectInner};
-    use crate::{
-        AuthenticatedData, EncryptedThresholdDecryptionRequest,
-        EncryptedThresholdDecryptionResponse, SessionSecretFactory, SessionStaticKey,
-        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
-    };
+
+    #[cfg(feature = "deterministic_encryption")]
+    #[derive(Serialize, Deserialize)]
+    pub struct TestVector {
+        pub seed: u8,
+        pub plaintext: Vec<u8>,
+        pub ciphertext: Box<[u8]>,
+    }
 
     #[test]
     fn decryption_with_shared_secret() {
@@ -858,13 +875,6 @@ mod tests {
         assert!(encrypted_response_from_bytes
             .decrypt(&random_shared_secret)
             .is_err());
-    }
-
-    #[cfg(feature = "deterministic_encryption")]
-    pub struct TestVector {
-        pub seed: u8,
-        pub plaintext: Vec<u8>,
-        pub ciphertext: Box<[u8]>,
     }
 
     #[cfg(feature = "deterministic_encryption")]
