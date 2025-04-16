@@ -617,13 +617,16 @@ impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+    use alloc::vec::Vec;
+    use alloc::boxed::Box;
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
     use rand_core::RngCore;
 
     use crate::access_control::AccessControlPolicy;
     use crate::conditions::{Conditions, Context};
-    use crate::dkg::session::SessionStaticSecret;
+    use crate::dkg::session::{SessionSharedSecret, SessionStaticSecret};
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
@@ -857,6 +860,46 @@ mod tests {
             .is_err());
     }
 
+    #[cfg(feature = "deterministic_encryption")]
+    pub fn generate_test_vectors() -> Vec<(SessionSharedSecret, Vec<u8>, Box<[u8]>)> {
+        use rand_core::SeedableRng;
+        use rand::rngs::StdRng;
+        use x25519_dalek::{PublicKey, StaticSecret};
+        use crate::dkg::session::SessionSharedSecret;
+
+        let mut test_vectors = Vec::new();
+        
+        // Generate test vectors with different seeds
+        for seed in 0..3 {
+            let mut rng = <StdRng as SeedableRng>::from_seed([seed as u8; 32]);
+            
+            // Generate test plaintexts
+            let plaintexts = vec![
+                b"test data".to_vec(),
+                b"another test".to_vec(),
+                b"".to_vec(), // empty string test
+            ];
+            
+            // Generate ciphertexts for each plaintext
+            for plaintext in plaintexts {
+                // Generate static secrets for each plaintext
+                let static_secret_a = StaticSecret::random_from_rng(&mut rng);
+                let static_secret_b = StaticSecret::random_from_rng(&mut rng);
+                let public_key_b = PublicKey::from(&static_secret_b);
+                
+                // Create shared secret
+                let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
+                let session_shared_secret = SessionSharedSecret::new(shared_secret);
+                
+                let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
+                    .expect("Encryption failed");
+                test_vectors.push((session_shared_secret, plaintext, ciphertext));
+            }
+        }
+        
+        test_vectors
+    }
+
     #[test]
     #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_deterministic() {
@@ -883,5 +926,24 @@ mod tests {
 
         // The ciphertexts will be identical because we used the same seed
         assert_eq!(ciphertext1, ciphertext2);
+    }
+
+    #[test]
+    #[cfg(feature = "deterministic_encryption")]
+    fn test_encryption_vectors() {
+        let test_vectors = generate_test_vectors();
+        
+        // Verify each test vector
+        for (shared_secret, plaintext, ciphertext) in test_vectors {
+            // Verify decryption works
+            let decrypted = decrypt_with_shared_secret(&shared_secret, &ciphertext)
+                .expect("Decryption failed");
+            assert_eq!(decrypted.as_ref(), plaintext.as_slice());
+            
+            // Verify encryption is deterministic
+            let new_ciphertext = encrypt_with_shared_secret(&shared_secret, &plaintext)
+                .expect("Encryption failed");
+            assert_eq!(new_ciphertext, ciphertext);
+        }
     }
 }
