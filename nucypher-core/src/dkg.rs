@@ -861,7 +861,15 @@ mod tests {
     }
 
     #[cfg(feature = "deterministic_encryption")]
-    pub fn generate_test_vectors() -> Vec<(SessionSharedSecret, Vec<u8>, Box<[u8]>)> {
+    pub struct TestVector {
+        pub seed: u8,
+        pub session_shared_secret: SessionSharedSecret,
+        pub plaintext: Vec<u8>,
+        pub ciphertext: Box<[u8]>,
+    }
+
+    #[cfg(feature = "deterministic_encryption")]
+    pub fn generate_test_vectors() -> Vec<TestVector> {
         use rand_core::SeedableRng;
         use rand::rngs::StdRng;
         use x25519_dalek::{PublicKey, StaticSecret};
@@ -893,7 +901,13 @@ mod tests {
                 
                 let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
                     .expect("Encryption failed");
-                test_vectors.push((session_shared_secret, plaintext, ciphertext));
+                
+                test_vectors.push(TestVector {
+                    seed,
+                    session_shared_secret,
+                    plaintext,
+                    ciphertext,
+                });
             }
         }
         
@@ -934,16 +948,16 @@ mod tests {
         let test_vectors = generate_test_vectors();
         
         // Verify each test vector
-        for (shared_secret, plaintext, ciphertext) in test_vectors {
+        for vector in test_vectors {
             // Verify decryption works
-            let decrypted = decrypt_with_shared_secret(&shared_secret, &ciphertext)
+            let decrypted = decrypt_with_shared_secret(&vector.session_shared_secret, &vector.ciphertext)
                 .expect("Decryption failed");
-            assert_eq!(decrypted.as_ref(), plaintext.as_slice());
+            assert_eq!(decrypted.as_ref(), vector.plaintext.as_slice());
             
             // Verify encryption is deterministic
-            let new_ciphertext = encrypt_with_shared_secret(&shared_secret, &plaintext)
+            let new_ciphertext = encrypt_with_shared_secret(&vector.session_shared_secret, &vector.plaintext)
                 .expect("Encryption failed");
-            assert_eq!(new_ciphertext, ciphertext);
+            assert_eq!(new_ciphertext, vector.ciphertext);
         }
     }
 }
