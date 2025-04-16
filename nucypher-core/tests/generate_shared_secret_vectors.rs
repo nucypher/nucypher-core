@@ -31,11 +31,7 @@ mod tests {
         #[serde(skip_serializing_if = "Option::is_none")]
         fixed_nonce: Option<Vec<u8>>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        expected_ciphertext: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        rust_generated_ciphertext: Option<Vec<u8>>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        expected_plaintext: Option<String>,
+        expected_ciphertext: Option<Vec<u8>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -122,16 +118,12 @@ mod tests {
             plaintext: Some(plaintext1.to_string()),
             fixed_nonce: Some(fixed_nonce1.clone()),
             expected_ciphertext: None,
-            rust_generated_ciphertext: None,
-            expected_plaintext: None,
         };
 
         // Generate ciphertext with fixed nonce for vector1
         match encrypt_with_fixed_nonce(&shared_secret1, plaintext1.as_bytes(), &fixed_nonce1) {
             Ok(ciphertext) => {
-                // Convert ciphertext to hex string
-                let ciphertext_hex = hex::encode(&ciphertext);
-                vector1.expected_ciphertext = Some(ciphertext_hex);
+                vector1.expected_ciphertext = Some(ciphertext);
                 println!("  ✓ Successfully generated ciphertext with fixed nonce");
             }
             Err(e) => {
@@ -153,16 +145,12 @@ mod tests {
             plaintext: Some(plaintext2.to_string()),
             fixed_nonce: Some(fixed_nonce2.clone()),
             expected_ciphertext: None,
-            rust_generated_ciphertext: None,
-            expected_plaintext: None,
         };
 
         // Generate ciphertext with fixed nonce for vector2
         match encrypt_with_fixed_nonce(&shared_secret2, plaintext2.as_bytes(), &fixed_nonce2) {
             Ok(ciphertext) => {
-                // Convert ciphertext to hex string
-                let ciphertext_hex = hex::encode(&ciphertext);
-                vector2.expected_ciphertext = Some(ciphertext_hex);
+                vector2.expected_ciphertext = Some(ciphertext);
                 println!("  ✓ Successfully generated ciphertext with fixed nonce");
             }
             Err(e) => {
@@ -180,17 +168,15 @@ mod tests {
             id: "vector3".to_string(),
             description: "Rust-generated ciphertext for TypeScript compatibility check".to_string(),
             shared_secret: shared_secret3.clone(),
-            plaintext: None,
+            plaintext: Some(plaintext3.to_string()),
             fixed_nonce: None,
             expected_ciphertext: None,
-            rust_generated_ciphertext: None,
-            expected_plaintext: Some(plaintext3.to_string()),
         };
 
         // Standard encryption with random nonce
         match test_encrypt_with_shared_secret(&shared_secret3, plaintext3.as_bytes()) {
             Ok(ciphertext) => {
-                vector3.rust_generated_ciphertext = Some(ciphertext);
+                vector3.expected_ciphertext = Some(ciphertext);
                 println!("  ✓ Successfully generated ciphertext for vector3");
             }
             Err(e) => {
@@ -252,20 +238,20 @@ mod tests {
             println!("Verifying vector: {}", id);
 
             // Verify vector3 with rust-generated ciphertext
-            if id == "vector3" && vector["rust_generated_ciphertext"].is_array() {
-                let ciphertext_json = vector["rust_generated_ciphertext"].as_array().unwrap();
+            if id == "vector3" && vector["expected_ciphertext"].is_array() {
+                let ciphertext_json = vector["expected_ciphertext"].as_array().unwrap();
                 let ciphertext: Vec<u8> = ciphertext_json
                     .iter()
                     .map(|v| v.as_u64().unwrap() as u8)
                     .collect();
 
-                let expected_plaintext = vector["expected_plaintext"].as_str().unwrap();
+                let plaintext = vector["plaintext"].as_str().unwrap();
 
                 match test_decrypt_with_shared_secret(&shared_secret_bytes, &ciphertext) {
                     Ok(decrypted) => {
                         let decrypted_str = String::from_utf8_lossy(&decrypted);
                         assert_eq!(
-                            decrypted_str, expected_plaintext,
+                            decrypted_str, plaintext,
                             "Decryption mismatch for vector {}",
                             id
                         );
