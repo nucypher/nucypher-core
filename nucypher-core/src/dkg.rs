@@ -14,7 +14,7 @@ use umbral_pre::serde_bytes; // TODO should this be in umbral?
 
 use crate::access_control::AccessControlPolicy;
 use crate::conditions::Context;
-use crate::dkg::session::{SessionSharedSecret, SessionStaticKey, SessionSecretFactory};
+use crate::dkg::session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
     ProtocolObjectInner,
@@ -85,7 +85,7 @@ fn encrypt_with_shared_secret(
 ) -> Result<Box<[u8]>, EncryptionError> {
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);  // TODO: Note that this seed is currently fixed for all tests
+    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]); // TODO: Note that this seed is currently fixed for all tests
     let nonce = ChaCha20Poly1305::generate_nonce(rng);
     encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
 }
@@ -100,7 +100,7 @@ fn encrypt_with_shared_secret_and_nonce(
     let cipher = ChaCha20Poly1305::new(key);
     let mut result = nonce.to_vec();
     let ciphertext = cipher
-        .encrypt(&nonce, plaintext.as_ref())
+        .encrypt(nonce, plaintext.as_ref())
         .map_err(|_err| EncryptionError::PlaintextTooLarge)?;
     result.extend(ciphertext);
     Ok(result.into_boxed_slice())
@@ -620,29 +620,31 @@ impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use crate::dkg::session::{SessionSharedSecret, SessionStaticSecret, SessionSecretFactory, SessionStaticKey};
+    use crate::dkg::session::{
+        SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret,
+    };
     use crate::dkg::{
-        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
-        ThresholdDecryptionRequest, EncryptedThresholdDecryptionRequest,
-        ThresholdDecryptionResponse, EncryptedThresholdDecryptionResponse,
+        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError,
+        EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, NonceSize,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
     use crate::{AuthenticatedData, Conditions};
+    use alloc::boxed::Box;
+    #[cfg(feature = "deterministic_encryption")]
+    use alloc::format;
+    #[cfg(feature = "deterministic_encryption")]
+    use alloc::string::String;
     use alloc::vec;
     use alloc::vec::Vec;
-    use alloc::boxed::Box;
     use core::clone::Clone;
-    use ferveo::api::{DkgPublicKey, FerveoVariant, SecretBox, encrypt as ferveo_encrypt};
+    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
-    use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use rand::SeedableRng;
     use rand_core::RngCore;
     use serde::{Deserialize, Serialize};
     use serde_json;
     use x25519_dalek::{PublicKey, StaticSecret};
-    #[cfg(feature = "deterministic_encryption")]
-    use alloc::string::String;
-    #[cfg(feature = "deterministic_encryption")]
-    use alloc::format;
 
     use crate::access_control::AccessControlPolicy;
     use crate::conditions::Context;
@@ -888,7 +890,7 @@ mod tests {
         use chacha20poly1305::{AeadCore, ChaCha20Poly1305};
 
         let mut test_vectors = Vec::new();
-        
+
         // Generate test vectors with different seeds
         for seed in 0..3 {
             // Generate test plaintexts
@@ -897,14 +899,14 @@ mod tests {
                 b"another test".to_vec(),
                 b"".to_vec(), // empty string test
             ];
-            
+
             // Generate ciphertexts for each plaintext
             for plaintext in plaintexts {
                 let session_shared_secret = create_session_shared_secret_from_seed(seed);
-                
+
                 let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
                     .expect("Encryption failed");
-                
+
                 // TODO: Note that this seed is currently fixed for all tests, and hence the nonce is also fixed
                 let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
                 let nonce = ChaCha20Poly1305::generate_nonce(rng);
@@ -917,7 +919,7 @@ mod tests {
                 });
             }
         }
-        
+
         test_vectors
     }
 
@@ -934,10 +936,10 @@ mod tests {
     #[test]
     #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_deterministic() {
-        use rand_core::SeedableRng;
-        use rand::rngs::StdRng;
-        use x25519_dalek::{PublicKey, StaticSecret};
         use crate::dkg::session::SessionSharedSecret;
+        use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
+        use x25519_dalek::{PublicKey, StaticSecret};
 
         // Create a test session_shared_secret and test plaintext
         let mut rng0 = <StdRng as SeedableRng>::from_seed([0u8; 32]);
@@ -961,8 +963,8 @@ mod tests {
 
     #[cfg(feature = "deterministic_encryption")]
     fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
-        use rand_core::SeedableRng;
         use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
         use x25519_dalek::{PublicKey, StaticSecret};
 
         let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
@@ -977,19 +979,20 @@ mod tests {
     #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_vectors() {
         let test_vectors = generate_test_vectors();
-        
+
         // Verify each test vector
         for vector in test_vectors {
             let session_shared_secret = create_session_shared_secret_from_seed(vector.seed);
-            
+
             // Verify decryption works
             let decrypted = decrypt_with_shared_secret(&session_shared_secret, &vector.ciphertext)
                 .expect("Decryption failed");
             assert_eq!(decrypted.as_ref(), vector.plaintext.as_slice());
-            
+
             // Verify encryption is deterministic
-            let new_ciphertext = encrypt_with_shared_secret(&session_shared_secret, &vector.plaintext)
-                .expect("Encryption failed");
+            let new_ciphertext =
+                encrypt_with_shared_secret(&session_shared_secret, &vector.plaintext)
+                    .expect("Encryption failed");
             assert_eq!(new_ciphertext, vector.ciphertext);
         }
     }
