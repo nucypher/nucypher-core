@@ -74,7 +74,8 @@ fn encrypt_with_shared_secret(
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
     use chacha20poly1305::aead::OsRng;
-    encrypt_with_shared_secret_with_rng(shared_secret, plaintext, &mut OsRng)
+    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+    encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
 }
 
 #[cfg(all(test, feature = "deterministic_encryption"))]
@@ -84,19 +85,19 @@ fn encrypt_with_shared_secret(
 ) -> Result<Box<[u8]>, EncryptionError> {
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    let mut rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
-    encrypt_with_shared_secret_with_rng(shared_secret, plaintext, &mut rng)
+    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);  // TODO: Note that this seed is currently fixed for all tests
+    let nonce = ChaCha20Poly1305::generate_nonce(rng);
+    encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
 }
 
-/// Encrypts data using a shared secret with a custom RNG.
-fn encrypt_with_shared_secret_with_rng<R: RngCore + CryptoRng>(
+/// Encrypts data using a shared secret with a custom nonce.
+fn encrypt_with_shared_secret_and_nonce(
     shared_secret: &SessionSharedSecret,
+    nonce: &Nonce,
     plaintext: &[u8],
-    rng: &mut R,
 ) -> Result<Box<[u8]>, EncryptionError> {
     let key = Key::from_slice(shared_secret.as_ref());
     let cipher = ChaCha20Poly1305::new(key);
-    let nonce = ChaCha20Poly1305::generate_nonce(rng);
     let mut result = nonce.to_vec();
     let ciphertext = cipher
         .encrypt(&nonce, plaintext.as_ref())
@@ -655,6 +656,7 @@ mod tests {
     pub struct TestVector {
         pub seed: u8,
         pub plaintext: Vec<u8>,
+        pub nonce: [u8; 12],
         pub ciphertext: Box<[u8]>,
     }
 
@@ -883,6 +885,8 @@ mod tests {
 
     #[cfg(feature = "deterministic_encryption")]
     pub fn generate_test_vectors() -> Vec<TestVector> {
+        use chacha20poly1305::{AeadCore, ChaCha20Poly1305};
+
         let mut test_vectors = Vec::new();
         
         // Generate test vectors with different seeds
@@ -901,9 +905,14 @@ mod tests {
                 let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
                     .expect("Encryption failed");
                 
+                // TODO: Note that this seed is currently fixed for all tests, and hence the nonce is also fixed
+                let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
+                let nonce = ChaCha20Poly1305::generate_nonce(rng);
+
                 test_vectors.push(TestVector {
                     seed,
                     plaintext,
+                    nonce: nonce.as_slice().try_into().unwrap(),
                     ciphertext,
                 });
             }
