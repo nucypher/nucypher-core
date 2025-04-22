@@ -3,6 +3,7 @@
 use alloc::vec::Vec;
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{ArrayLike, SliceLike, Hex};
 
 use crate::dkg::session::SessionSharedSecret;
 
@@ -12,10 +13,13 @@ pub struct TestVector {
     /// The seed used to generate the session shared secret
     pub seed: u8,
     /// The plaintext to be encrypted
+    #[serde(with = "SliceLike::<Hex>")]
     pub plaintext: Vec<u8>,
     /// The nonce used for encryption
+    #[serde(with = "ArrayLike::<Hex>")]
     pub nonce: [u8; 12],
     /// The resulting ciphertext
+    #[serde(with = "SliceLike::<Hex>")]
     pub ciphertext: alloc::boxed::Box<[u8]>,
 }
 

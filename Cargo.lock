@@ -915,6 +915,7 @@ dependencies = [
  "rand_core 0.6.4",
  "rmp-serde",
  "serde",
+ "serde-encoded-bytes",
  "serde_json",
  "serde_with 1.14.0",
  "sha2",
@@ -1317,6 +1318,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-encoded-bytes"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71779be2e12f3000185ea21d821c44e7aa9ec1ff0ea8d3155b993fac5c9b170d"
+dependencies = [
+ "hex",
+ "serde",
 ]
 
 [[package]]
