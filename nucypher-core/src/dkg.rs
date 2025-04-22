@@ -68,8 +68,8 @@ impl fmt::Display for DecryptionError {
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
 /// Encrypts data using a shared secret with the default OS RNG.
-#[cfg(not(all(test, feature = "deterministic_encryption")))]
-fn encrypt_with_shared_secret(
+#[cfg(not(feature = "deterministic_encryption"))]
+pub fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
@@ -78,8 +78,8 @@ fn encrypt_with_shared_secret(
     encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
 }
 
-#[cfg(all(test, feature = "deterministic_encryption"))]
-fn encrypt_with_shared_secret(
+#[cfg(feature = "deterministic_encryption")]
+pub fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
@@ -618,6 +618,19 @@ impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionResponse {
 
 impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
+pub fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
+    use rand::rngs::StdRng;
+    use rand_core::SeedableRng;
+    use x25519_dalek::{PublicKey, StaticSecret};
+
+    let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
+    let static_secret_a = StaticSecret::random_from_rng(&mut rng);
+    let static_secret_b = StaticSecret::random_from_rng(&mut rng);
+    let public_key_b = PublicKey::from(&static_secret_b);
+    let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
+    SessionSharedSecret::new(shared_secret)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::dkg::session::{
@@ -626,16 +639,17 @@ mod tests {
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError,
         EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, NonceSize,
-        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse, create_session_shared_secret_from_seed,
     };
+    #[cfg(feature = "test_vectors")]
+    use crate::test_vectors::{TestVector, generate_test_vectors};
     use crate::{AuthenticatedData, Conditions};
     use alloc::boxed::Box;
-    #[cfg(feature = "deterministic_encryption")]
+    #[cfg(feature = "test_vectors")]
     use alloc::format;
-    #[cfg(feature = "deterministic_encryption")]
+    #[cfg(feature = "test_vectors")]
     use alloc::string::String;
     use alloc::vec;
-    use alloc::vec::Vec;
     use core::clone::Clone;
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
@@ -652,15 +666,6 @@ mod tests {
         messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
         ProtocolObjectInner,
     };
-
-    #[cfg(feature = "deterministic_encryption")]
-    #[derive(Serialize, Deserialize)]
-    pub struct TestVector {
-        pub seed: u8,
-        pub plaintext: Vec<u8>,
-        pub nonce: [u8; 12],
-        pub ciphertext: Box<[u8]>,
-    }
 
     #[test]
     fn decryption_with_shared_secret() {
@@ -885,56 +890,8 @@ mod tests {
             .is_err());
     }
 
-    #[cfg(feature = "deterministic_encryption")]
-    pub fn generate_test_vectors() -> Vec<TestVector> {
-        use chacha20poly1305::{AeadCore, ChaCha20Poly1305};
-
-        let mut test_vectors = Vec::new();
-
-        // Generate test vectors with different seeds
-        for seed in 0..3 {
-            // Generate test plaintexts
-            let plaintexts = vec![
-                b"test data".to_vec(),
-                b"another test".to_vec(),
-                b"".to_vec(), // empty string test
-            ];
-
-            // Generate ciphertexts for each plaintext
-            for plaintext in plaintexts {
-                let session_shared_secret = create_session_shared_secret_from_seed(seed);
-
-                let ciphertext = encrypt_with_shared_secret(&session_shared_secret, &plaintext)
-                    .expect("Encryption failed");
-
-                // TODO: Note that this seed is currently fixed for all tests, and hence the nonce is also fixed
-                let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
-                let nonce = ChaCha20Poly1305::generate_nonce(rng);
-
-                test_vectors.push(TestVector {
-                    seed,
-                    plaintext,
-                    nonce: nonce.as_slice().try_into().unwrap(),
-                    ciphertext,
-                });
-            }
-        }
-
-        test_vectors
-    }
-
-    #[cfg(feature = "deterministic_encryption")]
-    pub fn serialize_test_vector_to_json(vector: &TestVector) -> String {
-        serde_json::to_string(vector).expect("Failed to serialize test vector to JSON")
-    }
-
-    #[cfg(feature = "deterministic_encryption")]
-    pub fn deserialize_test_vector_from_json(json: &str) -> TestVector {
-        serde_json::from_str(json).expect("Failed to deserialize test vector from JSON")
-    }
-
     #[test]
-    #[cfg(feature = "deterministic_encryption")]
+    #[cfg(feature = "test_vectors")]
     fn test_encryption_deterministic() {
         use crate::dkg::session::SessionSharedSecret;
         use rand::rngs::StdRng;
@@ -961,22 +918,8 @@ mod tests {
         assert_eq!(ciphertext1, ciphertext2);
     }
 
-    #[cfg(feature = "deterministic_encryption")]
-    fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
-        use rand::rngs::StdRng;
-        use rand_core::SeedableRng;
-        use x25519_dalek::{PublicKey, StaticSecret};
-
-        let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
-        let static_secret_a = StaticSecret::random_from_rng(&mut rng);
-        let static_secret_b = StaticSecret::random_from_rng(&mut rng);
-        let public_key_b = PublicKey::from(&static_secret_b);
-        let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
-        SessionSharedSecret::new(shared_secret)
-    }
-
     #[test]
-    #[cfg(feature = "deterministic_encryption")]
+    #[cfg(feature = "test_vectors")]
     fn test_encryption_vectors() {
         let test_vectors = generate_test_vectors();
 

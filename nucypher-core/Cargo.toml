@@ -36,4 +36,4 @@ test_vectors = []
 [[bin]]
 name = "generate-test-vectors"
 path = "src/bin/generate_test_vectors.rs"
-required-features = ["deterministic_encryption"]
+required-features = ["deterministic_encryption", "test_vectors"]

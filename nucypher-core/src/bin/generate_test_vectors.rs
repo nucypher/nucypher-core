@@ -1,10 +1,10 @@
-use nucypher_core::dkg::tests::generate_test_vectors;
+use nucypher_core::test_vectors::{TestVector, generate_test_vectors};
 use std::fs;
 use std::path::Path;
 
 fn main() {
     // Generate test vectors
-    let test_vectors = generate_test_vectors();
+    let test_vectors: Vec<TestVector> = generate_test_vectors();
     
     // Create output directory if it doesn't exist
     let output_dir = Path::new("test_vectors");
