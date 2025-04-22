@@ -31,3 +31,9 @@ rand = "0.8.5"
 [features]
 default = ["deterministic_encryption"]
 deterministic_encryption = []
+test_vectors = []
+
+[[bin]]
+name = "generate-test-vectors"
+path = "src/bin/generate_test_vectors.rs"
+required-features = ["deterministic_encryption"]
