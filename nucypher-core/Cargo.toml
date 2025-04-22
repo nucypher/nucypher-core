@@ -30,9 +30,9 @@ rand_chacha = "0.3.1"
 rand = "0.8.5"
 
 [features]
-default = ["deterministic_encryption"]
+default = []
 deterministic_encryption = []
-test_vectors = []
+test_vectors = ["deterministic_encryption"]
 
 [[bin]]
 name = "generate-test-vectors"
