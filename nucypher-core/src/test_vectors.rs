@@ -12,6 +12,9 @@ use crate::dkg::session::SessionSharedSecret;
 pub struct TestVector {
     /// The seed used to generate the session shared secret
     pub seed: u8,
+    /// The session shared secret used for encryption
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub session_shared_secret: [u8; 32],
     /// The plaintext to be encrypted
     #[serde(with = "SliceLike::<Hex>")]
     pub plaintext: Vec<u8>,
@@ -75,6 +78,7 @@ pub fn generate_test_vectors() -> Vec<TestVector> {
             
             test_vectors.push(TestVector {
                 seed,
+                session_shared_secret: *session_shared_secret.as_bytes(),
                 plaintext,
                 nonce: nonce.as_slice().try_into().unwrap(),
                 ciphertext,

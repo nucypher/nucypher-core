@@ -913,6 +913,7 @@ mod tests {
         // Verify each test vector
         for vector in test_vectors {
             let session_shared_secret = create_session_shared_secret_from_seed(vector.seed);
+            assert_eq!(session_shared_secret.as_ref(), vector.session_shared_secret);
 
             // Verify decryption works
             let decrypted = decrypt_with_shared_secret(&session_shared_secret, &vector.ciphertext)
