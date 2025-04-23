@@ -67,26 +67,26 @@ impl fmt::Display for DecryptionError {
 
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
-/// Encrypts data using a shared secret with the default OS RNG.
 #[cfg(not(feature = "deterministic_encryption"))]
-pub fn encrypt_with_shared_secret(
-    shared_secret: &SessionSharedSecret,
-    plaintext: &[u8],
-) -> Result<Box<[u8]>, EncryptionError> {
+pub fn generate_encryption_nonce() -> Nonce {
     use chacha20poly1305::aead::OsRng;
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
-    encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
+    ChaCha20Poly1305::generate_nonce(&mut OsRng)
 }
 
 #[cfg(feature = "deterministic_encryption")]
+pub fn generate_encryption_nonce() -> Nonce {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]); // TODO: Note that this seed is currently fixed for all tests
+    ChaCha20Poly1305::generate_nonce(rng)
+}
+
+/// Encrypts data using a shared secret with the default OS RNG.
 pub fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
-    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]); // TODO: Note that this seed is currently fixed for all tests
-    let nonce = ChaCha20Poly1305::generate_nonce(rng);
+    let nonce = generate_encryption_nonce();
     encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
 }
 

@@ -71,8 +71,7 @@ pub fn generate_test_vectors() -> Vec<TestVector> {
                 .expect("Encryption failed");
             
             // TODO: Note that this seed is currently fixed for all tests, and hence the nonce is also fixed
-            let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]);
-            let nonce = ChaCha20Poly1305::generate_nonce(rng);
+            let nonce = crate::dkg::generate_encryption_nonce();
             
             test_vectors.push(TestVector {
                 seed,
