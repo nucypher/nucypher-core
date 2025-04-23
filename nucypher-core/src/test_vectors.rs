@@ -28,7 +28,7 @@ pub struct TestVector {
 /// This is a helper function used by `generate_test_vectors` to create
 /// deterministic session shared secrets for testing.
 #[cfg(feature = "test_vectors")]
-fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
+pub fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
     use rand::rngs::StdRng;
     use rand_core::SeedableRng;
     use x25519_dalek::{PublicKey, StaticSecret};

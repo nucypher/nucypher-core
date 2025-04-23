@@ -618,19 +618,6 @@ impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionResponse {
 
 impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
-pub fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
-    use rand::rngs::StdRng;
-    use rand_core::SeedableRng;
-    use x25519_dalek::{PublicKey, StaticSecret};
-
-    let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
-    let static_secret_a = StaticSecret::random_from_rng(&mut rng);
-    let static_secret_b = StaticSecret::random_from_rng(&mut rng);
-    let public_key_b = PublicKey::from(&static_secret_b);
-    let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
-    SessionSharedSecret::new(shared_secret)
-}
-
 #[cfg(test)]
 mod tests {
     use crate::dkg::session::{
@@ -639,10 +626,10 @@ mod tests {
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError,
         EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, NonceSize,
-        ThresholdDecryptionRequest, ThresholdDecryptionResponse, create_session_shared_secret_from_seed,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
     #[cfg(feature = "test_vectors")]
-    use crate::test_vectors::{TestVector, generate_test_vectors};
+    use crate::test_vectors::{TestVector, create_session_shared_secret_from_seed, generate_test_vectors};
     use crate::{AuthenticatedData, Conditions};
     use alloc::boxed::Box;
     #[cfg(feature = "test_vectors")]
