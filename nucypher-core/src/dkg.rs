@@ -891,7 +891,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "test_vectors")]
+    #[cfg(feature = "deterministic_encryption")]
     fn test_encryption_deterministic() {
         use crate::dkg::session::SessionSharedSecret;
         use rand::rngs::StdRng;
