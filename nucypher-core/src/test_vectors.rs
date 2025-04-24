@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use serde::{Deserialize, Serialize};
 use serde_encoded_bytes::{ArrayLike, SliceLike, Hex};
+use x25519_dalek::StaticSecret;
 
 use crate::dkg::session::SessionSharedSecret;
 
@@ -12,6 +13,12 @@ use crate::dkg::session::SessionSharedSecret;
 pub struct TestVector {
     /// The seed used to generate the session shared secret
     pub seed: u8,
+    /// The static secret A used to generate the session shared secret
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub static_secret_a: [u8; 32],
+    /// The static secret B used to generate the session shared secret
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub static_secret_b: [u8; 32],
     /// The session shared secret used for encryption
     #[serde(with = "ArrayLike::<Hex>")]
     pub session_shared_secret: [u8; 32],
@@ -32,14 +39,24 @@ pub struct TestVector {
 /// deterministic session shared secrets for testing.
 #[cfg(feature = "test_vectors")]
 pub fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
+    let (static_secret_a, static_secret_b) = create_static_secrets_from_seed(seed);
+    create_session_shared_secret_from_static_secrets(&static_secret_a, &static_secret_b)
+}
+
+pub fn create_static_secrets_from_seed(seed: u8) -> (StaticSecret, StaticSecret) {
     use rand::rngs::StdRng;
     use rand_core::SeedableRng;
-    use x25519_dalek::{PublicKey, StaticSecret};
 
     let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
     let static_secret_a = StaticSecret::random_from_rng(&mut rng);
     let static_secret_b = StaticSecret::random_from_rng(&mut rng);
-    let public_key_b = PublicKey::from(&static_secret_b);
+    (static_secret_a, static_secret_b)
+}
+
+pub fn create_session_shared_secret_from_static_secrets(static_secret_a: &StaticSecret, static_secret_b: &StaticSecret) -> SessionSharedSecret {
+    use x25519_dalek::PublicKey;
+
+    let public_key_b = PublicKey::from(static_secret_b);
     let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
     SessionSharedSecret::new(shared_secret)
 }
@@ -68,8 +85,8 @@ pub fn generate_test_vectors() -> Vec<TestVector> {
         
         // Generate ciphertexts for each plaintext
         for plaintext in plaintexts {
-            let session_shared_secret = create_session_shared_secret_from_seed(seed);
-            
+            let (static_secret_a, static_secret_b) = create_static_secrets_from_seed(seed);
+            let session_shared_secret = create_session_shared_secret_from_static_secrets(&static_secret_a, &static_secret_b);
             let ciphertext = crate::dkg::encrypt_with_shared_secret(&session_shared_secret, &plaintext)
                 .expect("Encryption failed");
             
@@ -78,6 +95,8 @@ pub fn generate_test_vectors() -> Vec<TestVector> {
             
             test_vectors.push(TestVector {
                 seed,
+                static_secret_a: static_secret_a.to_bytes(),
+                static_secret_b: static_secret_b.to_bytes(),
                 session_shared_secret: *session_shared_secret.as_bytes(),
                 plaintext,
                 nonce: nonce.as_slice().try_into().unwrap(),
