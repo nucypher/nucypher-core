@@ -48,7 +48,7 @@ impl ThresholdMessageKit {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ThresholdMessageKit {
+impl ProtocolObjectInner<'_> for ThresholdMessageKit {
     fn version() -> (u16, u16) {
         (1, 0)
     }
@@ -70,7 +70,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdMessageKit {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ThresholdMessageKit {}
+impl ProtocolObject<'_> for ThresholdMessageKit {}
 
 #[cfg(test)]
 mod tests {

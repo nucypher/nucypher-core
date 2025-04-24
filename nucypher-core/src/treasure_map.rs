@@ -97,7 +97,7 @@ impl TreasureMap {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for TreasureMap {
+impl ProtocolObjectInner<'_> for TreasureMap {
     fn brand() -> [u8; 4] {
         *b"TMap"
     }
@@ -119,7 +119,7 @@ impl<'a> ProtocolObjectInner<'a> for TreasureMap {
     }
 }
 
-impl<'a> ProtocolObject<'a> for TreasureMap {}
+impl ProtocolObject<'_> for TreasureMap {}
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 struct AuthorizedTreasureMap {
@@ -157,7 +157,7 @@ impl AuthorizedTreasureMap {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for AuthorizedTreasureMap {
+impl ProtocolObjectInner<'_> for AuthorizedTreasureMap {
     fn brand() -> [u8; 4] {
         *b"AMap"
     }
@@ -179,7 +179,7 @@ impl<'a> ProtocolObjectInner<'a> for AuthorizedTreasureMap {
     }
 }
 
-impl<'a> ProtocolObject<'a> for AuthorizedTreasureMap {}
+impl ProtocolObject<'_> for AuthorizedTreasureMap {}
 
 /// A treasure map encrypted for Bob.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -229,7 +229,7 @@ impl EncryptedTreasureMap {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedTreasureMap {
+impl ProtocolObjectInner<'_> for EncryptedTreasureMap {
     fn brand() -> [u8; 4] {
         *b"EMap"
     }
@@ -251,4 +251,4 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedTreasureMap {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedTreasureMap {}
+impl ProtocolObject<'_> for EncryptedTreasureMap {}

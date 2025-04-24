@@ -50,7 +50,7 @@ impl RetrievalKit {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
+impl ProtocolObjectInner<'_> for RetrievalKit {
     fn brand() -> [u8; 4] {
         *b"RKit"
     }
@@ -72,4 +72,4 @@ impl<'a> ProtocolObjectInner<'a> for RetrievalKit {
     }
 }
 
-impl<'a> ProtocolObject<'a> for RetrievalKit {}
+impl ProtocolObject<'_> for RetrievalKit {}

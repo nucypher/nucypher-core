@@ -37,7 +37,7 @@ impl FleetStateChecksum {
                 // so this may lead to unnecessary fleet state update.
                 // But, unlike ProtocolObject::to_bytes(), payload serialization
                 // is not standardized, so it is better not to rely on it.
-                digest.chain(&node.to_bytes())
+                digest.chain(node.to_bytes())
             })
             .finalize();
 

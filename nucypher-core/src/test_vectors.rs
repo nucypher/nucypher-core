@@ -1,0 +1,106 @@
+//! Module for generating and handling test vectors for encryption/decryption testing.
+
+use alloc::vec::Vec;
+use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{ArrayLike, SliceLike, Hex};
+use x25519_dalek::StaticSecret;
+
+use crate::dkg::session::SessionSharedSecret;
+
+/// A test vector containing all necessary data for encryption/decryption testing.
+#[derive(Serialize, Deserialize)]
+pub struct TestVector {
+    /// The seed used to generate the session shared secret
+    pub seed: u8,
+    /// The static secret A used to generate the session shared secret
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub static_secret_a: [u8; 32],
+    /// The static secret B used to generate the session shared secret
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub static_secret_b: [u8; 32],
+    /// The session shared secret used for encryption
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub session_shared_secret: [u8; 32],
+    /// The plaintext to be encrypted
+    #[serde(with = "SliceLike::<Hex>")]
+    pub plaintext: Vec<u8>,
+    /// The nonce used for encryption
+    #[serde(with = "ArrayLike::<Hex>")]
+    pub nonce: [u8; 12],
+    /// The resulting ciphertext
+    #[serde(with = "SliceLike::<Hex>")]
+    pub ciphertext: alloc::boxed::Box<[u8]>,
+}
+
+/// Creates a session shared secret from a seed value.
+/// 
+/// This is a helper function used by `generate_test_vectors` to create
+/// deterministic session shared secrets for testing.
+#[cfg(feature = "test_vectors")]
+pub fn create_session_shared_secret_from_seed(seed: u8) -> SessionSharedSecret {
+    let (static_secret_a, static_secret_b) = create_static_secrets_from_seed(seed);
+    create_session_shared_secret_from_static_secrets(&static_secret_a, &static_secret_b)
+}
+
+pub fn create_static_secrets_from_seed(seed: u8) -> (StaticSecret, StaticSecret) {
+    use rand::rngs::StdRng;
+    use rand_core::SeedableRng;
+
+    let mut rng = <StdRng as SeedableRng>::from_seed([seed; 32]);
+    let static_secret_a = StaticSecret::random_from_rng(&mut rng);
+    let static_secret_b = StaticSecret::random_from_rng(&mut rng);
+    (static_secret_a, static_secret_b)
+}
+
+pub fn create_session_shared_secret_from_static_secrets(static_secret_a: &StaticSecret, static_secret_b: &StaticSecret) -> SessionSharedSecret {
+    use x25519_dalek::PublicKey;
+
+    let public_key_b = PublicKey::from(static_secret_b);
+    let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
+    SessionSharedSecret::new(shared_secret)
+}
+
+/// Generates a set of test vectors for encryption/decryption testing.
+/// 
+/// This function creates test vectors with different seeds and plaintexts,
+/// encrypting them to produce ciphertexts that can be used for testing.
+#[cfg(feature = "test_vectors")]
+pub fn generate_test_vectors() -> Vec<TestVector> {
+    use chacha20poly1305::{AeadCore, ChaCha20Poly1305};
+    use alloc::vec;
+
+    let mut test_vectors = Vec::new();
+    
+    // Generate test vectors with different seeds
+    for seed in 0..3 {
+        // Generate test plaintexts
+        let plaintexts: Vec<Vec<u8>> = vec![
+            b"test data".to_vec(),
+            b"another test".to_vec(),
+            b"".to_vec(), // empty string test
+        ];
+        
+        // Generate ciphertexts for each plaintext
+        for plaintext in plaintexts {
+            let (static_secret_a, static_secret_b) = create_static_secrets_from_seed(seed);
+            let session_shared_secret = create_session_shared_secret_from_static_secrets(&static_secret_a, &static_secret_b);
+            let ciphertext = crate::dkg::encrypt_with_shared_secret(&session_shared_secret, &plaintext)
+                .expect("Encryption failed");
+            
+            // TODO: Note that this seed is currently fixed for all tests, and hence the nonce is also fixed
+            let nonce = crate::dkg::generate_encryption_nonce();
+            
+            test_vectors.push(TestVector {
+                seed,
+                static_secret_a: static_secret_a.to_bytes(),
+                static_secret_b: static_secret_b.to_bytes(),
+                session_shared_secret: *session_shared_secret.as_bytes(),
+                plaintext,
+                nonce: nonce.as_slice().try_into().unwrap(),
+                ciphertext,
+            });
+        }
+    }
+    
+    test_vectors
+}

@@ -23,6 +23,8 @@ mod secret_box;
 mod threshold_message_kit;
 mod treasure_map;
 mod versioning;
+#[cfg(feature = "test_vectors")]
+pub mod test_vectors;
 
 /// Error returned by various `verify()` methods in the crate.
 pub struct VerificationError;
@@ -49,6 +51,8 @@ pub use revocation_order::RevocationOrder;
 pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
+#[cfg(feature = "test_vectors")]
+pub use test_vectors::{TestVector, generate_test_vectors};
 
 // Re-export umbral_pre so that the users don't have to version-match.
 pub use umbral_pre;

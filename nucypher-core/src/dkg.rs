@@ -1,17 +1,19 @@
 use alloc::boxed::Box;
 use alloc::string::String;
+use alloc::vec::Vec;
 use core::fmt;
 
-use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
+use chacha20poly1305::aead::{Aead, AeadCore, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
-use serde::{Deserialize, Serialize};
+use rand_core::{CryptoRng, RngCore};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
 
 use crate::access_control::AccessControlPolicy;
 use crate::conditions::Context;
-use crate::dkg::session::{SessionSharedSecret, SessionStaticKey};
+use crate::dkg::session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey};
 use crate::versioning::{
     messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
     ProtocolObjectInner,
@@ -64,16 +66,40 @@ impl fmt::Display for DecryptionError {
 
 type NonceSize = <ChaCha20Poly1305 as AeadCore>::NonceSize;
 
-fn encrypt_with_shared_secret(
+#[cfg(not(feature = "deterministic_encryption"))]
+pub fn generate_encryption_nonce() -> Nonce {
+    use chacha20poly1305::aead::OsRng;
+    ChaCha20Poly1305::generate_nonce(&mut OsRng)
+}
+
+#[cfg(feature = "deterministic_encryption")]
+pub fn generate_encryption_nonce() -> Nonce {
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+    let rng = <StdRng as SeedableRng>::from_seed([0u8; 32]); // TODO: Note that this seed is currently fixed for all tests
+    ChaCha20Poly1305::generate_nonce(rng)
+}
+
+/// Encrypts data using a shared secret with the default OS RNG.
+pub fn encrypt_with_shared_secret(
     shared_secret: &SessionSharedSecret,
+    plaintext: &[u8],
+) -> Result<Box<[u8]>, EncryptionError> {
+    let nonce = generate_encryption_nonce();
+    encrypt_with_shared_secret_and_nonce(shared_secret, &nonce, plaintext)
+}
+
+/// Encrypts data using a shared secret with a custom nonce.
+fn encrypt_with_shared_secret_and_nonce(
+    shared_secret: &SessionSharedSecret,
+    nonce: &Nonce,
     plaintext: &[u8],
 ) -> Result<Box<[u8]>, EncryptionError> {
     let key = Key::from_slice(shared_secret.as_ref());
     let cipher = ChaCha20Poly1305::new(key);
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
     let mut result = nonce.to_vec();
     let ciphertext = cipher
-        .encrypt(&nonce, plaintext.as_ref())
+        .encrypt(nonce, plaintext.as_ref())
         .map_err(|_err| EncryptionError::PlaintextTooLarge)?;
     result.extend(ciphertext);
     Ok(result.into_boxed_slice())
@@ -210,7 +236,7 @@ pub mod session {
         }
     }
 
-    impl<'a> ProtocolObjectInner<'a> for SessionStaticKey {
+    impl ProtocolObjectInner<'_> for SessionStaticKey {
         fn version() -> (u16, u16) {
             (2, 0)
         }
@@ -235,7 +261,7 @@ pub mod session {
         }
     }
 
-    impl<'a> ProtocolObject<'a> for SessionStaticKey {}
+    impl ProtocolObject<'_> for SessionStaticKey {}
 
     /// A session secret key.
     #[derive(ZeroizeOnDrop)]
@@ -391,7 +417,7 @@ impl ThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
+impl ProtocolObjectInner<'_> for ThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
         (4, 0)
     }
@@ -413,7 +439,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ThresholdDecryptionRequest {}
+impl ProtocolObject<'_> for ThresholdDecryptionRequest {}
 
 /// An encrypted request for an Ursula to derive a decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -456,7 +482,7 @@ impl EncryptedThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
+impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionRequest {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -478,7 +504,7 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionRequest {}
+impl ProtocolObject<'_> for EncryptedThresholdDecryptionRequest {}
 
 /// A response from Ursula with a derived decryption share.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
@@ -509,7 +535,7 @@ impl ThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
+impl ProtocolObjectInner<'_> for ThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -531,7 +557,7 @@ impl<'a> ProtocolObjectInner<'a> for ThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for ThresholdDecryptionResponse {}
+impl ProtocolObject<'_> for ThresholdDecryptionResponse {}
 
 /// An encrypted response from Ursula with a derived decryption share.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -567,7 +593,7 @@ impl EncryptedThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
+impl ProtocolObjectInner<'_> for EncryptedThresholdDecryptionResponse {
     fn version() -> (u16, u16) {
         (2, 0)
     }
@@ -589,25 +615,42 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionResponse {
     }
 }
 
-impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
+impl ProtocolObject<'_> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
+    use crate::dkg::session::{
+        SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret,
+    };
+    use crate::dkg::{
+        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError,
+        EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse, NonceSize,
+        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    };
+    #[cfg(feature = "test_vectors")]
+    use crate::test_vectors::{TestVector, create_session_shared_secret_from_seed, generate_test_vectors};
+    use crate::{AuthenticatedData, Conditions};
+    use alloc::boxed::Box;
+    #[cfg(feature = "test_vectors")]
+    use alloc::format;
+    #[cfg(feature = "test_vectors")]
+    use alloc::string::String;
+    use alloc::vec;
+    use core::clone::Clone;
     use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
     use rand_core::RngCore;
+    use serde::{Deserialize, Serialize};
+    use serde_json;
+    use x25519_dalek::{PublicKey, StaticSecret};
 
     use crate::access_control::AccessControlPolicy;
-    use crate::conditions::{Conditions, Context};
-    use crate::dkg::session::SessionStaticSecret;
-    use crate::dkg::{
-        decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
-    };
-    use crate::versioning::{ProtocolObject, ProtocolObjectInner};
-    use crate::{
-        AuthenticatedData, EncryptedThresholdDecryptionRequest,
-        EncryptedThresholdDecryptionResponse, SessionSecretFactory, SessionStaticKey,
-        ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    use crate::conditions::Context;
+    use crate::versioning::{
+        messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
+        ProtocolObjectInner,
     };
 
     #[test]
@@ -831,5 +874,56 @@ mod tests {
         assert!(encrypted_response_from_bytes
             .decrypt(&random_shared_secret)
             .is_err());
+    }
+
+    #[test]
+    #[cfg(feature = "deterministic_encryption")]
+    fn test_encryption_deterministic() {
+        use crate::dkg::session::SessionSharedSecret;
+        use rand::rngs::StdRng;
+        use rand_core::SeedableRng;
+        use x25519_dalek::{PublicKey, StaticSecret};
+
+        // Create a test session_shared_secret and test plaintext
+        let mut rng0 = <StdRng as SeedableRng>::from_seed([0u8; 32]);
+        let static_secret_a = StaticSecret::random_from_rng(&mut rng0);
+        let static_secret_b = StaticSecret::random_from_rng(&mut rng0);
+        let public_key_b = PublicKey::from(&static_secret_b);
+        let shared_secret = static_secret_a.diffie_hellman(&public_key_b);
+        let session_shared_secret = SessionSharedSecret::new(shared_secret);
+
+        let plaintext = b"test data";
+
+        // Use a seeded RNG for deterministic testing on encryption
+        let ciphertext1 = encrypt_with_shared_secret(&session_shared_secret, plaintext).unwrap();
+
+        // Reset the RNG with the same seed
+        let ciphertext2 = encrypt_with_shared_secret(&session_shared_secret, plaintext).unwrap();
+
+        // The ciphertexts will be identical because we used the same seed
+        assert_eq!(ciphertext1, ciphertext2);
+    }
+
+    #[test]
+    #[cfg(feature = "test_vectors")]
+    fn test_encryption_vectors() {
+        let test_vectors = generate_test_vectors();
+
+        // Verify each test vector
+        for vector in test_vectors {
+            let session_shared_secret = create_session_shared_secret_from_seed(vector.seed);
+            assert_eq!(session_shared_secret.as_ref(), vector.session_shared_secret);
+
+            // Verify decryption works
+            let decrypted = decrypt_with_shared_secret(&session_shared_secret, &vector.ciphertext)
+                .expect("Decryption failed");
+            assert_eq!(decrypted.as_ref(), vector.plaintext.as_slice());
+
+            // Verify encryption is deterministic
+            let new_ciphertext =
+                encrypt_with_shared_secret(&session_shared_secret, &vector.plaintext)
+                    .expect("Encryption failed");
+            assert_eq!(new_ciphertext, vector.ciphertext);
+        }
     }
 }
