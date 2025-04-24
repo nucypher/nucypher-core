@@ -1,7 +1,6 @@
 //! Module for generating and handling test vectors for encryption/decryption testing.
 
 use alloc::vec::Vec;
-use alloc::string::String;
 use serde::{Deserialize, Serialize};
 use serde_encoded_bytes::{ArrayLike, SliceLike, Hex};
 use x25519_dalek::StaticSecret;
@@ -68,8 +67,6 @@ pub fn create_session_shared_secret_from_static_secrets(static_secret_a: &Static
 #[cfg(feature = "test_vectors")]
 pub fn generate_test_vectors() -> Vec<TestVector> {
     use chacha20poly1305::{AeadCore, ChaCha20Poly1305};
-    use rand::rngs::StdRng;
-    use rand::SeedableRng;
     use alloc::vec;
 
     let mut test_vectors = Vec::new();
@@ -106,14 +103,4 @@ pub fn generate_test_vectors() -> Vec<TestVector> {
     }
     
     test_vectors
-}
-
-#[cfg(feature = "test_vectors")]
-pub fn serialize_test_vector_to_json(vector: &TestVector) -> String {
-    serde_json::to_string(vector).expect("Failed to serialize test vector to JSON")
-}
-
-#[cfg(feature = "test_vectors")]
-pub fn deserialize_test_vector_from_json(json: &str) -> TestVector {
-    serde_json::from_str(json).expect("Failed to deserialize test vector from JSON")
 }

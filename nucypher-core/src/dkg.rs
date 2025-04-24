@@ -9,7 +9,6 @@ use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
 use rand_core::{CryptoRng, RngCore};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_json;
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
 
 use crate::access_control::AccessControlPolicy;
