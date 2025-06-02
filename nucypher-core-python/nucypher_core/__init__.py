@@ -29,4 +29,10 @@ from ._nucypher_core import (
     SessionStaticSecret,
     SessionSecretFactory,
     encrypt_for_dkg,
+    EIP191SignatureRequest,
+    UserOperation,
+    UserOperationSignatureRequest,
+    PackedUserOperation,
+    PackedUserOperationSignatureRequest,
+    SignatureResponse,
 )
