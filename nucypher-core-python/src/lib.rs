@@ -1553,6 +1553,376 @@ impl MetadataResponse {
     }
 }
 
+//
+// SignatureRequestType enum support
+//
+
+fn signature_request_type_to_u8(variant: &nucypher_core::SignatureRequestType) -> u8 {
+    match variant {
+        nucypher_core::SignatureRequestType::UserOp => 0,
+        nucypher_core::SignatureRequestType::PackedUserOp => 1,
+        nucypher_core::SignatureRequestType::EIP191 => 2,
+        nucypher_core::SignatureRequestType::EIP712 => 3,
+    }
+}
+
+fn u8_to_signature_request_type(variant: u8) -> PyResult<nucypher_core::SignatureRequestType> {
+    match variant {
+        0 => Ok(nucypher_core::SignatureRequestType::UserOp),
+        1 => Ok(nucypher_core::SignatureRequestType::PackedUserOp),
+        2 => Ok(nucypher_core::SignatureRequestType::EIP191),
+        3 => Ok(nucypher_core::SignatureRequestType::EIP712),
+        _ => Err(PyValueError::new_err(format!(
+            "Invalid signature request type: {}",
+            variant
+        ))),
+    }
+}
+
+//
+// AAVersion enum support
+//
+
+fn aa_version_to_str(version: &nucypher_core::AAVersion) -> &'static str {
+    match version {
+        nucypher_core::AAVersion::V08 => "0.8.0",
+        nucypher_core::AAVersion::MDT => "mdt",
+    }
+}
+
+fn str_to_aa_version(version: &str) -> PyResult<nucypher_core::AAVersion> {
+    match version {
+        "0.8.0" => Ok(nucypher_core::AAVersion::V08),
+        "mdt" => Ok(nucypher_core::AAVersion::MDT),
+        _ => Err(PyValueError::new_err(format!(
+            "Invalid AA version: {}",
+            version
+        ))),
+    }
+}
+
+//
+// EIP191SignatureRequest
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct EIP191SignatureRequest {
+    backend: nucypher_core::EIP191SignatureRequest,
+}
+
+#[pymethods]
+impl EIP191SignatureRequest {
+    #[new]
+    pub fn new(data: &[u8], cohort_id: u32, chain_id: u32, context: Option<&Context>) -> Self {
+        Self {
+            backend: nucypher_core::EIP191SignatureRequest::new(
+                data,
+                cohort_id,
+                chain_id,
+                context.map(|c| c.backend.clone()),
+            ),
+        }
+    }
+
+    #[getter]
+    fn data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.data).into()
+    }
+
+    #[getter]
+    fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    #[getter]
+    fn chain_id(&self) -> u32 {
+        self.backend.chain_id
+    }
+
+    #[getter]
+    fn context(&self) -> Option<Context> {
+        self.backend.context.clone().map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        signature_request_type_to_u8(&self.backend.signature_type)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::EIP191SignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// UserOperation
+//
+
+#[pyclass(module = "nucypher_core")]
+pub struct UserOperation {
+    backend: nucypher_core::UserOperation,
+}
+
+#[pymethods]
+impl UserOperation {
+    #[new]
+    pub fn new(data: String) -> Self {
+        Self {
+            backend: nucypher_core::UserOperation::new(data),
+        }
+    }
+
+    #[getter]
+    fn data(&self) -> &str {
+        &self.backend.data
+    }
+
+    fn to_bytes(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.to_bytes()).into()
+    }
+
+    #[staticmethod]
+    fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        nucypher_core::UserOperation::from_bytes(data)
+            .map(|backend| Self { backend })
+            .map_err(|e| PyValueError::new_err(e))
+    }
+}
+
+//
+// UserOperationSignatureRequest
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct UserOperationSignatureRequest {
+    backend: nucypher_core::UserOperationSignatureRequest,
+}
+
+#[pymethods]
+impl UserOperationSignatureRequest {
+    #[new]
+    pub fn new(
+        user_op: &UserOperation,
+        cohort_id: u32,
+        chain_id: u32,
+        aa_version: &str,
+        context: Option<&Context>,
+    ) -> PyResult<Self> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        Ok(Self {
+            backend: nucypher_core::UserOperationSignatureRequest::new(
+                user_op.backend.clone(),
+                cohort_id,
+                chain_id,
+                aa_version,
+                context.map(|c| c.backend.clone()),
+            ),
+        })
+    }
+
+    #[getter]
+    fn user_op(&self) -> UserOperation {
+        UserOperation {
+            backend: self.backend.user_op.clone(),
+        }
+    }
+
+    #[getter]
+    fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    #[getter]
+    fn chain_id(&self) -> u32 {
+        self.backend.chain_id
+    }
+
+    #[getter]
+    fn aa_version(&self) -> &'static str {
+        aa_version_to_str(&self.backend.aa_version)
+    }
+
+    #[getter]
+    fn context(&self) -> Option<Context> {
+        self.backend.context.clone().map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        signature_request_type_to_u8(&self.backend.signature_type)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::UserOperationSignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// PackedUserOperation
+//
+
+#[pyclass(module = "nucypher_core")]
+pub struct PackedUserOperation {
+    backend: nucypher_core::PackedUserOperation,
+}
+
+#[pymethods]
+impl PackedUserOperation {
+    #[new]
+    pub fn new(data: String) -> Self {
+        Self {
+            backend: nucypher_core::PackedUserOperation::new(data),
+        }
+    }
+
+    #[getter]
+    fn data(&self) -> &str {
+        &self.backend.data
+    }
+
+    fn to_bytes(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.to_bytes()).into()
+    }
+
+    #[staticmethod]
+    fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        nucypher_core::PackedUserOperation::from_bytes(data)
+            .map(|backend| Self { backend })
+            .map_err(|e| PyValueError::new_err(e))
+    }
+}
+
+//
+// PackedUserOperationSignatureRequest
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct PackedUserOperationSignatureRequest {
+    backend: nucypher_core::PackedUserOperationSignatureRequest,
+}
+
+#[pymethods]
+impl PackedUserOperationSignatureRequest {
+    #[new]
+    pub fn new(
+        packed_user_op: &PackedUserOperation,
+        cohort_id: u32,
+        chain_id: u32,
+        aa_version: &str,
+        context: Option<&Context>,
+    ) -> PyResult<Self> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        Ok(Self {
+            backend: nucypher_core::PackedUserOperationSignatureRequest::new(
+                packed_user_op.backend.clone(),
+                cohort_id,
+                chain_id,
+                aa_version,
+                context.map(|c| c.backend.clone()),
+            ),
+        })
+    }
+
+    #[getter]
+    fn packed_user_op(&self) -> PackedUserOperation {
+        PackedUserOperation {
+            backend: self.backend.packed_user_op.clone(),
+        }
+    }
+
+    #[getter]
+    fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    #[getter]
+    fn chain_id(&self) -> u32 {
+        self.backend.chain_id
+    }
+
+    #[getter]
+    fn aa_version(&self) -> &'static str {
+        aa_version_to_str(&self.backend.aa_version)
+    }
+
+    #[getter]
+    fn context(&self) -> Option<Context> {
+        self.backend.context.clone().map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        signature_request_type_to_u8(&self.backend.signature_type)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::PackedUserOperationSignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// SignatureResponse
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SignatureResponse {
+    backend: nucypher_core::SignatureResponse,
+}
+
+#[pymethods]
+impl SignatureResponse {
+    #[new]
+    pub fn new(hash: &[u8], signature: &[u8], signature_type: u8) -> PyResult<Self> {
+        let signature_type = u8_to_signature_request_type(signature_type)?;
+        Ok(Self {
+            backend: nucypher_core::SignatureResponse::new(hash, signature, signature_type),
+        })
+    }
+
+    #[getter]
+    fn hash(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.hash).into()
+    }
+
+    #[getter]
+    fn signature(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.signature).into()
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        signature_request_type_to_u8(&self.backend.signature_type)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::SignatureResponse>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
@@ -1586,6 +1956,14 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<AccessControlPolicy>()?;
     core_module.add_class::<ThresholdMessageKit>()?;
     core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
+
+    // Add signature request/response classes
+    core_module.add_class::<EIP191SignatureRequest>()?;
+    core_module.add_class::<UserOperation>()?;
+    core_module.add_class::<UserOperationSignatureRequest>()?;
+    core_module.add_class::<PackedUserOperation>()?;
+    core_module.add_class::<PackedUserOperationSignatureRequest>()?;
+    core_module.add_class::<SignatureResponse>()?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;

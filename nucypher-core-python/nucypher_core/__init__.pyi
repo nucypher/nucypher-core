@@ -663,3 +663,199 @@ class SessionSecretFactory:
 
     def make_key(self, label: bytes) -> SessionStaticSecret:
         ...
+
+
+#
+# Signature request/response types
+#
+
+class SignatureRequestType:
+    USEROP: int = 0
+    PACKED_USER_OP: int = 1 
+    EIP_191: int = 2
+    EIP_712: int = 3
+
+
+class AAVersion:
+    V08: str = "0.8.0"
+    MDT: str = "mdt"
+
+
+class EIP191SignatureRequest:
+
+    def __init__(self, data: bytes, cohort_id: int, chain_id: int, context: Optional[Context]):
+        ...
+
+    @property
+    def data(self) -> bytes:
+        ...
+
+    @property
+    def cohort_id(self) -> int:
+        ...
+
+    @property 
+    def chain_id(self) -> int:
+        ...
+
+    @property
+    def context(self) -> Optional[Context]:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EIP191SignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class UserOperation:
+
+    def __init__(self, data: str):
+        ...
+
+    @property
+    def data(self) -> str:
+        ...
+
+    def to_bytes(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> UserOperation:
+        ...
+
+
+class UserOperationSignatureRequest:
+
+    def __init__(
+        self,
+        user_op: UserOperation,
+        cohort_id: int,
+        chain_id: int,
+        aa_version: str,
+        context: Optional[Context]
+    ):
+        ...
+
+    @property
+    def user_op(self) -> UserOperation:
+        ...
+
+    @property
+    def cohort_id(self) -> int:
+        ...
+
+    @property
+    def chain_id(self) -> int:
+        ...
+
+    @property
+    def aa_version(self) -> str:
+        ...
+
+    @property
+    def context(self) -> Optional[Context]:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> UserOperationSignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class PackedUserOperation:
+
+    def __init__(self, data: str):
+        ...
+
+    @property
+    def data(self) -> str:
+        ...
+
+    def to_bytes(self) -> bytes:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> PackedUserOperation:
+        ...
+
+
+class PackedUserOperationSignatureRequest:
+
+    def __init__(
+        self,
+        packed_user_op: PackedUserOperation,
+        cohort_id: int,
+        chain_id: int,
+        aa_version: str,
+        context: Optional[Context]
+    ):
+        ...
+
+    @property
+    def packed_user_op(self) -> PackedUserOperation:
+        ...
+
+    @property
+    def cohort_id(self) -> int:
+        ...
+
+    @property
+    def chain_id(self) -> int:
+        ...
+
+    @property
+    def aa_version(self) -> str:
+        ...
+
+    @property
+    def context(self) -> Optional[Context]:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> PackedUserOperationSignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+class SignatureResponse:
+
+    def __init__(self, hash: bytes, signature: bytes, signature_type: int):
+        ...
+
+    @property
+    def hash(self) -> bytes:
+        ...
+
+    @property
+    def signature(self) -> bytes:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> SignatureResponse:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...

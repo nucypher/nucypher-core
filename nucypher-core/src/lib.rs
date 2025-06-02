@@ -22,6 +22,7 @@ mod revocation_order;
 mod secret_box;
 mod test_utils;
 mod threshold_message_kit;
+mod signature_request;
 mod treasure_map;
 mod versioning;
 
@@ -48,6 +49,11 @@ pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use threshold_message_kit::ThresholdMessageKit;
+pub use signature_request::{
+    AAVersion, BaseSignatureRequest, EIP191SignatureRequest, PackedUserOperation,
+    PackedUserOperationSignatureRequest, SignatureRequestType, SignatureResponse, UserOperation,
+    UserOperationSignatureRequest,
+};
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
 

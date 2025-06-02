@@ -5,6 +5,7 @@ version = "0.15.0"
 edition = "2018"
 
 [lib]
+name = "_nucypher_core"
 crate-type = ["cdylib"]
 
 [dependencies]
