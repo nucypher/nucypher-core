@@ -10,6 +10,7 @@ use ferveo::bindings_python::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
     SharedSecret,
 };
+use hex;
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -18,6 +19,13 @@ use pyo3::types::{PyBytes, PyUnicode};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
+};
+
+use nucypher_core as rust_nucypher_core;
+use rust_nucypher_core::{
+    UserOperation as SignatureRequestUserOperation,
+    PackedUserOperation as SignatureRequestPackedUserOperation,
+    SignedPackedUserOperation as SignatureRequestSignedPackedUserOperation,
 };
 
 use nucypher_core::ProtocolObject;
@@ -71,6 +79,27 @@ where
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
     })
 }
+
+// Helper functions for Address conversion
+fn address_to_string(addr: &rust_nucypher_core::Address) -> String {
+    addr.to_checksum_address()
+}
+
+fn string_to_address(hex_str: &str) -> PyResult<rust_nucypher_core::Address> {
+    let hex_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
+    let bytes = hex::decode(hex_str)
+        .map_err(|e| PyValueError::new_err(format!("Invalid hex address: {}", e)))?;
+    if bytes.len() != 20 {
+        return Err(PyValueError::new_err(format!(
+            "Invalid address length: expected 20 bytes, got {}",
+            bytes.len()
+        )));
+    }
+    let mut array = [0u8; 20];
+    array.copy_from_slice(&bytes);
+    Ok(rust_nucypher_core::Address::new(&array))
+}
+
 #[pyclass(module = "nucypher_core")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, derive_more::AsRef)]
 pub struct Address {
@@ -757,12 +786,12 @@ impl AuthenticatedData {
         }
     }
 
-    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
+    pub fn aad(&self) -> PyResult<Vec<u8>> {
         let result = self
             .backend
             .aad()
             .map_err(|err| PyValueError::new_err(format!("{err}")))?;
-        Ok(PyBytes::new(py, &result).into())
+        Ok(result.to_vec())
     }
 
     #[getter]
@@ -815,31 +844,34 @@ impl AccessControlPolicy {
     #[new]
     pub fn new(auth_data: &AuthenticatedData, authorization: &[u8]) -> Self {
         Self {
-            backend: nucypher_core::AccessControlPolicy::new(auth_data.as_ref(), authorization),
+            backend: nucypher_core::AccessControlPolicy::new(&auth_data.backend, authorization),
         }
     }
 
-    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
-        let result = self
-            .backend
+    pub fn aad(&self) -> PyResult<Vec<u8>> {
+        self.backend
             .aad()
-            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
-        Ok(PyBytes::new(py, &result).into())
+            .map(|aad| aad.to_vec())
+            .map_err(|err| {
+                PyValueError::new_err(format!("Failed to get authenticated data: {err}"))
+            })
     }
 
     #[getter]
     pub fn public_key(&self) -> DkgPublicKey {
-        self.backend.auth_data.public_key.into()
+        self.backend.public_key().into()
     }
 
     #[getter]
     pub fn conditions(&self) -> Conditions {
-        self.backend.auth_data.conditions.clone().into()
+        Conditions {
+            backend: self.backend.conditions(),
+        }
     }
 
     #[getter]
-    pub fn authorization(&self) -> &[u8] {
-        self.backend.authorization.as_ref()
+    pub fn authorization(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.authorization).into()
     }
 
     #[staticmethod]
@@ -866,28 +898,32 @@ impl ThresholdMessageKit {
     #[new]
     pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
         Self {
-            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), acp.as_ref()),
+            backend: nucypher_core::ThresholdMessageKit::new(
+                ciphertext.as_ref(),
+                &acp.backend
+            ),
         }
     }
 
     #[getter]
     pub fn ciphertext_header(&self) -> PyResult<CiphertextHeader> {
-        let header = self
-            .backend
+        self.backend
             .ciphertext_header()
-            .map_err(FerveoPythonError::from)?;
-        Ok(CiphertextHeader::from(header))
+            .map(|header| header.into())
+            .map_err(|err| PyValueError::new_err(format!("Failed to get ciphertext header: {}", err)))
     }
 
     #[getter]
     pub fn acp(&self) -> AccessControlPolicy {
-        self.backend.acp.clone().into()
+        AccessControlPolicy {
+            backend: self.backend.acp.clone(),
+        }
     }
 
     pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> PyResult<Vec<u8>> {
         self.backend
             .decrypt_with_shared_secret(shared_secret.as_ref())
-            .map_err(|err| FerveoPythonError::FerveoError(err).into())
+            .map_err(|err| PyValueError::new_err(format!("Failed to decrypt: {}", err)))
     }
 
     #[staticmethod]
@@ -925,7 +961,7 @@ impl ThresholdDecryptionRequest {
                 ritual_id,
                 ciphertext_header.as_ref(),
                 acp.as_ref(),
-                context.map(|context| context.backend.clone()).as_ref(),
+                context.map(|context| &context.backend),
                 variant.into(),
             ),
         })
@@ -1614,7 +1650,7 @@ pub struct EIP191SignatureRequest {
 #[pymethods]
 impl EIP191SignatureRequest {
     #[new]
-    pub fn new(data: &[u8], cohort_id: u32, chain_id: u32, context: Option<&Context>) -> Self {
+    pub fn new(data: &[u8], cohort_id: u32, chain_id: u64, context: Option<&Context>) -> Self {
         Self {
             backend: nucypher_core::EIP191SignatureRequest::new(
                 data,
@@ -1636,7 +1672,7 @@ impl EIP191SignatureRequest {
     }
 
     #[getter]
-    fn chain_id(&self) -> u32 {
+    fn chain_id(&self) -> u64 {
         self.backend.chain_id
     }
 
@@ -1664,34 +1700,127 @@ impl EIP191SignatureRequest {
 // UserOperation
 //
 
+/// Python bindings for UserOperation
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct UserOperation {
-    backend: nucypher_core::UserOperation,
+    backend: SignatureRequestUserOperation,
 }
 
 #[pymethods]
 impl UserOperation {
     #[new]
-    pub fn new(data: String) -> Self {
-        Self {
-            backend: nucypher_core::UserOperation::new(data),
-        }
+    #[pyo3(signature = (sender, nonce, init_code=None, call_data=None, call_gas_limit=None, verification_gas_limit=None, pre_verification_gas=None, max_fee_per_gas=None, max_priority_fee_per_gas=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
+    pub fn new(
+        sender: String,
+        nonce: u64,
+        init_code: Option<&[u8]>,
+        call_data: Option<&[u8]>,
+        call_gas_limit: Option<u128>,
+        verification_gas_limit: Option<u128>,
+        pre_verification_gas: Option<u128>,
+        max_fee_per_gas: Option<u128>,
+        max_priority_fee_per_gas: Option<u128>,
+        paymaster: Option<String>,
+        paymaster_verification_gas_limit: Option<u128>,
+        paymaster_post_op_gas_limit: Option<u128>,
+        paymaster_data: Option<&[u8]>,
+    ) -> PyResult<Self> {
+        // Convert hex string to Address
+        let sender_address = string_to_address(&sender)?;
+        let paymaster_address = paymaster.as_ref().map(|p| string_to_address(p)).transpose()?;
+
+        Ok(Self {
+            backend: SignatureRequestUserOperation::new(
+                sender_address,
+                nonce,
+                init_code,
+                call_data,
+                call_gas_limit,
+                verification_gas_limit,
+                pre_verification_gas,
+                max_fee_per_gas,
+                max_priority_fee_per_gas,
+                paymaster_address,
+                paymaster_verification_gas_limit,
+                paymaster_post_op_gas_limit,
+                paymaster_data,
+            ),
+        })
     }
 
     #[getter]
-    fn data(&self) -> &str {
-        &self.backend.data
+    pub fn sender(&self) -> String {
+        address_to_string(&self.backend.sender)
     }
 
-    fn to_bytes(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.to_bytes()).into()
+    #[getter]
+    pub fn nonce(&self) -> u64 {
+        self.backend.nonce
+    }
+
+    #[getter]
+    pub fn init_code(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.init_code).into()
+    }
+
+    #[getter]
+    pub fn call_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.call_data).into()
+    }
+
+    #[getter]
+    pub fn call_gas_limit(&self) -> u128 {
+        self.backend.call_gas_limit
+    }
+
+    #[getter]
+    pub fn verification_gas_limit(&self) -> u128 {
+        self.backend.verification_gas_limit
+    }
+
+    #[getter]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.backend.pre_verification_gas
+    }
+
+    #[getter]
+    pub fn max_fee_per_gas(&self) -> u128 {
+        self.backend.max_fee_per_gas
+    }
+
+    #[getter]
+    pub fn max_priority_fee_per_gas(&self) -> u128 {
+        self.backend.max_priority_fee_per_gas
+    }
+
+    #[getter]
+    pub fn paymaster(&self) -> Option<String> {
+        self.backend.paymaster.as_ref().map(address_to_string)
+    }
+
+    #[getter]
+    pub fn paymaster_verification_gas_limit(&self) -> u128 {
+        self.backend.paymaster_verification_gas_limit
+    }
+
+    #[getter]
+    pub fn paymaster_post_op_gas_limit(&self) -> u128 {
+        self.backend.paymaster_post_op_gas_limit
+    }
+
+    #[getter]
+    pub fn paymaster_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.paymaster_data).into()
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
     }
 
     #[staticmethod]
-    fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        nucypher_core::UserOperation::from_bytes(data)
-            .map(|backend| Self { backend })
-            .map_err(|e| PyValueError::new_err(e))
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, SignatureRequestUserOperation>(data)
     }
 }
 
@@ -1711,7 +1840,7 @@ impl UserOperationSignatureRequest {
     pub fn new(
         user_op: &UserOperation,
         cohort_id: u32,
-        chain_id: u32,
+        chain_id: u64,
         aa_version: &str,
         context: Option<&Context>,
     ) -> PyResult<Self> {
@@ -1729,9 +1858,7 @@ impl UserOperationSignatureRequest {
 
     #[getter]
     fn user_op(&self) -> UserOperation {
-        UserOperation {
-            backend: self.backend.user_op.clone(),
-        }
+        UserOperation::from(self.backend.user_op.clone())
     }
 
     #[getter]
@@ -1740,7 +1867,7 @@ impl UserOperationSignatureRequest {
     }
 
     #[getter]
-    fn chain_id(&self) -> u32 {
+    fn chain_id(&self) -> u64 {
         self.backend.chain_id
     }
 
@@ -1773,34 +1900,258 @@ impl UserOperationSignatureRequest {
 // PackedUserOperation
 //
 
+/// Python bindings for PackedUserOperation
 #[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
 pub struct PackedUserOperation {
-    backend: nucypher_core::PackedUserOperation,
+    backend: SignatureRequestPackedUserOperation,
 }
 
 #[pymethods]
 impl PackedUserOperation {
     #[new]
-    pub fn new(data: String) -> Self {
+    pub fn new(
+        sender: String,
+        nonce: u64,
+        init_code: &[u8],
+        call_data: &[u8],
+        account_gas_limits: &[u8],
+        pre_verification_gas: u128,
+        gas_fees: &[u8],
+        paymaster_and_data: &[u8],
+    ) -> PyResult<Self> {
+        // Convert hex string to Address
+        let sender_address = string_to_address(&sender)?;
+
+        Ok(Self {
+            backend: SignatureRequestPackedUserOperation::new(
+                sender_address,
+                nonce,
+                init_code,
+                call_data,
+                account_gas_limits,
+                pre_verification_gas,
+                gas_fees,
+                paymaster_and_data,
+            ),
+        })
+    }
+
+    #[staticmethod]
+    pub fn from_user_operation(user_op: &UserOperation) -> Self {
         Self {
-            backend: nucypher_core::PackedUserOperation::new(data),
+            backend: SignatureRequestPackedUserOperation::from_user_operation(&user_op.backend),
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "_pack_account_gas_limits")]
+    pub fn pack_account_gas_limits(py: Python, call_gas_limit: u128, verification_gas_limit: u128) -> PyObject {
+        let mut result = [0u8; 32];
+        // Pack as: verification_gas_limit << 128 | call_gas_limit
+        // Each value is u128, so verification goes in upper 16 bytes, call in lower 16 bytes
+        result[0..16].copy_from_slice(&verification_gas_limit.to_be_bytes());
+        result[16..32].copy_from_slice(&call_gas_limit.to_be_bytes());
+        PyBytes::new(py, &result).into()
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "_pack_gas_fees")]
+    pub fn pack_gas_fees(py: Python, max_fee_per_gas: u128, max_priority_fee_per_gas: u128) -> PyObject {
+        let mut result = [0u8; 32];
+        // Pack as: max_priority_fee_per_gas << 128 | max_fee_per_gas
+        // Each value is u128, so priority goes in upper 16 bytes, max_fee in lower 16 bytes
+        result[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes());
+        result[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes());
+        PyBytes::new(py, &result).into()
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "_pack_paymaster_and_data", signature = (paymaster, paymaster_verification_gas_limit, paymaster_post_op_gas_limit, paymaster_data))]
+    pub fn pack_paymaster_and_data(
+        py: Python,
+        paymaster: Option<String>,
+        paymaster_verification_gas_limit: u128,
+        paymaster_post_op_gas_limit: u128,
+        paymaster_data: &[u8],
+    ) -> PyResult<PyObject> {
+        match paymaster {
+            None => Ok(PyBytes::new(py, &[]).into()),
+            Some(addr_str) => {
+                let addr = string_to_address(&addr_str)?;
+                let mut result = Vec::with_capacity(20 + 16 + 16 + paymaster_data.len());
+                result.extend_from_slice(addr.as_ref());
+
+                // Verification gas limit as 16 bytes big-endian (full u128)
+                result.extend_from_slice(&paymaster_verification_gas_limit.to_be_bytes());
+
+                // Post-op gas limit as 16 bytes big-endian (full u128)
+                result.extend_from_slice(&paymaster_post_op_gas_limit.to_be_bytes());
+
+                result.extend_from_slice(paymaster_data);
+                Ok(PyBytes::new(py, &result).into())
+            }
         }
     }
 
     #[getter]
-    fn data(&self) -> &str {
-        &self.backend.data
+    pub fn sender(&self) -> String {
+        address_to_string(&self.backend.sender)
     }
 
-    fn to_bytes(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.to_bytes()).into()
+    #[getter]
+    pub fn nonce(&self) -> u64 {
+        self.backend.nonce
+    }
+
+    #[getter]
+    pub fn init_code(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.init_code).into()
+    }
+
+    #[getter]
+    pub fn call_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.call_data).into()
+    }
+
+    #[getter]
+    pub fn account_gas_limits(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.account_gas_limits).into()
+    }
+
+    #[getter]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.backend.pre_verification_gas
+    }
+
+    #[getter]
+    pub fn gas_fees(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.gas_fees).into()
+    }
+
+    #[getter]
+    pub fn paymaster_and_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.paymaster_and_data).into()
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
     }
 
     #[staticmethod]
-    fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        nucypher_core::PackedUserOperation::from_bytes(data)
-            .map(|backend| Self { backend })
-            .map_err(|e| PyValueError::new_err(e))
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, SignatureRequestPackedUserOperation>(data)
+    }
+
+    pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let eip712_struct = self.backend.to_eip712_struct(&aa_version, chain_id);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(eip712_struct))
+        })
+    }
+
+    #[pyo3(name = "_to_eip712_message")]
+    pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let message = self.backend.to_eip712_message(&aa_version);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(message))
+        })
+    }
+
+    #[pyo3(name = "_get_domain")]
+    pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let domain = self.backend.get_domain(&aa_version, chain_id);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(domain))
+        })
+    }
+}
+
+//
+// SignedPackedUserOperation
+//
+
+/// Python bindings for SignedPackedUserOperation
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SignedPackedUserOperation {
+    backend: SignatureRequestSignedPackedUserOperation,
+}
+
+#[pymethods]
+impl SignedPackedUserOperation {
+    #[new]
+    pub fn new(operation: &PackedUserOperation, signature: &[u8]) -> Self {
+        Self {
+            backend: SignatureRequestSignedPackedUserOperation::new(
+                operation.backend.clone(),
+                signature,
+            ),
+        }
+    }
+
+    #[getter]
+    pub fn operation(&self) -> PackedUserOperation {
+        PackedUserOperation::from(self.backend.operation().clone())
+    }
+
+    #[getter]
+    pub fn signature(&self, py: Python) -> PyObject {
+        PyBytes::new(py, self.backend.signature()).into()
+    }
+
+    pub fn into_parts(&self) -> (PackedUserOperation, PyObject) {
+        let (operation, signature) = (self.backend.operation().clone(), self.backend.signature());
+        Python::with_gil(|py| {
+            (
+                PackedUserOperation::from(operation),
+                PyBytes::new(py, signature).into(),
+            )
+        })
+    }
+
+    pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let eip712_struct = self.backend.to_eip712_struct(&aa_version, chain_id);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(eip712_struct))
+        })
+    }
+
+    #[pyo3(name = "_to_eip712_message")]
+    pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let message = self.backend.to_eip712_message(&aa_version);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(message))
+        })
+    }
+
+    #[pyo3(name = "_get_domain")]
+    pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let aa_version = str_to_aa_version(aa_version)?;
+        let domain = self.backend.get_domain(&aa_version, chain_id);
+
+        Python::with_gil(|py| {
+            json_to_pyobject(py, &serde_json::Value::Object(domain))
+        })
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, SignatureRequestSignedPackedUserOperation>(data)
     }
 }
 
@@ -1820,7 +2171,7 @@ impl PackedUserOperationSignatureRequest {
     pub fn new(
         packed_user_op: &PackedUserOperation,
         cohort_id: u32,
-        chain_id: u32,
+        chain_id: u64,
         aa_version: &str,
         context: Option<&Context>,
     ) -> PyResult<Self> {
@@ -1838,9 +2189,7 @@ impl PackedUserOperationSignatureRequest {
 
     #[getter]
     fn packed_user_op(&self) -> PackedUserOperation {
-        PackedUserOperation {
-            backend: self.backend.packed_user_op.clone(),
-        }
+        PackedUserOperation::from(self.backend.packed_user_op.clone())
     }
 
     #[getter]
@@ -1849,7 +2198,7 @@ impl PackedUserOperationSignatureRequest {
     }
 
     #[getter]
-    fn chain_id(&self) -> u32 {
+    fn chain_id(&self) -> u64 {
         self.backend.chain_id
     }
 
@@ -1959,11 +2308,14 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
 
     // Add signature request/response classes
     core_module.add_class::<EIP191SignatureRequest>()?;
+    core_module.add_class::<SignedEIP191SignatureRequest>()?;
     core_module.add_class::<UserOperation>()?;
     core_module.add_class::<UserOperationSignatureRequest>()?;
     core_module.add_class::<PackedUserOperation>()?;
+    core_module.add_class::<SignedPackedUserOperation>()?;
     core_module.add_class::<PackedUserOperationSignatureRequest>()?;
     core_module.add_class::<SignatureResponse>()?;
+    core_module.add_function(wrap_pyfunction!(deserialize_signature_request, core_module)?)?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
@@ -1997,4 +2349,127 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_submodule(ferveo_module)?;
 
     Ok(())
+}
+
+// Helper function to convert JSON value to Python object
+fn json_to_pyobject(py: Python, value: &serde_json::Value) -> PyResult<PyObject> {
+    use pyo3::types::{PyDict, PyList};
+    use serde_json::Value;
+
+    match value {
+        Value::Null => Ok(py.None()),
+        Value::Bool(b) => Ok(b.to_object(py)),
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(i.to_object(py))
+            } else if let Some(u) = n.as_u64() {
+                Ok(u.to_object(py))
+            } else if let Some(f) = n.as_f64() {
+                Ok(f.to_object(py))
+            } else {
+                Err(PyValueError::new_err("Invalid number"))
+            }
+        }
+        Value::String(s) => Ok(s.to_object(py)),
+        Value::Array(arr) => {
+            let list = PyList::empty(py);
+            for item in arr {
+                list.append(json_to_pyobject(py, item)?)?;
+            }
+            Ok(list.to_object(py))
+        }
+        Value::Object(map) => {
+            let dict = PyDict::new(py);
+            for (k, v) in map {
+                dict.set_item(k, json_to_pyobject(py, v)?)?;
+            }
+            Ok(dict.to_object(py))
+        }
+    }
+}
+
+//
+// Signature Request Deserializer
+//
+
+/// Utility function to deserialize any signature request from bytes - returns specific type directly
+#[pyfunction]
+pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
+    let direct_request = nucypher_core::deserialize_signature_request(data)
+        .map_err(|err| PyValueError::new_err(format!("Failed to deserialize signature request: {}", err)))?;
+
+    // Convert to the specific Python type
+    match direct_request {
+        nucypher_core::DirectSignatureRequest::EIP191(req) => {
+            Python::with_gil(|py| {
+                let python_req = EIP191SignatureRequest { backend: req };
+                Ok(python_req.into_py(py))
+            })
+        }
+        nucypher_core::DirectSignatureRequest::UserOp(req) => {
+            Python::with_gil(|py| {
+                let python_req = UserOperationSignatureRequest { backend: req };
+                Ok(python_req.into_py(py))
+            })
+        }
+        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => {
+            Python::with_gil(|py| {
+                let python_req = PackedUserOperationSignatureRequest { backend: req };
+                Ok(python_req.into_py(py))
+            })
+        }
+    }
+}
+
+//
+// SignedEIP191SignatureRequest
+//
+
+/// Python bindings for SignedEIP191SignatureRequest
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SignedEIP191SignatureRequest {
+    backend: nucypher_core::SignedEIP191SignatureRequest,
+}
+
+#[pymethods]
+impl SignedEIP191SignatureRequest {
+    #[new]
+    pub fn new(request: &EIP191SignatureRequest, signature: &[u8]) -> Self {
+        Self {
+            backend: nucypher_core::SignedEIP191SignatureRequest::new(
+                request.backend.clone(),
+                signature,
+            ),
+        }
+    }
+
+    #[getter]
+    pub fn request(&self) -> EIP191SignatureRequest {
+        EIP191SignatureRequest::from(self.backend.request().clone())
+    }
+
+    #[getter]
+    pub fn signature(&self, py: Python) -> PyObject {
+        PyBytes::new(py, self.backend.signature()).into()
+    }
+
+    pub fn into_parts(&self) -> (EIP191SignatureRequest, PyObject) {
+        let (request, signature) = (self.backend.request().clone(), self.backend.signature());
+        Python::with_gil(|py| {
+            (
+                EIP191SignatureRequest::from(request),
+                PyBytes::new(py, signature).into(),
+            )
+        })
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::SignedEIP191SignatureRequest>(data)
+    }
 }

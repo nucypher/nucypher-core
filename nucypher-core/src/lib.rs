@@ -50,9 +50,10 @@ pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
 pub use threshold_message_kit::ThresholdMessageKit;
 pub use signature_request::{
-    AAVersion, BaseSignatureRequest, EIP191SignatureRequest, PackedUserOperation,
-    PackedUserOperationSignatureRequest, SignatureRequestType, SignatureResponse, UserOperation,
-    UserOperationSignatureRequest,
+    AAVersion, BaseSignatureRequest, DirectSignatureRequest, EIP191SignatureRequest, 
+    PackedUserOperation, PackedUserOperationSignatureRequest, SignatureRequestType, 
+    SignatureResponse, SignedEIP191SignatureRequest, SignedPackedUserOperation, UserOperation, 
+    UserOperationSignatureRequest, deserialize_signature_request,
 };
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
