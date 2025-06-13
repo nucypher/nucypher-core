@@ -118,6 +118,13 @@ class Dkg:
     ) -> AggregatedTranscript:
         ...
 
+    def generate_handover_transcript(
+        self,
+        aggregate: AggregatedTranscript,
+        handover_slot_index: int,
+        incoming_validator_keypair: Keypair,
+    ) -> HandoverTranscript:
+        ...
 
 @final
 class Ciphertext:
@@ -161,6 +168,14 @@ class DecryptionSharePrecomputed:
     def __bytes__(self) -> bytes:
         ...
 
+@final
+class HandoverTranscript:
+    @staticmethod
+    def from_bytes(data: bytes) -> HandoverTranscript:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
 
 @final
 class AggregatedTranscript:
@@ -187,6 +202,13 @@ class AggregatedTranscript:
             aad: bytes,
             validator_keypair: Keypair
     ) -> DecryptionSharePrecomputed:
+        ...
+
+    def finalize_handover(
+        self,
+        handover_transcript: HandoverTranscript,
+        validator_keypair: Keypair,
+    ) -> AggregatedTranscript:
         ...
 
     @staticmethod
