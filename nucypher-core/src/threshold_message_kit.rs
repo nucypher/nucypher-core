@@ -74,16 +74,16 @@ impl<'a> ProtocolObject<'a> for ThresholdMessageKit {}
 
 #[cfg(test)]
 mod tests {
-    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, SecretBox};
+    use ferveo::api::{encrypt as ferveo_encrypt, SecretBox};
 
     use crate::access_control::{AccessControlPolicy, AuthenticatedData};
     use crate::conditions::Conditions;
+    use crate::test_utils::util::random_dkg_pubkey;
     use crate::threshold_message_kit::ThresholdMessageKit;
     use crate::versioning::ProtocolObject;
-
     #[test]
     fn threshold_message_kit() {
-        let dkg_pk = DkgPublicKey::random();
+        let dkg_pk = random_dkg_pubkey();
         let data = "The Tyranny of Merit".as_bytes().to_vec();
 
         let authorization = b"we_dont_need_no_stinking_badges";

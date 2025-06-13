@@ -3,7 +3,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use core::fmt;
 
-use ferveo::api::PublicKey as FerveoPublicKey;
+use ferveo::api::ValidatorPublicKey as FerveoPublicKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use sha3::{digest::Update, Digest, Keccak256};

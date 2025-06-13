@@ -593,7 +593,7 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use ferveo::api::{encrypt as ferveo_encrypt, DkgPublicKey, FerveoVariant, SecretBox};
+    use ferveo::api::{encrypt as ferveo_encrypt, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
     use rand_core::RngCore;
 
@@ -603,6 +603,7 @@ mod tests {
     use crate::dkg::{
         decrypt_with_shared_secret, encrypt_with_shared_secret, DecryptionError, NonceSize,
     };
+    use crate::test_utils::util::random_dkg_pubkey;
     use crate::versioning::{ProtocolObject, ProtocolObjectInner};
     use crate::{
         AuthenticatedData, EncryptedThresholdDecryptionRequest,
@@ -725,7 +726,7 @@ mod tests {
             let requester_secret = SessionStaticSecret::random();
             let requester_public_key = requester_secret.public_key();
 
-            let dkg_pk = DkgPublicKey::random();
+            let dkg_pk = random_dkg_pubkey();
             let message = "The Tyranny of Merit".as_bytes().to_vec();
             let aad = "my-add".as_bytes();
             let ciphertext = ferveo_encrypt(SecretBox::new(message), aad, &dkg_pk).unwrap();
