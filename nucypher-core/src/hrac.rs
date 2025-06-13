@@ -55,6 +55,6 @@ impl AsRef<[u8]> for HRAC {
 impl fmt::Display for HRAC {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let hex_repr = hex::encode(&self.0[..8]);
-        write!(f, "HRAC:{}...", hex_repr)
+        write!(f, "HRAC:{hex_repr}...")
     }
 }

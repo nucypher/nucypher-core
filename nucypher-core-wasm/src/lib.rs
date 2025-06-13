@@ -31,7 +31,7 @@ use nucypher_core::ProtocolObject;
 pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
 
 fn map_js_err<T: fmt::Display>(err: T) -> Error {
-    Error::new(&format!("{}", err))
+    Error::new(&format!("{err}"))
 }
 
 fn to_bytes<'a, T, U>(obj: &T) -> Box<[u8]>

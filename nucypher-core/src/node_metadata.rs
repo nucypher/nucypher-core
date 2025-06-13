@@ -30,8 +30,7 @@ impl fmt::Display for AddressDerivationError {
             Self::NoSignatureInPayload => write!(f, "Signature is missing from the payload"),
             Self::RecoveryFailed(err) => write!(
                 f,
-                "Failed to recover the public key from the signature: {}",
-                err
+                "Failed to recover the public key from the signature: {err}"
             ),
         }
     }

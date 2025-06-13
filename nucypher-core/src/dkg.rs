@@ -57,7 +57,7 @@ impl fmt::Display for DecryptionError {
                 either someone tampered with the ciphertext or \
                 you are using an incorrect decryption key."
             ),
-            Self::DeserializationFailed(err) => write!(f, "deserialization failed: {}", err),
+            Self::DeserializationFailed(err) => write!(f, "deserialization failed: {err}"),
         }
     }
 }

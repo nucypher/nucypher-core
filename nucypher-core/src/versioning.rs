@@ -27,7 +27,7 @@ pub(crate) fn messagepack_deserialize<'a, T>(bytes: &'a [u8]) -> Result<T, Strin
 where
     T: Deserialize<'a>,
 {
-    rmp_serde::from_slice(bytes).map_err(|err| format!("{}", err))
+    rmp_serde::from_slice(bytes).map_err(|err| format!("{err}"))
 }
 
 struct ProtocolObjectHeader {
@@ -94,26 +94,22 @@ impl fmt::Display for DeserializationError {
         match self {
             Self::TooShort { expected, received } => write!(
                 f,
-                "bytestring too short: expected {} bytes, got {}",
-                expected, received
+                "bytestring too short: expected {expected} bytes, got {received}"
             ),
             Self::IncorrectHeader { expected, received } => write!(
                 f,
-                "incorrect header: expected {:?}, got {:?}",
-                expected, received
+                "incorrect header: expected {expected:?}, got {received:?}"
             ),
             Self::MajorVersionMismatch { expected, received } => write!(
                 f,
-                "differing major version: expected {}, got {}",
-                expected, received
+                "differing major version: expected {expected}, got {received}"
             ),
             Self::UnsupportedMinorVersion { expected, received } => write!(
                 f,
-                "unsupported minor version: expected <={}, got {}",
-                expected, received
+                "unsupported minor version: expected <={expected}, got {received}"
             ),
             Self::BadPayload { error_msg } => {
-                write!(f, "payload deserialization failed: {}", error_msg)
+                write!(f, "payload deserialization failed: {error_msg}")
             }
         }
     }
