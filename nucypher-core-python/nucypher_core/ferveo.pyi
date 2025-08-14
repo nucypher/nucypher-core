@@ -48,12 +48,14 @@ class FerveoPublicKey:
 @final
 class Validator:
 
-    def __init__(self, address: str, public_key: FerveoPublicKey):
+    def __init__(self, address: str, public_key: FerveoPublicKey, share_index: int):
         ...
 
     address: str
 
     public_key: FerveoPublicKey
+
+    share_index: int
 
 
 @final
@@ -179,11 +181,12 @@ class HandoverTranscript:
 
 @final
 class AggregatedTranscript:
+    public_key: DkgPublicKey
 
     def __init__(self, messages: Sequence[ValidatorMessage]):
         ...
 
-    def verify(self, shares_num: int, messages: Sequence[ValidatorMessage]) -> bool:
+    def verify(self, validators_num: int, messages: Sequence[ValidatorMessage]) -> bool:
         ...
 
     def create_decryption_share_simple(
@@ -200,7 +203,8 @@ class AggregatedTranscript:
             dkg: Dkg,
             ciphertext_header: CiphertextHeader,
             aad: bytes,
-            validator_keypair: Keypair
+            validator_keypair: Keypair,
+            selected_validators: Sequence[Validator],
     ) -> DecryptionSharePrecomputed:
         ...
 
@@ -315,10 +319,6 @@ class InsufficientValidators(Exception):
 
 
 class InvalidTranscriptAggregate(Exception):
-    pass
-
-
-class ValidatorsNotSorted(Exception):
     pass
 
 
