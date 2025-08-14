@@ -167,9 +167,10 @@ jobs:
       # Only checking the coverage of the main library,
       # bindings are covered by their language's tests.
       - name: Generate code coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info --all-features
+        # TODO why we need to exclude wasm bindings from coverage nucypher-core#108
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info --all-features --exclude nucypher-core-wasm
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: lcov.info
           fail_ci_if_error: true
