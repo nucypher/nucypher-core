@@ -11,7 +11,7 @@ categories = ["cryptography", "no-std"]
 
 [dependencies]
 umbral-pre = { version = "0.11.0", features = ["serde"] }
-ferveo = { package = "ferveo-nucypher-temp6", version = "0.4.0-alpha" }
+ferveo = { package = "ferveo-nucypher", version = "0.4.0" }
 ark-std = "0.4"
 serde = { version = "1", default-features = false, features = ["derive"] }
 generic-array = { version = "0.14", features = ["zeroize"] }
