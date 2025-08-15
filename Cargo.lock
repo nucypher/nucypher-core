@@ -903,7 +903,7 @@ checksum = "94c7128ba23c81f6471141b90f17654f89ef44a56e14b8a4dd0fddfccd655277"
 
 [[package]]
 name = "nucypher-core"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "ark-std",
  "chacha20poly1305",
@@ -926,19 +926,19 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "derive_more",
  "ferveo-nucypher",
  "nucypher-core",
  "pyo3",
- "pyo3-build-config 0.25.1",
+ "pyo3-build-config",
  "umbral-pre",
 ]
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "ark-std",
  "console_error_panic_hook",
@@ -1076,7 +1076,7 @@ dependencies = [
  "libc",
  "memoffset",
  "parking_lot",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
@@ -1089,17 +1089,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cb946f5ac61bb61a5014924910d936ebd2b23b705f7a4a3c40b05c720b079a3"
 dependencies = [
  "once_cell",
- "target-lexicon 0.12.16",
-]
-
-[[package]]
-name = "pyo3-build-config"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "458eb0c55e7ece017adeba38f2248ff3ac615e53660d7c71a238d7d2a01c7598"
-dependencies = [
- "once_cell",
- "target-lexicon 0.13.2",
+ "target-lexicon",
 ]
 
 [[package]]
@@ -1109,7 +1099,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d7c5337821916ea2a1d21d1092e8443cf34879e53a0ac653fbb98f44ff65c"
 dependencies = [
  "libc",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
 ]
 
 [[package]]
@@ -1503,12 +1493,6 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
-
-[[package]]
-name = "target-lexicon"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e502f78cdbb8ba4718f566c418c52bc729126ffd16baee5baa718cf25dd5a69a"
 
 [[package]]
 name = "thiserror"
