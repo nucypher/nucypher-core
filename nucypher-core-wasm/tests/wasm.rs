@@ -1,3 +1,5 @@
+use ark_std::{rand, UniformRand};
+use ferveo::api::{to_bytes, G1Affine};
 use ferveo::bindings_wasm::{ferveo_encrypt, DkgPublicKey, FerveoVariant, Keypair};
 use umbral_pre::bindings_wasm::{
     generate_kfrags, reencrypt, Capsule, RecoverableSignature, SecretKey, Signer,
@@ -8,7 +10,6 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_test::*;
 
 use nucypher_core_wasm::*;
-
 //
 // Test utilities
 //
@@ -47,6 +48,13 @@ where
         .map(JsValue::from)
         .collect::<js_sys::Array>()
         .unchecked_into::<T>()
+}
+
+/// Generate a random DKG public key.
+fn random_dkg_pubkey() -> DkgPublicKey {
+    let mut rng = rand::thread_rng();
+    let g1 = G1Affine::rand(&mut rng);
+    DkgPublicKey::from_bytes(&to_bytes(&g1).unwrap()).unwrap()
 }
 
 fn make_message_kit(
@@ -697,7 +705,7 @@ fn threshold_decryption_request() {
     let conditions = Conditions::new("{'some': 'condition'}");
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
-    let dkg_pk = DkgPublicKey::random();
+    let dkg_pk = random_dkg_pubkey();
 
     let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 
@@ -796,7 +804,7 @@ fn threshold_decryption_response() {
 
 #[wasm_bindgen_test]
 fn authenticated_data() {
-    let dkg_pk = DkgPublicKey::random();
+    let dkg_pk = random_dkg_pubkey();
 
     let conditions = Conditions::new("{'some': 'condition'}");
 
@@ -825,7 +833,7 @@ fn authenticated_data() {
 
 #[wasm_bindgen_test]
 fn access_control_policy() {
-    let dkg_pk = DkgPublicKey::random();
+    let dkg_pk = random_dkg_pubkey();
 
     let conditions = Conditions::new("{'some': 'condition'}");
 
@@ -865,7 +873,7 @@ fn access_control_policy() {
 fn threshold_message_kit() {
     let conditions = Conditions::new("{'some': 'condition'}");
 
-    let dkg_pk = DkgPublicKey::random();
+    let dkg_pk = random_dkg_pubkey();
 
     let auth_data = AuthenticatedData::new(&dkg_pk, &conditions).unwrap();
 

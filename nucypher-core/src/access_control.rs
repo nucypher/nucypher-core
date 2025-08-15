@@ -144,15 +144,14 @@ impl<'a> ProtocolObject<'a> for AccessControlPolicy {}
 
 #[cfg(test)]
 mod tests {
-    use ferveo::api::DkgPublicKey;
-
     use crate::access_control::{AccessControlPolicy, AuthenticatedData};
     use crate::conditions::Conditions;
+    use crate::test_utils::util::random_dkg_pubkey;
     use crate::versioning::ProtocolObject;
 
     #[test]
     fn authenticated_data() {
-        let dkg_pk = DkgPublicKey::random();
+        let dkg_pk = random_dkg_pubkey();
         let conditions = Conditions::new("abcd");
 
         let auth_data = AuthenticatedData::new(&dkg_pk, &conditions);
@@ -178,7 +177,7 @@ mod tests {
 
     #[test]
     fn access_control_policy() {
-        let dkg_pk = DkgPublicKey::random();
+        let dkg_pk = random_dkg_pubkey();
         let conditions = Conditions::new("abcd");
 
         let auth_data = AuthenticatedData::new(&dkg_pk, &conditions);

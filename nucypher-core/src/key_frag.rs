@@ -87,8 +87,8 @@ pub enum DecryptionError {
 impl fmt::Display for DecryptionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::DecryptionFailed(err) => write!(f, "decryption failed: {}", err),
-            Self::DeserializationFailed(err) => write!(f, "deserialization failed: {}", err),
+            Self::DecryptionFailed(err) => write!(f, "decryption failed: {err}"),
+            Self::DeserializationFailed(err) => write!(f, "deserialization failed: {err}"),
             Self::VerificationFailed => write!(f, "verification failed"),
         }
     }

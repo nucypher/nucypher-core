@@ -37,7 +37,7 @@ impl FleetStateChecksum {
                 // so this may lead to unnecessary fleet state update.
                 // But, unlike ProtocolObject::to_bytes(), payload serialization
                 // is not standardized, so it is better not to rely on it.
-                digest.chain(&node.to_bytes())
+                digest.chain(node.to_bytes())
             })
             .finalize();
 
@@ -54,6 +54,6 @@ impl AsRef<[u8]> for FleetStateChecksum {
 impl fmt::Display for FleetStateChecksum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let hex_repr = hex::encode(&self.0[..8]);
-        write!(f, "FleetStateChecksum:{}...", hex_repr)
+        write!(f, "FleetStateChecksum:{hex_repr}...")
     }
 }

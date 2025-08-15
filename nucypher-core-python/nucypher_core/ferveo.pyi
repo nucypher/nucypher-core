@@ -48,12 +48,14 @@ class FerveoPublicKey:
 @final
 class Validator:
 
-    def __init__(self, address: str, public_key: FerveoPublicKey):
+    def __init__(self, address: str, public_key: FerveoPublicKey, share_index: int):
         ...
 
     address: str
 
     public_key: FerveoPublicKey
+
+    share_index: int
 
 
 @final
@@ -118,6 +120,13 @@ class Dkg:
     ) -> AggregatedTranscript:
         ...
 
+    def generate_handover_transcript(
+        self,
+        aggregate: AggregatedTranscript,
+        handover_slot_index: int,
+        incoming_validator_keypair: Keypair,
+    ) -> HandoverTranscript:
+        ...
 
 @final
 class Ciphertext:
@@ -161,14 +170,23 @@ class DecryptionSharePrecomputed:
     def __bytes__(self) -> bytes:
         ...
 
+@final
+class HandoverTranscript:
+    @staticmethod
+    def from_bytes(data: bytes) -> HandoverTranscript:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
 
 @final
 class AggregatedTranscript:
+    public_key: DkgPublicKey
 
     def __init__(self, messages: Sequence[ValidatorMessage]):
         ...
 
-    def verify(self, shares_num: int, messages: Sequence[ValidatorMessage]) -> bool:
+    def verify(self, validators_num: int, messages: Sequence[ValidatorMessage]) -> bool:
         ...
 
     def create_decryption_share_simple(
@@ -185,8 +203,16 @@ class AggregatedTranscript:
             dkg: Dkg,
             ciphertext_header: CiphertextHeader,
             aad: bytes,
-            validator_keypair: Keypair
+            validator_keypair: Keypair,
+            selected_validators: Sequence[Validator],
     ) -> DecryptionSharePrecomputed:
+        ...
+
+    def finalize_handover(
+        self,
+        handover_transcript: HandoverTranscript,
+        validator_keypair: Keypair,
+    ) -> AggregatedTranscript:
         ...
 
     @staticmethod
@@ -293,10 +319,6 @@ class InsufficientValidators(Exception):
 
 
 class InvalidTranscriptAggregate(Exception):
-    pass
-
-
-class ValidatorsNotSorted(Exception):
     pass
 
 

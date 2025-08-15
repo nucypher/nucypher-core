@@ -3,6 +3,27 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased - 2025-08-15
+
+### Changed
+
+- Bumped MSRV to 1.87. ([#107])
+- Bumped `ferveo-nucypher` (formerly `ferveo-pre-release`) version to 0.4.0 ([#107])
+- Removed `ValidatorsNotSorted` python binding, as it is no longer available in `ferveo-nucypher`. ([#107])
+
+### Added
+
+- Expose `HandoverTranscript` from `ferveo-nucypher` in Python bindings. ([#106])
+
+### Fixed
+
+- Fixed mismatched python bindings for `Validator` and `AggregatedTranscript` ([#107])
+
+
+[#106]: https://github.com/nucypher/nucypher-core/pull/106
+[#107]: https://github.com/nucypher/nucypher-core/pull/107
+
+
 ## [0.14.1-5] - 2024-07-12
 
 ### Fixed

@@ -20,6 +20,7 @@ mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod secret_box;
+mod test_utils;
 mod threshold_message_kit;
 mod treasure_map;
 mod versioning;

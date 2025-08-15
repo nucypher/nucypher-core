@@ -42,7 +42,7 @@ where
 {
     U::from_bytes(data)
         .map(T::from)
-        .map_err(|err| PyValueError::new_err(format!("Failed to deserialize: {}", err)))
+        .map_err(|err| PyValueError::new_err(format!("Failed to deserialize: {err}")))
 }
 
 fn richcmp<T>(obj: &T, other: &T, op: CompareOp) -> PyResult<bool>
@@ -185,7 +185,7 @@ impl MessageKit {
         let plaintext = self
             .backend
             .decrypt(sk.as_ref())
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
@@ -201,7 +201,7 @@ impl MessageKit {
         let plaintext = self
             .backend
             .decrypt_reencrypted(sk.as_ref(), policy_encrypting_key.as_ref(), backend_vcfrags)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(PyBytes::new(py, &plaintext).into())
     }
 
@@ -311,7 +311,7 @@ impl EncryptedKeyFrag {
         self.backend
             .decrypt(sk.as_ref(), &hrac.backend, publisher_verifying_key.as_ref())
             .map(VerifiedKeyFrag::from)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))
+            .map_err(|err| PyValueError::new_err(format!("{err}")))
     }
 
     #[staticmethod]
@@ -441,7 +441,7 @@ impl EncryptedTreasureMap {
         self.backend
             .decrypt(sk.as_ref(), publisher_verifying_key.as_ref())
             .map(TreasureMap::from)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))
+            .map_err(|err| PyValueError::new_err(format!("{err}")))
     }
 
     #[staticmethod]
@@ -721,7 +721,7 @@ impl SessionSecretFactory {
     #[staticmethod]
     pub fn from_secure_randomness(seed: &[u8]) -> PyResult<Self> {
         let factory = nucypher_core::SessionSecretFactory::from_secure_randomness(seed)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(Self { backend: factory })
     }
 
@@ -761,7 +761,7 @@ impl AuthenticatedData {
         let result = self
             .backend
             .aad()
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(PyBytes::new(py, &result).into())
     }
 
@@ -823,7 +823,7 @@ impl AccessControlPolicy {
         let result = self
             .backend
             .aad()
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(PyBytes::new(py, &result).into())
     }
 
@@ -1011,7 +1011,7 @@ impl EncryptedThresholdDecryptionRequest {
         self.backend
             .decrypt(shared_secret.as_ref())
             .map(ThresholdDecryptionRequest::from)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))
+            .map_err(|err| PyValueError::new_err(format!("{err}")))
     }
 
     #[staticmethod]
@@ -1096,7 +1096,7 @@ impl EncryptedThresholdDecryptionResponse {
         self.backend
             .decrypt(shared_secret.as_ref())
             .map(ThresholdDecryptionResponse::from)
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))
+            .map_err(|err| PyValueError::new_err(format!("{err}")))
     }
 
     #[staticmethod]
@@ -1328,7 +1328,7 @@ impl NodeMetadataPayload {
         let address = self
             .backend
             .derive_operator_address()
-            .map_err(|err| PyValueError::new_err(format!("{}", err)))?;
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
         Ok(Python::with_gil(|py| -> PyObject {
             PyBytes::new(py, address.as_ref()).into()
         }))

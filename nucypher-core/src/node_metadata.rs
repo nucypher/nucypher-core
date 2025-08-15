@@ -3,7 +3,7 @@ use alloc::string::String;
 use alloc::string::ToString;
 use core::fmt;
 
-use ferveo::api::PublicKey as FerveoPublicKey;
+use ferveo::api::ValidatorPublicKey as FerveoPublicKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use sha3::{digest::Update, Digest, Keccak256};
@@ -30,8 +30,7 @@ impl fmt::Display for AddressDerivationError {
             Self::NoSignatureInPayload => write!(f, "Signature is missing from the payload"),
             Self::RecoveryFailed(err) => write!(
                 f,
-                "Failed to recover the public key from the signature: {}",
-                err
+                "Failed to recover the public key from the signature: {err}"
             ),
         }
     }
