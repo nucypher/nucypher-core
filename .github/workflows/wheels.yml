@@ -28,7 +28,7 @@ jobs:
       # Make cargo available inside cibuildwheel environments on all OSes
        CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin"'
        CIBW_ENVIRONMENT_MACOS: 'PATH="$PATH:$HOME/.cargo/bin"'
-       CIBW_ENVIRONMENT_WINDOWS: 'PATH="%PATH%;%UserProfile%\.cargo\bin"'
+       CIBW_ENVIRONMENT_WINDOWS: 'PATH="$PATH;$USERPROFILE/.cargo/bin"'
 
        # still skipping win32 & musllinux as before
        CIBW_SKIP: "*-win32 *musllinux*" # only using manylinux to build
@@ -82,7 +82,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: wheels-${{ matrix.os }}
           path: ./nucypher-core-python/wheelhouse/*.whl
+          overwrite: true
 
   build_sdist:
     name: Build source distribution
@@ -119,7 +121,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          name: sdist
           path: ./nucypher-core-python/dist/*.tar.gz
+          overwrite: true
 
   upload_pypi:
     needs: [build_wheels, build_sdist]
@@ -128,12 +132,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact
+          pattern: wheels-*
           path: dist
+          merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
-          name: artifact
-          path: wheelhouse
+          name: sdist
+          path: dist
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
