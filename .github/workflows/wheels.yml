@@ -9,15 +9,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-11]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     env:
        CIBW_BUILD_VERBOSITY: 1
+       # Build only Python 3.9–3.12
+       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
+
+       # Use modern manylinux (AlmaLinux 9)
+       CIBW_MANYLINUX_X86_64: "manylinux_2_28"   # <— use AlmaLinux 9 image
+
+       # Install Rust + OpenSSL dev inside the Linux build container
        CIBW_BEFORE_ALL_LINUX: "curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y && yum install -y openssl-devel"
+
        CIBW_BEFORE_BUILD_LINUX: "pip3 install --upgrade keyrings.alt"
        CIBW_ARCHS_LINUX: "x86_64"
-       CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
-       CIBW_SKIP: "cp36-* pp* *-win32 *musllinux*" # only using manylinux to build
+
+      # Make cargo available inside cibuildwheel environments on all OSes
+       CIBW_ENVIRONMENT_LINUX: 'PATH="$PATH:$HOME/.cargo/bin"'
+       CIBW_ENVIRONMENT_MACOS: 'PATH="$PATH:$HOME/.cargo/bin"'
+       CIBW_ENVIRONMENT_WINDOWS: 'PATH="%PATH%;%UserProfile%\.cargo\bin"'
+
+       # still skipping win32 & musllinux as before
+       CIBW_SKIP: "*-win32 *musllinux*" # only using manylinux to build
 
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +43,6 @@ jobs:
       - if: runner.os == 'Windows'
         run: |
             echo 'PATH=/c/Python312:/c/Python312/Scripts:/c/Strawberry/perl/site/bin:/c/Strawberry/perl/bin:/c/Strawberry/c/bin:$PATH' >> $GITHUB_ENV
-            echo 'RUSTFLAGS=-Ctarget-feature=+crt-static' >> $GITHUB_ENV
             echo 'RUSTFLAGS=-Ctarget-feature=+crt-static' >> $GITHUB_ENV
             echo 'CIBW_BEFORE_BUILD=python -m pip install --upgrade pip' >> $GITHUB_ENV
       - if: runner.os != 'Linux'
@@ -44,7 +57,7 @@ jobs:
           image: tonistiigi/binfmt:latest
           platforms: arm64
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: '3.12'
@@ -52,7 +65,8 @@ jobs:
       - name: Install cibuildwheel
         run: |
           # Install cibuildwheel from git for CIBW_ARCHS_LINUX support
-          python -m pip install cibuildwheel==2.9.0
+          python -m pip install --upgrade pip
+          python -m pip install "cibuildwheel>=2.20"
 
       - if: runner.os == 'Linux'
         run: cp -r ./nucypher-core ./nucypher-core-python/nucypher-core
@@ -64,8 +78,7 @@ jobs:
 
       - name: Build wheels
         working-directory: ./nucypher-core-python
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
@@ -77,7 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         name: Install Python
         with:
           python-version: '3.12'
@@ -113,11 +126,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: artifact
           path: dist
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: artifact
           path: wheelhouse
