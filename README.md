@@ -1,6 +1,6 @@
-# Protocol structures of Nucypher network
+# Protocol structures of TACo Network
 
-This repo contains Rust implementation of the protocol classes that can be shared between Python and JS clients/servers of the network.
+This repo contains Rust implementation of the protocol classes that can be shared between Python server and JS clients of the TACo Network.
 
 * [Rust](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core) (primary) [![crate][rust-crate-image]][rust-crate-link] [![Docs][rust-docs-image]][rust-docs-link] ![License][rust-license-image] [![Build Status][rust-build-image]][rust-build-link] [![Coverage][rust-coverage-image]][rust-coverage-link]
 * [JavaScript](https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-wasm) (WASM-based) [![npm package][js-npm-image]][js-npm-link] ![License][js-license-image]
@@ -23,3 +23,19 @@ This repo contains Rust implementation of the protocol classes that can be share
 [pypi-license-image]: https://img.shields.io/pypi/l/nucypher-core
 [rtd-image]: https://readthedocs.org/projects/nucypher-core/badge/?version=latest
 [rtd-link]: https://nucypher-core.readthedocs.io/en/latest/
+
+## Ensure Correct Rust Version
+
+A Rust toolchain with version `>= 1.87.0` is required. You can use [rustup](https://rustup.rs/) to manage and switch between Rust versions. To install the required version, run:
+```bash
+rustup install <version>
+rustup override set <version>
+```
+Replace `<version>` with the relevant version.
+
+
+## Build and Test
+
+Run the following commands to ensure everything is working correctly:
+- `cargo build`
+- `cargo test`
