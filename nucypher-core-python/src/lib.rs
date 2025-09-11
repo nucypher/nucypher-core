@@ -786,12 +786,12 @@ impl AuthenticatedData {
         }
     }
 
-    pub fn aad(&self) -> PyResult<Vec<u8>> {
+    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
         let result = self
             .backend
             .aad()
             .map_err(|err| PyValueError::new_err(format!("{err}")))?;
-        Ok(result.to_vec())
+        Ok(PyBytes::new(py, &result).into())
     }
 
     #[getter]
@@ -848,13 +848,12 @@ impl AccessControlPolicy {
         }
     }
 
-    pub fn aad(&self) -> PyResult<Vec<u8>> {
-        self.backend
+    pub fn aad(&self, py: Python) -> PyResult<PyObject> {
+        let result = self
+            .backend
             .aad()
-            .map(|aad| aad.to_vec())
-            .map_err(|err| {
-                PyValueError::new_err(format!("Failed to get authenticated data: {err}"))
-            })
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?;
+        Ok(PyBytes::new(py, &result).into())
     }
 
     #[getter]
@@ -898,32 +897,28 @@ impl ThresholdMessageKit {
     #[new]
     pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
         Self {
-            backend: nucypher_core::ThresholdMessageKit::new(
-                ciphertext.as_ref(),
-                &acp.backend
-            ),
+            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), &acp.backend),
         }
     }
 
     #[getter]
     pub fn ciphertext_header(&self) -> PyResult<CiphertextHeader> {
-        self.backend
+        let header = self
+            .backend
             .ciphertext_header()
-            .map(|header| header.into())
-            .map_err(|err| PyValueError::new_err(format!("Failed to get ciphertext header: {}", err)))
+            .map_err(FerveoPythonError::from)?;
+        Ok(CiphertextHeader::from(header))
     }
 
     #[getter]
     pub fn acp(&self) -> AccessControlPolicy {
-        AccessControlPolicy {
-            backend: self.backend.acp.clone(),
-        }
+        self.backend.acp.clone().into()
     }
 
     pub fn decrypt_with_shared_secret(&self, shared_secret: &SharedSecret) -> PyResult<Vec<u8>> {
         self.backend
             .decrypt_with_shared_secret(shared_secret.as_ref())
-            .map_err(|err| PyValueError::new_err(format!("Failed to decrypt: {}", err)))
+            .map_err(|err| FerveoPythonError::FerveoError(err).into())
     }
 
     #[staticmethod]
