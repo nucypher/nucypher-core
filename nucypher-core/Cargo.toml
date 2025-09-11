@@ -14,6 +14,7 @@ umbral-pre = { version = "0.11.0", features = ["serde"] }
 ferveo = { package = "ferveo-nucypher", version = "0.4.0" }
 ark-std = "0.4"
 serde = { version = "1", default-features = false, features = ["derive"] }
+serde_json = { version = "1" }
 generic-array = { version = "0.14", features = ["zeroize"] }
 sha3 = "0.10"
 rmp-serde = "1"
