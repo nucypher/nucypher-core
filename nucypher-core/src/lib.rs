@@ -20,9 +20,9 @@ mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod secret_box;
+mod signature_request;
 mod test_utils;
 mod threshold_message_kit;
-mod signature_request;
 mod treasure_map;
 mod versioning;
 
@@ -48,13 +48,13 @@ pub use node_metadata::{
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
-pub use threshold_message_kit::ThresholdMessageKit;
 pub use signature_request::{
-    AAVersion, BaseSignatureRequest, DirectSignatureRequest, EIP191SignatureRequest, 
-    PackedUserOperation, PackedUserOperationSignatureRequest, SignatureRequestType, 
-    SignatureResponse, SignedEIP191SignatureRequest, SignedPackedUserOperation, UserOperation, 
-    UserOperationSignatureRequest, deserialize_signature_request,
+    deserialize_signature_request, AAVersion, BaseSignatureRequest, DirectSignatureRequest,
+    EIP191SignatureRequest, PackedUserOperation, PackedUserOperationSignatureRequest,
+    SignatureRequestType, SignatureResponse, SignedEIP191SignatureRequest,
+    SignedPackedUserOperation, UserOperation, UserOperationSignatureRequest,
 };
+pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
 pub use versioning::ProtocolObject;
 

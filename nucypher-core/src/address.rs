@@ -42,10 +42,10 @@ impl Address {
     pub fn to_checksum_address(&self) -> String {
         let hex_address = hex::encode(self.0);
         let hash = Keccak256::digest(hex_address.as_bytes());
-        
+
         let mut result = String::with_capacity(42);
         result.push_str("0x");
-        
+
         for (i, ch) in hex_address.chars().enumerate() {
             if ch.is_alphabetic() {
                 let hash_byte = hash[i / 2];
@@ -54,7 +54,7 @@ impl Address {
                 } else {
                     hash_byte & 0x0f
                 };
-                
+
                 if hash_nibble >= 8 {
                     result.push(ch.to_ascii_uppercase());
                 } else {
@@ -64,7 +64,7 @@ impl Address {
                 result.push(ch);
             }
         }
-        
+
         result
     }
 }
@@ -86,18 +86,18 @@ mod tests {
         let mut array = [0u8; 20];
         array.copy_from_slice(&address_bytes);
         let address = Address::new(&array);
-        
+
         assert_eq!(
             address.to_checksum_address(),
             "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"
         );
-        
+
         // Test with all lowercase input
         let address_bytes2 = hex::decode("fb6916095ca1df60bb79ce92ce3ea74c37c5d359").unwrap();
         let mut array2 = [0u8; 20];
         array2.copy_from_slice(&address_bytes2);
         let address2 = Address::new(&array2);
-        
+
         assert_eq!(
             address2.to_checksum_address(),
             "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"
