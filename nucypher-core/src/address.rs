@@ -27,14 +27,11 @@ impl Address {
         Self(*bytes)
     }
 
-    /// Creates an address from a verification key.
-    pub fn from_public_key(public_key: &PublicKey) -> Self {
-        let public_key_bytes = public_key.to_compressed_bytes();
-
-        let digest = Keccak256::new()
-            .chain(b"ECDSA")
-            .chain(public_key_bytes)
-            .finalize();
+    pub(crate) fn from_public_key(pk: &PublicKey) -> Self {
+        // Canonical address is the last 20 bytes of keccak256 hash
+        // of the uncompressed public key (without the header, so 64 bytes in total).
+        let pk_bytes = pk.to_uncompressed_bytes();
+        let digest = Keccak256::new().chain(&pk_bytes[1..]).finalize();
 
         let (_prefix, address): (GenericArray<u8, U12>, GenericArray<u8, U20>) = digest.split();
 
