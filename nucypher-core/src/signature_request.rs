@@ -4,7 +4,6 @@ use alloc::vec::Vec;
 use alloc::{format, vec};
 use core::fmt;
 
-use hex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use umbral_pre::serde_bytes;
@@ -192,6 +191,7 @@ pub struct UserOperation {
 
 impl UserOperation {
     /// Creates a new UserOperation
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Address,
         nonce: u64,
@@ -308,6 +308,7 @@ pub struct PackedUserOperation {
 
 impl PackedUserOperation {
     /// Creates a new PackedUserOperation
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Address,
         nonce: u64,
@@ -362,13 +363,13 @@ impl PackedUserOperation {
             Some(addr) => {
                 let mut result = Vec::with_capacity(20 + 16 + 16 + paymaster_data.len());
                 result.extend_from_slice(addr.as_ref());
-                
+
                 // Verification gas limit as 16 bytes big-endian (full u128)
                 result.extend_from_slice(&paymaster_verification_gas_limit.to_be_bytes());
-                
+
                 // Post-op gas limit as 16 bytes big-endian (full u128)
                 result.extend_from_slice(&paymaster_post_op_gas_limit.to_be_bytes());
-                
+
                 result.extend_from_slice(paymaster_data);
                 result
             }
@@ -377,23 +378,19 @@ impl PackedUserOperation {
 
     /// Creates a PackedUserOperation from a UserOperation
     pub fn from_user_operation(user_op: &UserOperation) -> Self {
-        let account_gas_limits = Self::pack_account_gas_limits(
-            user_op.call_gas_limit,
-            user_op.verification_gas_limit,
-        );
-        
-        let gas_fees = Self::pack_gas_fees(
-            user_op.max_fee_per_gas,
-            user_op.max_priority_fee_per_gas,
-        );
-        
+        let account_gas_limits =
+            Self::pack_account_gas_limits(user_op.call_gas_limit, user_op.verification_gas_limit);
+
+        let gas_fees =
+            Self::pack_gas_fees(user_op.max_fee_per_gas, user_op.max_priority_fee_per_gas);
+
         let paymaster_and_data = Self::pack_paymaster_and_data(
             user_op.paymaster.as_ref(),
             user_op.paymaster_verification_gas_limit,
             user_op.paymaster_post_op_gas_limit,
             &user_op.paymaster_data,
         );
-        
+
         Self {
             sender: user_op.sender,
             nonce: user_op.nonce,
@@ -409,75 +406,115 @@ impl PackedUserOperation {
     /// Converts to EIP-712 message format
     pub fn to_eip712_message(&self, aa_version: &AAVersion) -> serde_json::Map<String, JsonValue> {
         let mut message = serde_json::Map::new();
-        message.insert("sender".into(), JsonValue::String(format!("0x{}", hex::encode(self.sender.as_ref()))));
+        message.insert(
+            "sender".into(),
+            JsonValue::String(format!("0x{}", hex::encode(self.sender.as_ref()))),
+        );
         message.insert("nonce".into(), JsonValue::Number(self.nonce.into()));
-        message.insert("initCode".into(), JsonValue::String(format!("0x{}", hex::encode(&self.init_code))));
-        message.insert("callData".into(), JsonValue::String(format!("0x{}", hex::encode(&self.call_data))));
-        message.insert("accountGasLimits".into(), JsonValue::String(format!("0x{}", hex::encode(&self.account_gas_limits))));
-        message.insert("preVerificationGas".into(), JsonValue::String(self.pre_verification_gas.to_string()));
-        message.insert("gasFees".into(), JsonValue::String(format!("0x{}", hex::encode(&self.gas_fees))));
-        message.insert("paymasterAndData".into(), JsonValue::String(format!("0x{}", hex::encode(&self.paymaster_and_data))));
-        
+        message.insert(
+            "initCode".into(),
+            JsonValue::String(format!("0x{}", hex::encode(&self.init_code))),
+        );
+        message.insert(
+            "callData".into(),
+            JsonValue::String(format!("0x{}", hex::encode(&self.call_data))),
+        );
+        message.insert(
+            "accountGasLimits".into(),
+            JsonValue::String(format!("0x{}", hex::encode(&self.account_gas_limits))),
+        );
+        message.insert(
+            "preVerificationGas".into(),
+            JsonValue::String(self.pre_verification_gas.to_string()),
+        );
+        message.insert(
+            "gasFees".into(),
+            JsonValue::String(format!("0x{}", hex::encode(&self.gas_fees))),
+        );
+        message.insert(
+            "paymasterAndData".into(),
+            JsonValue::String(format!("0x{}", hex::encode(&self.paymaster_and_data))),
+        );
+
         if *aa_version == AAVersion::MDT {
-            message.insert("entryPoint".into(), JsonValue::String("0x0000000071727de22e5e9d8baf0edac6f37da032".into()));
+            message.insert(
+                "entryPoint".into(),
+                JsonValue::String("0x0000000071727de22e5e9d8baf0edac6f37da032".into()),
+            );
         }
-        
+
         message
     }
 
     /// Gets the EIP-712 domain
-    pub fn get_domain(&self, aa_version: &AAVersion, chain_id: u64) -> serde_json::Map<String, JsonValue> {
+    pub fn get_domain(
+        &self,
+        aa_version: &AAVersion,
+        chain_id: u64,
+    ) -> serde_json::Map<String, JsonValue> {
         let mut domain = serde_json::Map::new();
-        
-        let name = if *aa_version != AAVersion::MDT { "ERC4337" } else { "MultiSigDeleGator" };
+
+        let name = if *aa_version != AAVersion::MDT {
+            "ERC4337"
+        } else {
+            "MultiSigDeleGator"
+        };
         domain.insert("name".into(), JsonValue::String(name.into()));
         domain.insert("version".into(), JsonValue::String("1".into()));
         domain.insert("chainId".into(), JsonValue::Number(chain_id.into()));
-        
+
         let verifying_contract = if *aa_version != AAVersion::MDT {
             "0x4337084d9e255ff0702461cf8895ce9e3b5ff108".into()
         } else {
             format!("0x{}", hex::encode(self.sender.as_ref()))
         };
-        domain.insert("verifyingContract".into(), JsonValue::String(verifying_contract));
-        
+        domain.insert(
+            "verifyingContract".into(),
+            JsonValue::String(verifying_contract),
+        );
+
         domain
     }
 
     /// Converts to EIP-712 struct format
-    pub fn to_eip712_struct(&self, aa_version: &AAVersion, chain_id: u64) -> serde_json::Map<String, JsonValue> {
+    pub fn to_eip712_struct(
+        &self,
+        aa_version: &AAVersion,
+        chain_id: u64,
+    ) -> serde_json::Map<String, JsonValue> {
         let mut result = serde_json::Map::new();
-        
+
         // Create types
         let mut types = serde_json::Map::new();
-        
+
         // EIP712Domain type
         let mut domain_type = Vec::new();
         let mut name_field = serde_json::Map::new();
         name_field.insert("name".into(), JsonValue::String("name".into()));
         name_field.insert("type".into(), JsonValue::String("string".into()));
         domain_type.push(JsonValue::Object(name_field));
-        
+
         let mut version_field = serde_json::Map::new();
         version_field.insert("name".into(), JsonValue::String("version".into()));
         version_field.insert("type".into(), JsonValue::String("string".into()));
         domain_type.push(JsonValue::Object(version_field));
-        
+
         let mut chain_id_field = serde_json::Map::new();
         chain_id_field.insert("name".into(), JsonValue::String("chainId".into()));
         chain_id_field.insert("type".into(), JsonValue::String("uint256".into()));
         domain_type.push(JsonValue::Object(chain_id_field));
-        
+
         let mut verifying_contract_field = serde_json::Map::new();
-        verifying_contract_field.insert("name".into(), JsonValue::String("verifyingContract".into()));
+        verifying_contract_field
+            .insert("name".into(), JsonValue::String("verifyingContract".into()));
         verifying_contract_field.insert("type".into(), JsonValue::String("address".into()));
         domain_type.push(JsonValue::Object(verifying_contract_field));
-        
+
         types.insert("EIP712Domain".into(), JsonValue::Array(domain_type));
-        
+
         // PackedUserOperation type
         let mut packed_user_op_type = Vec::new();
-        
+
         let field_specs = vec![
             ("sender", "address"),
             ("nonce", "uint256"),
@@ -488,29 +525,41 @@ impl PackedUserOperation {
             ("gasFees", "bytes32"),
             ("paymasterAndData", "bytes"),
         ];
-        
+
         for (name, type_str) in field_specs {
             let mut field = serde_json::Map::new();
             field.insert("name".into(), JsonValue::String(name.into()));
             field.insert("type".into(), JsonValue::String(type_str.into()));
             packed_user_op_type.push(JsonValue::Object(field));
         }
-        
+
         if *aa_version == AAVersion::MDT {
             let mut entry_point_field = serde_json::Map::new();
             entry_point_field.insert("name".into(), JsonValue::String("entryPoint".into()));
             entry_point_field.insert("type".into(), JsonValue::String("address".into()));
             packed_user_op_type.push(JsonValue::Object(entry_point_field));
         }
-        
-        types.insert("PackedUserOperation".into(), JsonValue::Array(packed_user_op_type));
-        
+
+        types.insert(
+            "PackedUserOperation".into(),
+            JsonValue::Array(packed_user_op_type),
+        );
+
         // Build final result
         result.insert("types".into(), JsonValue::Object(types));
-        result.insert("primaryType".into(), JsonValue::String("PackedUserOperation".into()));
-        result.insert("domain".into(), JsonValue::Object(self.get_domain(aa_version, chain_id)));
-        result.insert("message".into(), JsonValue::Object(self.to_eip712_message(aa_version)));
-        
+        result.insert(
+            "primaryType".into(),
+            JsonValue::String("PackedUserOperation".into()),
+        );
+        result.insert(
+            "domain".into(),
+            JsonValue::Object(self.get_domain(aa_version, chain_id)),
+        );
+        result.insert(
+            "message".into(),
+            JsonValue::Object(self.to_eip712_message(aa_version)),
+        );
+
         result
     }
 }
@@ -555,12 +604,20 @@ impl SignedPackedUserOperation {
     }
 
     /// Gets the EIP-712 domain (delegates to operation)
-    pub fn get_domain(&self, aa_version: &AAVersion, chain_id: u64) -> serde_json::Map<String, JsonValue> {
+    pub fn get_domain(
+        &self,
+        aa_version: &AAVersion,
+        chain_id: u64,
+    ) -> serde_json::Map<String, JsonValue> {
         self.operation.get_domain(aa_version, chain_id)
     }
 
     /// Converts to EIP-712 struct format (delegates to operation)
-    pub fn to_eip712_struct(&self, aa_version: &AAVersion, chain_id: u64) -> serde_json::Map<String, JsonValue> {
+    pub fn to_eip712_struct(
+        &self,
+        aa_version: &AAVersion,
+        chain_id: u64,
+    ) -> serde_json::Map<String, JsonValue> {
         self.operation.to_eip712_struct(aa_version, chain_id)
     }
 }
@@ -860,21 +917,20 @@ impl DirectSignatureRequest {
         let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
 
         match &brand {
-            b"E191" => {
-                EIP191SignatureRequest::from_bytes(bytes)
-                    .map(Self::EIP191)
-                    .map_err(|e| format!("Failed to deserialize EIP191SignatureRequest: {}", e))
-            }
-            b"UOSR" => {
-                UserOperationSignatureRequest::from_bytes(bytes)
-                    .map(Self::UserOp)
-                    .map_err(|e| format!("Failed to deserialize UserOperationSignatureRequest: {}", e))
-            }
-            b"PUOS" => {
-                PackedUserOperationSignatureRequest::from_bytes(bytes)
-                    .map(Self::PackedUserOp)
-                    .map_err(|e| format!("Failed to deserialize PackedUserOperationSignatureRequest: {}", e))
-            }
+            b"E191" => EIP191SignatureRequest::from_bytes(bytes)
+                .map(Self::EIP191)
+                .map_err(|e| format!("Failed to deserialize EIP191SignatureRequest: {}", e)),
+            b"UOSR" => UserOperationSignatureRequest::from_bytes(bytes)
+                .map(Self::UserOp)
+                .map_err(|e| format!("Failed to deserialize UserOperationSignatureRequest: {}", e)),
+            b"PUOS" => PackedUserOperationSignatureRequest::from_bytes(bytes)
+                .map(Self::PackedUserOp)
+                .map_err(|e| {
+                    format!(
+                        "Failed to deserialize PackedUserOperationSignatureRequest: {}",
+                        e
+                    )
+                }),
             _ => Err(format!("Unknown signature request brand: {:?}", brand)),
         }
     }
@@ -941,10 +997,10 @@ mod tests {
         // Test with a large chain ID like the example provided (131277322940537)
         let large_chain_id = 131277322940537u64;
         let request = EIP191SignatureRequest::new(data, 1, large_chain_id, None);
-        
+
         let bytes = request.to_bytes();
         let deserialized = EIP191SignatureRequest::from_bytes(&bytes).unwrap();
-        
+
         assert_eq!(request, deserialized);
         assert_eq!(deserialized.data.as_ref(), data);
         assert_eq!(deserialized.cohort_id, 1);
@@ -958,22 +1014,22 @@ mod tests {
         let context = Some(Context::new("test_context"));
         let request = EIP191SignatureRequest::new(data, 456, 1, context);
         let test_signature = b"test_eip191_signature";
-        
+
         // Test creating SignedEIP191SignatureRequest
         let signed_request = SignedEIP191SignatureRequest::new(request.clone(), test_signature);
-        
+
         assert_eq!(signed_request.signature(), test_signature);
         assert_eq!(signed_request.request().data.as_ref(), data);
         assert_eq!(signed_request.request().cohort_id, 456);
         assert_eq!(signed_request.request().chain_id, 1);
-        
+
         // Test into_parts method
         let (reconstructed_request, reconstructed_signature) = signed_request.clone().into_parts();
         assert_eq!(reconstructed_signature.as_ref(), test_signature);
         assert_eq!(reconstructed_request.data.as_ref(), data);
         assert_eq!(reconstructed_request.cohort_id, 456);
         assert_eq!(reconstructed_request.chain_id, 1);
-        
+
         // Test serialization
         let bytes = signed_request.to_bytes();
         let deserialized = SignedEIP191SignatureRequest::from_bytes(&bytes).unwrap();
@@ -988,7 +1044,7 @@ mod tests {
     fn test_user_operation_signature_request_serialization() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        
+
         let user_op = UserOperation::new(
             sender,
             42,
@@ -1011,15 +1067,18 @@ mod tests {
             AAVersion::V08,
             Some(Context::new("test_context")),
         );
-        
+
         let bytes = request.to_bytes();
         let deserialized = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
-        
+
         assert_eq!(request, deserialized);
         assert_eq!(deserialized.user_op.sender, sender);
         assert_eq!(deserialized.user_op.nonce, 42);
         assert_eq!(deserialized.aa_version, AAVersion::V08);
-        assert_eq!(deserialized.context.as_ref().unwrap().as_ref(), "test_context");
+        assert_eq!(
+            deserialized.context.as_ref().unwrap().as_ref(),
+            "test_context"
+        );
     }
 
     #[test]
@@ -1027,10 +1086,10 @@ mod tests {
         let hash = b"test_hash";
         let signature = b"test_signature";
         let response = SignatureResponse::new(hash, signature, SignatureRequestType::UserOp);
-        
+
         let bytes = response.to_bytes();
         let deserialized = SignatureResponse::from_bytes(&bytes).unwrap();
-        
+
         assert_eq!(response, deserialized);
         assert_eq!(deserialized.hash.as_ref(), hash);
         assert_eq!(deserialized.signature.as_ref(), signature);
@@ -1063,11 +1122,11 @@ mod tests {
             AAVersion::V08,
             Some(Context::new("test_context")),
         );
-        
+
         let bytes = request_v08.to_bytes();
         let deserialized_v08 = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
         assert_eq!(deserialized_v08.aa_version, AAVersion::V08);
-        
+
         // Test MDT
         let sender_mdt = address_from_hex("abcdef0123456789abcdef0123456789abcdef01");
         let user_op_mdt = UserOperation::new(
@@ -1092,11 +1151,11 @@ mod tests {
             AAVersion::MDT,
             Some(Context::new("test_context")),
         );
-        
+
         let bytes_mdt = request_mdt.to_bytes();
         let deserialized_mdt = UserOperationSignatureRequest::from_bytes(&bytes_mdt).unwrap();
         assert_eq!(deserialized_mdt.aa_version, AAVersion::MDT);
-        
+
         // Test Display trait
         assert_eq!(AAVersion::V08.to_string(), "0.8.0");
         assert_eq!(AAVersion::MDT.to_string(), "mdt");
@@ -1106,7 +1165,7 @@ mod tests {
     fn test_packed_user_operation_conversion() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        
+
         let user_op = UserOperation::new(
             sender,
             100,
@@ -1122,30 +1181,33 @@ mod tests {
             Some(200000),
             Some(b"paymaster_specific_data"),
         );
-        
+
         let packed = PackedUserOperation::from_user_operation(&user_op);
-        
+
         assert_eq!(packed.sender, user_op.sender);
         assert_eq!(packed.nonce, user_op.nonce);
         assert_eq!(packed.init_code, user_op.init_code);
         assert_eq!(packed.call_data, user_op.call_data);
         assert_eq!(packed.pre_verification_gas, user_op.pre_verification_gas);
-        
+
         // Check account gas limits packing
         assert_eq!(packed.account_gas_limits.len(), 32);
-        
+
         // Check gas fees packing
         assert_eq!(packed.gas_fees.len(), 32);
-        
+
         // Check paymaster data packing (20 bytes address + 16 bytes + 16 bytes + data)
-        assert_eq!(packed.paymaster_and_data.len(), 20 + 16 + 16 + b"paymaster_specific_data".len());
+        assert_eq!(
+            packed.paymaster_and_data.len(),
+            20 + 16 + 16 + b"paymaster_specific_data".len()
+        );
     }
 
     #[test]
     fn test_signed_packed_user_operation() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        
+
         let user_op = UserOperation::new(
             sender,
             123,
@@ -1161,33 +1223,33 @@ mod tests {
             Some(250000),
             Some(b"paymaster_test_data"),
         );
-        
+
         let packed = PackedUserOperation::from_user_operation(&user_op);
         let test_signature = b"test_signature";
-        
+
         // Test creating SignedPackedUserOperation
         let signed_packed = SignedPackedUserOperation::new(packed.clone(), test_signature);
-        
+
         assert_eq!(signed_packed.signature(), test_signature);
         assert_eq!(signed_packed.operation().sender, sender);
         assert_eq!(signed_packed.operation().nonce, 123);
-        
+
         // Test into_parts method
         let (reconstructed_operation, reconstructed_signature) = signed_packed.clone().into_parts();
         assert_eq!(reconstructed_signature.as_ref(), test_signature);
         assert_eq!(reconstructed_operation.sender, sender);
         assert_eq!(reconstructed_operation.nonce, 123);
-        
+
         // Test serialization
         let bytes = signed_packed.to_bytes();
         let deserialized = SignedPackedUserOperation::from_bytes(&bytes).unwrap();
         assert_eq!(signed_packed, deserialized);
         assert_eq!(deserialized.signature(), test_signature);
         assert_eq!(deserialized.operation().sender, sender);
-        
+
         // Test EIP-712 methods delegate correctly
         let eip712_message = signed_packed.to_eip712_message(&AAVersion::V08);
         let operation_message = signed_packed.operation().to_eip712_message(&AAVersion::V08);
         assert_eq!(eip712_message, operation_message);
     }
-} 
+}

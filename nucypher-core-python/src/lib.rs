@@ -10,7 +10,6 @@ use ferveo::bindings_python::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
     SharedSecret,
 };
-use hex;
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -23,9 +22,9 @@ use umbral_pre::bindings_python::{
 
 use nucypher_core as rust_nucypher_core;
 use rust_nucypher_core::{
-    UserOperation as SignatureRequestUserOperation,
     PackedUserOperation as SignatureRequestPackedUserOperation,
     SignedPackedUserOperation as SignatureRequestSignedPackedUserOperation,
+    UserOperation as SignatureRequestUserOperation,
 };
 
 use nucypher_core::ProtocolObject;
@@ -1673,7 +1672,10 @@ impl EIP191SignatureRequest {
 
     #[getter]
     fn context(&self) -> Option<Context> {
-        self.backend.context.clone().map(|context| Context { backend: context })
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
     }
 
     #[getter]
@@ -1706,6 +1708,7 @@ pub struct UserOperation {
 impl UserOperation {
     #[new]
     #[pyo3(signature = (sender, nonce, init_code=None, call_data=None, call_gas_limit=None, verification_gas_limit=None, pre_verification_gas=None, max_fee_per_gas=None, max_priority_fee_per_gas=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
         nonce: u64,
@@ -1723,7 +1726,10 @@ impl UserOperation {
     ) -> PyResult<Self> {
         // Convert hex string to Address
         let sender_address = string_to_address(&sender)?;
-        let paymaster_address = paymaster.as_ref().map(|p| string_to_address(p)).transpose()?;
+        let paymaster_address = paymaster
+            .as_ref()
+            .map(|p| string_to_address(p))
+            .transpose()?;
 
         Ok(Self {
             backend: SignatureRequestUserOperation::new(
@@ -1873,7 +1879,10 @@ impl UserOperationSignatureRequest {
 
     #[getter]
     fn context(&self) -> Option<Context> {
-        self.backend.context.clone().map(|context| Context { backend: context })
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
     }
 
     #[getter]
@@ -1905,6 +1914,7 @@ pub struct PackedUserOperation {
 #[pymethods]
 impl PackedUserOperation {
     #[new]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
         nonce: u64,
@@ -1941,7 +1951,11 @@ impl PackedUserOperation {
 
     #[staticmethod]
     #[pyo3(name = "_pack_account_gas_limits")]
-    pub fn pack_account_gas_limits(py: Python, call_gas_limit: u128, verification_gas_limit: u128) -> PyObject {
+    pub fn pack_account_gas_limits(
+        py: Python,
+        call_gas_limit: u128,
+        verification_gas_limit: u128,
+    ) -> PyObject {
         let mut result = [0u8; 32];
         // Pack as: verification_gas_limit << 128 | call_gas_limit
         // Each value is u128, so verification goes in upper 16 bytes, call in lower 16 bytes
@@ -1952,7 +1966,11 @@ impl PackedUserOperation {
 
     #[staticmethod]
     #[pyo3(name = "_pack_gas_fees")]
-    pub fn pack_gas_fees(py: Python, max_fee_per_gas: u128, max_priority_fee_per_gas: u128) -> PyObject {
+    pub fn pack_gas_fees(
+        py: Python,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
+    ) -> PyObject {
         let mut result = [0u8; 32];
         // Pack as: max_priority_fee_per_gas << 128 | max_fee_per_gas
         // Each value is u128, so priority goes in upper 16 bytes, max_fee in lower 16 bytes
@@ -2042,9 +2060,7 @@ impl PackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let eip712_struct = self.backend.to_eip712_struct(&aa_version, chain_id);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(eip712_struct))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
     }
 
     #[pyo3(name = "_to_eip712_message")]
@@ -2052,9 +2068,7 @@ impl PackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let message = self.backend.to_eip712_message(&aa_version);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(message))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
     }
 
     #[pyo3(name = "_get_domain")]
@@ -2062,9 +2076,7 @@ impl PackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let domain = self.backend.get_domain(&aa_version, chain_id);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(domain))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
     }
 }
 
@@ -2115,9 +2127,7 @@ impl SignedPackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let eip712_struct = self.backend.to_eip712_struct(&aa_version, chain_id);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(eip712_struct))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
     }
 
     #[pyo3(name = "_to_eip712_message")]
@@ -2125,9 +2135,7 @@ impl SignedPackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let message = self.backend.to_eip712_message(&aa_version);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(message))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
     }
 
     #[pyo3(name = "_get_domain")]
@@ -2135,9 +2143,7 @@ impl SignedPackedUserOperation {
         let aa_version = str_to_aa_version(aa_version)?;
         let domain = self.backend.get_domain(&aa_version, chain_id);
 
-        Python::with_gil(|py| {
-            json_to_pyobject(py, &serde_json::Value::Object(domain))
-        })
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -2204,7 +2210,10 @@ impl PackedUserOperationSignatureRequest {
 
     #[getter]
     fn context(&self) -> Option<Context> {
-        self.backend.context.clone().map(|context| Context { backend: context })
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
     }
 
     #[getter]
@@ -2310,7 +2319,10 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<SignedPackedUserOperation>()?;
     core_module.add_class::<PackedUserOperationSignatureRequest>()?;
     core_module.add_class::<SignatureResponse>()?;
-    core_module.add_function(wrap_pyfunction!(deserialize_signature_request, core_module)?)?;
+    core_module.add_function(wrap_pyfunction!(
+        deserialize_signature_request,
+        core_module
+    )?)?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
@@ -2390,29 +2402,24 @@ fn json_to_pyobject(py: Python, value: &serde_json::Value) -> PyResult<PyObject>
 /// Utility function to deserialize any signature request from bytes - returns specific type directly
 #[pyfunction]
 pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
-    let direct_request = nucypher_core::deserialize_signature_request(data)
-        .map_err(|err| PyValueError::new_err(format!("Failed to deserialize signature request: {}", err)))?;
+    let direct_request = nucypher_core::deserialize_signature_request(data).map_err(|err| {
+        PyValueError::new_err(format!("Failed to deserialize signature request: {}", err))
+    })?;
 
     // Convert to the specific Python type
     match direct_request {
-        nucypher_core::DirectSignatureRequest::EIP191(req) => {
-            Python::with_gil(|py| {
-                let python_req = EIP191SignatureRequest { backend: req };
-                Ok(python_req.into_py(py))
-            })
-        }
-        nucypher_core::DirectSignatureRequest::UserOp(req) => {
-            Python::with_gil(|py| {
-                let python_req = UserOperationSignatureRequest { backend: req };
-                Ok(python_req.into_py(py))
-            })
-        }
-        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => {
-            Python::with_gil(|py| {
-                let python_req = PackedUserOperationSignatureRequest { backend: req };
-                Ok(python_req.into_py(py))
-            })
-        }
+        nucypher_core::DirectSignatureRequest::EIP191(req) => Python::with_gil(|py| {
+            let python_req = EIP191SignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
+        nucypher_core::DirectSignatureRequest::UserOp(req) => Python::with_gil(|py| {
+            let python_req = UserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
+        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => Python::with_gil(|py| {
+            let python_req = PackedUserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
     }
 }
 
