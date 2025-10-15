@@ -672,81 +672,12 @@ class SessionSecretFactory:
 class SignatureRequestType:
     USEROP: int = 0
     PACKED_USER_OP: int = 1 
-    EIP_191: int = 2
-    EIP_712: int = 3
+    EIP_712: int = 2
 
 
 class AAVersion:
     V08: str = "0.8.0"
     MDT: str = "mdt"
-
-
-class EIP191SignatureRequest:
-
-    def __init__(self, data: bytes, cohort_id: int, chain_id: int, context: Optional[Context]):
-        ...
-
-    @property
-    def data(self) -> bytes:
-        ...
-
-    @property
-    def cohort_id(self) -> int:
-        ...
-
-    @property 
-    def chain_id(self) -> int:
-        ...
-
-    @property
-    def context(self) -> Optional[Context]:
-        ...
-
-    @property
-    def signature_type(self) -> int:
-        ...
-
-    @staticmethod
-    def from_bytes(data: bytes) -> EIP191SignatureRequest:
-        ...
-
-    def __bytes__(self) -> bytes:
-        ...
-
-
-class SignedEIP191SignatureRequest:
-    """Signed EIP-191 signature request - combines an EIP191SignatureRequest with a signature."""
-    
-    def __init__(
-        self,
-        request: EIP191SignatureRequest,
-        signature: bytes,
-    ) -> None:
-        """Create a new SignedEIP191SignatureRequest."""
-        ...
-    
-    @property
-    def request(self) -> EIP191SignatureRequest:
-        """The EIP-191 signature request without signature."""
-        ...
-    
-    @property
-    def signature(self) -> bytes:
-        """The signature over the request."""
-        ...
-    
-    def into_parts(self) -> Tuple[EIP191SignatureRequest, bytes]:
-        """Returns the request and signature as separate components."""
-        ...
-    
-    def __bytes__(self) -> bytes:
-        """Serialize to bytes."""
-        ...
-    
-    @staticmethod
-    def from_bytes(data: bytes) -> 'SignedEIP191SignatureRequest':
-        """Deserialize from bytes."""
-        ...
 
 
 class UserOperation:
@@ -1117,6 +1048,6 @@ class SignatureResponse:
         ...
 
 
-def deserialize_signature_request(data: bytes) -> Union[EIP191SignatureRequest, UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
+def deserialize_signature_request(data: bytes) -> Union[UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
     """Utility function to deserialize any signature request from bytes and return the specific type directly."""
     ...

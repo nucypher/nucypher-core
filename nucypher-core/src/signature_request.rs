@@ -22,9 +22,6 @@ pub enum SignatureRequestType {
     UserOp,
     /// Packed UserOperation signature request
     PackedUserOp,
-    /// EIP-191 signature request
-    #[serde(rename = "eip-191")]
-    EIP191,
     /// EIP-712 signature request
     #[serde(rename = "eip-712")]
     EIP712,
@@ -35,7 +32,6 @@ impl fmt::Display for SignatureRequestType {
         match self {
             Self::UserOp => write!(f, "userop"),
             Self::PackedUserOp => write!(f, "packedUserOp"),
-            Self::EIP191 => write!(f, "eip-191"),
             Self::EIP712 => write!(f, "eip-712"),
         }
     }
@@ -71,88 +67,6 @@ pub trait BaseSignatureRequest: Serialize + for<'de> Deserialize<'de> {
     fn signature_type(&self) -> SignatureRequestType;
     /// Returns the optional context for this signature request
     fn context(&self) -> Option<&Context>;
-}
-
-/// EIP-191 signature request
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EIP191SignatureRequest {
-    /// Data to be signed
-    #[serde(with = "serde_bytes::as_base64")]
-    pub data: Box<[u8]>,
-    /// Cohort ID
-    pub cohort_id: u32,
-    /// Chain ID
-    pub chain_id: u64,
-    /// Optional context
-    pub context: Option<Context>,
-    /// Signature type (always EIP-191)
-    pub signature_type: SignatureRequestType,
-}
-
-impl EIP191SignatureRequest {
-    /// Creates a new EIP-191 signature request
-    pub fn new(data: &[u8], cohort_id: u32, chain_id: u64, context: Option<Context>) -> Self {
-        Self {
-            data: data.to_vec().into_boxed_slice(),
-            cohort_id,
-            chain_id,
-            context,
-            signature_type: SignatureRequestType::EIP191,
-        }
-    }
-}
-
-impl BaseSignatureRequest for EIP191SignatureRequest {
-    fn cohort_id(&self) -> u32 {
-        self.cohort_id
-    }
-
-    fn chain_id(&self) -> u64 {
-        self.chain_id
-    }
-
-    fn signature_type(&self) -> SignatureRequestType {
-        self.signature_type
-    }
-
-    fn context(&self) -> Option<&Context> {
-        self.context.as_ref()
-    }
-}
-
-/// Signed EIP-191 signature request - combines an EIP191SignatureRequest with a signature
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SignedEIP191SignatureRequest {
-    /// The EIP-191 signature request without signature
-    pub request: EIP191SignatureRequest,
-    /// The signature over the request
-    #[serde(with = "serde_bytes::as_base64")]
-    pub signature: Box<[u8]>,
-}
-
-impl SignedEIP191SignatureRequest {
-    /// Creates a new SignedEIP191SignatureRequest
-    pub fn new(request: EIP191SignatureRequest, signature: &[u8]) -> Self {
-        Self {
-            request,
-            signature: signature.to_vec().into_boxed_slice(),
-        }
-    }
-
-    /// Gets a reference to the request part
-    pub fn request(&self) -> &EIP191SignatureRequest {
-        &self.request
-    }
-
-    /// Gets a reference to the signature
-    pub fn signature(&self) -> &[u8] {
-        &self.signature
-    }
-
-    /// Returns the request and signature as separate components
-    pub fn into_parts(self) -> (EIP191SignatureRequest, Box<[u8]>) {
-        (self.request, self.signature)
-    }
 }
 
 /// UserOperation for signature requests
@@ -703,54 +617,6 @@ impl SignatureResponse {
 
 // ProtocolObject implementations
 
-impl<'a> ProtocolObjectInner<'a> for EIP191SignatureRequest {
-    fn brand() -> [u8; 4] {
-        *b"E191"
-    }
-
-    fn version() -> (u16, u16) {
-        (1, 0)
-    }
-
-    fn unversioned_to_bytes(&self) -> Box<[u8]> {
-        messagepack_serialize(&self)
-    }
-
-    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> ProtocolObject<'a> for EIP191SignatureRequest {}
-
-impl<'a> ProtocolObjectInner<'a> for SignedEIP191SignatureRequest {
-    fn brand() -> [u8; 4] {
-        *b"SE19"
-    }
-
-    fn version() -> (u16, u16) {
-        (1, 0)
-    }
-
-    fn unversioned_to_bytes(&self) -> Box<[u8]> {
-        messagepack_serialize(&self)
-    }
-
-    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> ProtocolObject<'a> for SignedEIP191SignatureRequest {}
-
 impl<'a> ProtocolObjectInner<'a> for UserOperationSignatureRequest {
     fn brand() -> [u8; 4] {
         *b"UOSR"
@@ -898,8 +764,6 @@ impl<'a> ProtocolObject<'a> for SignedPackedUserOperation {}
 /// Enum to hold any type of signature request for direct returns
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectSignatureRequest {
-    /// EIP-191 signature request
-    EIP191(EIP191SignatureRequest),
     /// UserOperation signature request
     UserOp(UserOperationSignatureRequest),
     /// PackedUserOperation signature request
@@ -917,9 +781,6 @@ impl DirectSignatureRequest {
         let brand = [bytes[0], bytes[1], bytes[2], bytes[3]];
 
         match &brand {
-            b"E191" => EIP191SignatureRequest::from_bytes(bytes)
-                .map(Self::EIP191)
-                .map_err(|e| format!("Failed to deserialize EIP191SignatureRequest: {}", e)),
             b"UOSR" => UserOperationSignatureRequest::from_bytes(bytes)
                 .map(Self::UserOp)
                 .map_err(|e| format!("Failed to deserialize UserOperationSignatureRequest: {}", e)),
@@ -938,7 +799,6 @@ impl DirectSignatureRequest {
     /// Get the signature type for this request
     pub fn signature_type(&self) -> SignatureRequestType {
         match self {
-            Self::EIP191(_) => SignatureRequestType::EIP191,
             Self::UserOp(_) => SignatureRequestType::UserOp,
             Self::PackedUserOp(_) => SignatureRequestType::PackedUserOp,
         }
@@ -947,7 +807,6 @@ impl DirectSignatureRequest {
     /// Get the cohort ID for this request
     pub fn cohort_id(&self) -> u32 {
         match self {
-            Self::EIP191(req) => req.cohort_id(),
             Self::UserOp(req) => req.cohort_id(),
             Self::PackedUserOp(req) => req.cohort_id(),
         }
@@ -956,7 +815,6 @@ impl DirectSignatureRequest {
     /// Get the chain ID for this request  
     pub fn chain_id(&self) -> u64 {
         match self {
-            Self::EIP191(req) => req.chain_id(),
             Self::UserOp(req) => req.chain_id(),
             Self::PackedUserOp(req) => req.chain_id(),
         }
@@ -965,7 +823,6 @@ impl DirectSignatureRequest {
     /// Get the optional context for this request
     pub fn context(&self) -> Option<&Context> {
         match self {
-            Self::EIP191(req) => req.context(),
             Self::UserOp(req) => req.context(),
             Self::PackedUserOp(req) => req.context(),
         }
@@ -989,55 +846,6 @@ mod tests {
         let mut array = [0u8; 20];
         array.copy_from_slice(&bytes);
         Address::new(&array)
-    }
-
-    #[test]
-    fn test_eip191_signature_request_serialization() {
-        let data = b"test data";
-        // Test with a large chain ID like the example provided (131277322940537)
-        let large_chain_id = 131277322940537u64;
-        let request = EIP191SignatureRequest::new(data, 1, large_chain_id, None);
-
-        let bytes = request.to_bytes();
-        let deserialized = EIP191SignatureRequest::from_bytes(&bytes).unwrap();
-
-        assert_eq!(request, deserialized);
-        assert_eq!(deserialized.data.as_ref(), data);
-        assert_eq!(deserialized.cohort_id, 1);
-        assert_eq!(deserialized.chain_id, large_chain_id);
-        assert_eq!(deserialized.signature_type, SignatureRequestType::EIP191);
-    }
-
-    #[test]
-    fn test_signed_eip191_signature_request() {
-        let data = b"test data for signing";
-        let context = Some(Context::new("test_context"));
-        let request = EIP191SignatureRequest::new(data, 456, 1, context);
-        let test_signature = b"test_eip191_signature";
-
-        // Test creating SignedEIP191SignatureRequest
-        let signed_request = SignedEIP191SignatureRequest::new(request.clone(), test_signature);
-
-        assert_eq!(signed_request.signature(), test_signature);
-        assert_eq!(signed_request.request().data.as_ref(), data);
-        assert_eq!(signed_request.request().cohort_id, 456);
-        assert_eq!(signed_request.request().chain_id, 1);
-
-        // Test into_parts method
-        let (reconstructed_request, reconstructed_signature) = signed_request.clone().into_parts();
-        assert_eq!(reconstructed_signature.as_ref(), test_signature);
-        assert_eq!(reconstructed_request.data.as_ref(), data);
-        assert_eq!(reconstructed_request.cohort_id, 456);
-        assert_eq!(reconstructed_request.chain_id, 1);
-
-        // Test serialization
-        let bytes = signed_request.to_bytes();
-        let deserialized = SignedEIP191SignatureRequest::from_bytes(&bytes).unwrap();
-        assert_eq!(signed_request, deserialized);
-        assert_eq!(deserialized.signature(), test_signature);
-        assert_eq!(deserialized.request().data.as_ref(), data);
-        assert_eq!(deserialized.request().cohort_id, 456);
-        assert_eq!(deserialized.request().chain_id, 1);
     }
 
     #[test]
