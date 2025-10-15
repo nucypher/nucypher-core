@@ -1,5 +1,6 @@
 use alloc::string::String;
 
+use ethers::{types::Address as Addr, utils::to_checksum};
 use generic_array::{
     sequence::Split,
     typenum::{U12, U20},
@@ -40,32 +41,7 @@ impl Address {
 
     /// Returns the EIP-55 checksummed representation of the address.
     pub fn to_checksum_address(&self) -> String {
-        let hex_address = hex::encode(self.0);
-        let hash = Keccak256::digest(hex_address.as_bytes());
-
-        let mut result = String::with_capacity(42);
-        result.push_str("0x");
-
-        for (i, ch) in hex_address.chars().enumerate() {
-            if ch.is_alphabetic() {
-                let hash_byte = hash[i / 2];
-                let hash_nibble = if i % 2 == 0 {
-                    hash_byte >> 4
-                } else {
-                    hash_byte & 0x0f
-                };
-
-                if hash_nibble >= 8 {
-                    result.push(ch.to_ascii_uppercase());
-                } else {
-                    result.push(ch);
-                }
-            } else {
-                result.push(ch);
-            }
-        }
-
-        result
+        to_checksum(&Addr::from(self.0), None)
     }
 }
 
