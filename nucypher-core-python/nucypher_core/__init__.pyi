@@ -686,7 +686,8 @@ class UserOperation:
         self,
         sender: str,
         nonce: int,
-        init_code: bytes = b"",
+        factory: Optional[str] = None,
+        factory_data: bytes = b"",
         call_data: bytes = b"",
         call_gas_limit: int = 0,
         verification_gas_limit: int = 0,
@@ -710,10 +711,15 @@ class UserOperation:
     def nonce(self) -> int:
         """Nonce for replay protection."""
         ...
-    
+
     @property
-    def init_code(self) -> bytes:
-        """Factory and data for account creation."""
+    def factory(self) -> Optional[str]:
+        """Address of factory contract for account creation (optional)."""
+        ...
+
+    @property
+    def factory_data(self) -> bytes:
+        """Data for factory contract account creation (optional)."""
         ...
     
     @property
@@ -842,36 +848,8 @@ class PackedUserOperation:
         """Create a PackedUserOperation from a UserOperation."""
         ...
     
-    @staticmethod
-    def _pack_account_gas_limits(call_gas_limit: int, verification_gas_limit: int) -> bytes:
-        """Pack account gas limits into a 32-byte value (u128 values)."""
-        ...
-    
-    @staticmethod
-    def _pack_gas_fees(max_fee_per_gas: int, max_priority_fee_per_gas: int) -> bytes:
-        """Pack gas fees into a 32-byte value (u128 values)."""
-        ...
-    
-    @staticmethod
-    def _pack_paymaster_and_data(
-        paymaster: Optional[str],
-        paymaster_verification_gas_limit: int,
-        paymaster_post_op_gas_limit: int,
-        paymaster_data: bytes,
-    ) -> bytes:
-        """Pack paymaster and data with u128 gas limits."""
-        ...
-    
     def to_eip712_struct(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
         """Convert to EIP-712 struct format."""
-        ...
-    
-    def _to_eip712_message(self, aa_version: str) -> Dict[str, Any]:
-        """Convert to EIP-712 message format."""
-        ...
-    
-    def _get_domain(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
-        """Get the EIP-712 domain."""
         ...
     
     @property
@@ -951,14 +929,6 @@ class SignedPackedUserOperation:
     
     def to_eip712_struct(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
         """Convert to EIP-712 struct format."""
-        ...
-    
-    def _to_eip712_message(self, aa_version: str) -> Dict[str, Any]:
-        """Convert to EIP-712 message format."""
-        ...
-    
-    def _get_domain(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
-        """Get the EIP-712 domain."""
         ...
     
     def __bytes__(self) -> bytes:

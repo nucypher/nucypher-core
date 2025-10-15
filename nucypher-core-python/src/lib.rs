@@ -1641,12 +1641,13 @@ pub struct UserOperation {
 #[pymethods]
 impl UserOperation {
     #[new]
-    #[pyo3(signature = (sender, nonce, init_code=None, call_data=None, call_gas_limit=None, verification_gas_limit=None, pre_verification_gas=None, max_fee_per_gas=None, max_priority_fee_per_gas=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
+    #[pyo3(signature = (sender, nonce, factory=None, factory_data=None, call_data=None, call_gas_limit=None, verification_gas_limit=None, pre_verification_gas=None, max_fee_per_gas=None, max_priority_fee_per_gas=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
         nonce: u64,
-        init_code: Option<&[u8]>,
+        factory: Option<String>,
+        factory_data: Option<&[u8]>,
         call_data: Option<&[u8]>,
         call_gas_limit: Option<u128>,
         verification_gas_limit: Option<u128>,
@@ -1664,12 +1665,14 @@ impl UserOperation {
             .as_ref()
             .map(|p| string_to_address(p))
             .transpose()?;
+        let factory_address = factory.as_ref().map(|f| string_to_address(f)).transpose()?;
 
         Ok(Self {
             backend: SignatureRequestUserOperation::new(
                 sender_address,
                 nonce,
-                init_code,
+                factory_address,
+                factory_data,
                 call_data,
                 call_gas_limit,
                 verification_gas_limit,
@@ -1695,8 +1698,13 @@ impl UserOperation {
     }
 
     #[getter]
-    pub fn init_code(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.init_code).into()
+    pub fn factory(&self) -> Option<String> {
+        self.backend.factory.as_ref().map(address_to_string)
+    }
+
+    #[getter]
+    pub fn factory_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.factory_data).into()
     }
 
     #[getter]

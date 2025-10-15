@@ -65,16 +65,18 @@ pub trait BaseSignatureRequest: Serialize + for<'de> Deserialize<'de> {
     fn context(&self) -> Option<&Context>;
 }
 
-/// UserOperation for signature requests
+/// UserOperation for signature requests - https://eips.ethereum.org/EIPS/eip-4337
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserOperation {
     /// Address of the sender (smart contract account)
     pub sender: Address,
     /// Nonce for replay protection
     pub nonce: u64,
-    /// Factory and data for account creation (empty for existing accounts)
+    /// Address of factory contract for account creation (empty for existing accounts)
+    pub factory: Option<Address>,
+    /// Data for factory contract account creation (empty for existing accounts)
     #[serde(with = "serde_bytes::as_base64")]
-    pub init_code: Box<[u8]>,
+    pub factory_data: Box<[u8]>,
     /// The calldata to execute
     #[serde(with = "serde_bytes::as_base64")]
     pub call_data: Box<[u8]>,
@@ -105,7 +107,8 @@ impl UserOperation {
     pub fn new(
         sender: Address,
         nonce: u64,
-        init_code: Option<&[u8]>,
+        factory: Option<Address>,
+        factory_data: Option<&[u8]>,
         call_data: Option<&[u8]>,
         call_gas_limit: Option<u128>,
         verification_gas_limit: Option<u128>,
@@ -120,7 +123,8 @@ impl UserOperation {
         Self {
             sender,
             nonce,
-            init_code: init_code.unwrap_or_default().into(),
+            factory,
+            factory_data: factory_data.unwrap_or_default().into(),
             call_data: call_data.unwrap_or_default().into(),
             call_gas_limit: call_gas_limit.unwrap_or(0),
             verification_gas_limit: verification_gas_limit.unwrap_or(0),
@@ -286,6 +290,18 @@ impl PackedUserOperation {
         }
     }
 
+    fn pack_init_code(factory: Option<&Address>, factory_data: &[u8]) -> Vec<u8> {
+        match factory {
+            None => Vec::new(),
+            Some(addr) => {
+                let mut result = Vec::with_capacity(20 + factory_data.len());
+                result.extend_from_slice(addr.as_ref());
+                result.extend_from_slice(factory_data);
+                result
+            }
+        }
+    }
+
     /// Creates a PackedUserOperation from a UserOperation
     pub fn from_user_operation(user_op: &UserOperation) -> Self {
         let account_gas_limits =
@@ -301,10 +317,12 @@ impl PackedUserOperation {
             &user_op.paymaster_data,
         );
 
+        let init_code = Self::pack_init_code(user_op.factory.as_ref(), &user_op.factory_data);
+
         Self {
             sender: user_op.sender,
             nonce: user_op.nonce,
-            init_code: user_op.init_code.clone(),
+            init_code: init_code.to_vec().into_boxed_slice(),
             call_data: user_op.call_data.clone(),
             account_gas_limits: account_gas_limits.to_vec().into_boxed_slice(),
             pre_verification_gas: user_op.pre_verification_gas,
@@ -848,11 +866,13 @@ mod tests {
     fn test_user_operation_signature_request_serialization() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
+        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
 
         let user_op = UserOperation::new(
             sender,
             42,
-            Some(b"init_code"),
+            factory,
+            Some(b"factory_data"),
             Some(b"call_data"),
             Some(100000),
             Some(200000),
@@ -907,6 +927,7 @@ mod tests {
         let user_op = UserOperation::new(
             sender,
             1,
+            None,
             Some(b""),
             Some(b""),
             Some(0),
@@ -936,6 +957,7 @@ mod tests {
         let user_op_mdt = UserOperation::new(
             sender_mdt,
             2,
+            None,
             Some(b""),
             Some(b""),
             Some(0),
@@ -969,11 +991,13 @@ mod tests {
     fn test_packed_user_operation_conversion() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
+        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
 
         let user_op = UserOperation::new(
             sender,
             100,
-            Some(b"factory_code"),
+            factory,
+            Some(b"factory_data"),
             Some(b"execution_data"),
             Some(150000),
             Some(250000),
@@ -990,7 +1014,7 @@ mod tests {
 
         assert_eq!(packed.sender, user_op.sender);
         assert_eq!(packed.nonce, user_op.nonce);
-        assert_eq!(packed.init_code, user_op.init_code);
+        assert_eq!(packed.init_code.len(), 32);
         assert_eq!(packed.call_data, user_op.call_data);
         assert_eq!(packed.pre_verification_gas, user_op.pre_verification_gas);
 
@@ -1011,11 +1035,13 @@ mod tests {
     fn test_signed_packed_user_operation() {
         let sender = address_from_hex("1234567890123456789012345678901234567890");
         let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
+        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
 
         let user_op = UserOperation::new(
             sender,
             123,
-            Some(b"init_factory"),
+            factory,
+            Some(b"factory_data"),
             Some(b"call_data_test"),
             Some(200000),
             Some(300000),
