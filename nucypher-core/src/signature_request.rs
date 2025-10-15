@@ -22,9 +22,6 @@ pub enum SignatureRequestType {
     UserOp,
     /// Packed UserOperation signature request
     PackedUserOp,
-    /// EIP-712 signature request
-    #[serde(rename = "eip-712")]
-    EIP712,
 }
 
 impl fmt::Display for SignatureRequestType {
@@ -32,7 +29,6 @@ impl fmt::Display for SignatureRequestType {
         match self {
             Self::UserOp => write!(f, "userop"),
             Self::PackedUserOp => write!(f, "packedUserOp"),
-            Self::EIP712 => write!(f, "eip-712"),
         }
     }
 }

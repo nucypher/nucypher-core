@@ -696,7 +696,6 @@ class SessionSecretFactory:
 class SignatureRequestType:
     USEROP: int = 0
     PACKED_USER_OP: int = 1 
-    EIP_712: int = 2
 
 
 class AAVersion:
