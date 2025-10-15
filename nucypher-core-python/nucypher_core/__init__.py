@@ -43,7 +43,6 @@ class SignatureRequestType:
     """Constants for signature request types."""
     USEROP = 0
     PACKED_USER_OP = 1
-    EIP_712 = 2
 
 
 # Constants for AA versions

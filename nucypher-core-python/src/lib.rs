@@ -1591,7 +1591,6 @@ fn signature_request_type_to_u8(variant: &nucypher_core::SignatureRequestType) -
     match variant {
         nucypher_core::SignatureRequestType::UserOp => 0,
         nucypher_core::SignatureRequestType::PackedUserOp => 1,
-        nucypher_core::SignatureRequestType::EIP712 => 2,
     }
 }
 
@@ -1599,7 +1598,6 @@ fn u8_to_signature_request_type(variant: u8) -> PyResult<nucypher_core::Signatur
     match variant {
         0 => Ok(nucypher_core::SignatureRequestType::UserOp),
         1 => Ok(nucypher_core::SignatureRequestType::PackedUserOp),
-        2 => Ok(nucypher_core::SignatureRequestType::EIP712),
         _ => Err(PyValueError::new_err(format!(
             "Invalid signature request type: {}",
             variant
