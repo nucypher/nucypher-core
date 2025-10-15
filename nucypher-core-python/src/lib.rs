@@ -1591,8 +1591,7 @@ fn signature_request_type_to_u8(variant: &nucypher_core::SignatureRequestType) -
     match variant {
         nucypher_core::SignatureRequestType::UserOp => 0,
         nucypher_core::SignatureRequestType::PackedUserOp => 1,
-        nucypher_core::SignatureRequestType::EIP191 => 2,
-        nucypher_core::SignatureRequestType::EIP712 => 3,
+        nucypher_core::SignatureRequestType::EIP712 => 2,
     }
 }
 
@@ -1600,8 +1599,7 @@ fn u8_to_signature_request_type(variant: u8) -> PyResult<nucypher_core::Signatur
     match variant {
         0 => Ok(nucypher_core::SignatureRequestType::UserOp),
         1 => Ok(nucypher_core::SignatureRequestType::PackedUserOp),
-        2 => Ok(nucypher_core::SignatureRequestType::EIP191),
-        3 => Ok(nucypher_core::SignatureRequestType::EIP712),
+        2 => Ok(nucypher_core::SignatureRequestType::EIP712),
         _ => Err(PyValueError::new_err(format!(
             "Invalid signature request type: {}",
             variant
@@ -1628,68 +1626,6 @@ fn str_to_aa_version(version: &str) -> PyResult<nucypher_core::AAVersion> {
             "Invalid AA version: {}",
             version
         ))),
-    }
-}
-
-//
-// EIP191SignatureRequest
-//
-
-#[pyclass(module = "nucypher_core")]
-#[derive(derive_more::From, derive_more::AsRef)]
-pub struct EIP191SignatureRequest {
-    backend: nucypher_core::EIP191SignatureRequest,
-}
-
-#[pymethods]
-impl EIP191SignatureRequest {
-    #[new]
-    pub fn new(data: &[u8], cohort_id: u32, chain_id: u64, context: Option<&Context>) -> Self {
-        Self {
-            backend: nucypher_core::EIP191SignatureRequest::new(
-                data,
-                cohort_id,
-                chain_id,
-                context.map(|c| c.backend.clone()),
-            ),
-        }
-    }
-
-    #[getter]
-    fn data(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.data).into()
-    }
-
-    #[getter]
-    fn cohort_id(&self) -> u32 {
-        self.backend.cohort_id
-    }
-
-    #[getter]
-    fn chain_id(&self) -> u64 {
-        self.backend.chain_id
-    }
-
-    #[getter]
-    fn context(&self) -> Option<Context> {
-        self.backend
-            .context
-            .clone()
-            .map(|context| Context { backend: context })
-    }
-
-    #[getter]
-    fn signature_type(&self) -> u8 {
-        signature_request_type_to_u8(&self.backend.signature_type)
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::EIP191SignatureRequest>(data)
-    }
-
-    fn __bytes__(&self) -> PyObject {
-        to_bytes(self)
     }
 }
 
@@ -2311,8 +2247,6 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
 
     // Add signature request/response classes
-    core_module.add_class::<EIP191SignatureRequest>()?;
-    core_module.add_class::<SignedEIP191SignatureRequest>()?;
     core_module.add_class::<UserOperation>()?;
     core_module.add_class::<UserOperationSignatureRequest>()?;
     core_module.add_class::<PackedUserOperation>()?;
@@ -2408,10 +2342,6 @@ pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
 
     // Convert to the specific Python type
     match direct_request {
-        nucypher_core::DirectSignatureRequest::EIP191(req) => Python::with_gil(|py| {
-            let python_req = EIP191SignatureRequest { backend: req };
-            Ok(python_req.into_py(py))
-        }),
         nucypher_core::DirectSignatureRequest::UserOp(req) => Python::with_gil(|py| {
             let python_req = UserOperationSignatureRequest { backend: req };
             Ok(python_req.into_py(py))
@@ -2420,58 +2350,5 @@ pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
             let python_req = PackedUserOperationSignatureRequest { backend: req };
             Ok(python_req.into_py(py))
         }),
-    }
-}
-
-//
-// SignedEIP191SignatureRequest
-//
-
-/// Python bindings for SignedEIP191SignatureRequest
-#[pyclass(module = "nucypher_core")]
-#[derive(derive_more::From, derive_more::AsRef)]
-pub struct SignedEIP191SignatureRequest {
-    backend: nucypher_core::SignedEIP191SignatureRequest,
-}
-
-#[pymethods]
-impl SignedEIP191SignatureRequest {
-    #[new]
-    pub fn new(request: &EIP191SignatureRequest, signature: &[u8]) -> Self {
-        Self {
-            backend: nucypher_core::SignedEIP191SignatureRequest::new(
-                request.backend.clone(),
-                signature,
-            ),
-        }
-    }
-
-    #[getter]
-    pub fn request(&self) -> EIP191SignatureRequest {
-        EIP191SignatureRequest::from(self.backend.request().clone())
-    }
-
-    #[getter]
-    pub fn signature(&self, py: Python) -> PyObject {
-        PyBytes::new(py, self.backend.signature()).into()
-    }
-
-    pub fn into_parts(&self) -> (EIP191SignatureRequest, PyObject) {
-        let (request, signature) = (self.backend.request().clone(), self.backend.signature());
-        Python::with_gil(|py| {
-            (
-                EIP191SignatureRequest::from(request),
-                PyBytes::new(py, signature).into(),
-            )
-        })
-    }
-
-    fn __bytes__(&self) -> PyObject {
-        to_bytes(self)
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, nucypher_core::SignedEIP191SignatureRequest>(data)
     }
 }
