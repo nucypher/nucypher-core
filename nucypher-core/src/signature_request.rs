@@ -33,6 +33,11 @@ impl fmt::Display for SignatureRequestType {
     }
 }
 
+/// AA v0.8.0 entryPoint address
+pub const ENTRYPOINT_V08: &str = "0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108";
+/// AA v0.7.0 entryPoint address
+pub const ENTRYPOINT_V07: &str = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
+
 /// AA version enum for Account Abstraction versions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AAVersion {
@@ -367,7 +372,7 @@ impl PackedUserOperation {
         if *aa_version == AAVersion::MDT {
             message.insert(
                 "entryPoint".into(),
-                JsonValue::String("0x0000000071727de22e5e9d8baf0edac6f37da032".into()),
+                JsonValue::String(ENTRYPOINT_V07.into()),
             );
         }
 
@@ -392,7 +397,7 @@ impl PackedUserOperation {
         domain.insert("chainId".into(), JsonValue::Number(chain_id.into()));
 
         let verifying_contract = if *aa_version != AAVersion::MDT {
-            "0x4337084d9e255ff0702461cf8895ce9e3b5ff108".into()
+            ENTRYPOINT_V08.into()
         } else {
             format!("0x{}", hex::encode(self.sender.as_ref()))
         };
