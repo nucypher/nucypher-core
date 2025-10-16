@@ -3,6 +3,7 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::{format, vec};
 use core::fmt;
+use core::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -19,9 +20,25 @@ use crate::versioning::{
 #[serde(rename_all = "kebab-case")]
 pub enum SignatureRequestType {
     /// UserOperation signature request
-    UserOp,
+    UserOp = 0,
     /// Packed UserOperation signature request
-    PackedUserOp,
+    PackedUserOp = 1,
+}
+
+impl SignatureRequestType {
+    /// Convert to u8
+    pub fn as_u8(&self) -> u8 {
+        *self as u8
+    }
+
+    /// Create from a u8
+    pub fn from_u8(i: u8) -> Result<Self, String> {
+        match i {
+            0 => Ok(Self::UserOp),
+            1 => Ok(Self::PackedUserOp),
+            _ => Err(format!("Invalid signature request type: {}", i)),
+        }
+    }
 }
 
 impl fmt::Display for SignatureRequestType {
@@ -49,11 +66,33 @@ pub enum AAVersion {
     MDT,
 }
 
+impl AAVersion {
+    /// Return the string representation
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::V08 => "0.8.0",
+            Self::MDT => "mdt",
+        }
+    }
+}
+
+impl FromStr for AAVersion {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "0.8.0" => Ok(Self::V08),
+            "mdt" => Ok(Self::MDT),
+            _ => Err(format!("Invalid AA version: {}", s)),
+        }
+    }
+}
+
 impl fmt::Display for AAVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::V08 => write!(f, "0.8.0"),
-            Self::MDT => write!(f, "mdt"),
+            Self::V08 => write!(f, "{}", Self::V08.as_str()),
+            Self::MDT => write!(f, "{}", Self::MDT.as_str()),
         }
     }
 }
