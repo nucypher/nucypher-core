@@ -207,14 +207,14 @@ impl UserOperationSignatureRequest {
         cohort_id: u32,
         chain_id: u64,
         aa_version: AAVersion,
-        context: Option<Context>,
+        context: Option<&Context>,
     ) -> Self {
         Self {
             user_op,
             cohort_id,
             chain_id,
             aa_version,
-            context,
+            context: context.cloned(),
             signature_type: SignatureRequestType::UserOp,
         }
     }
@@ -618,14 +618,14 @@ impl PackedUserOperationSignatureRequest {
         cohort_id: u32,
         chain_id: u64,
         aa_version: AAVersion,
-        context: Option<Context>,
+        context: Option<&Context>,
     ) -> Self {
         Self {
             packed_user_op,
             cohort_id,
             chain_id,
             aa_version,
-            context,
+            context: context.cloned(),
             signature_type: SignatureRequestType::PackedUserOp,
         }
     }
@@ -933,7 +933,7 @@ mod tests {
             1,
             137,
             AAVersion::V08,
-            Some(Context::new("test_context")),
+            Some(&Context::new("test_context")),
         );
 
         let bytes = request.to_bytes();
@@ -989,7 +989,7 @@ mod tests {
             1,
             137,
             AAVersion::V08,
-            Some(Context::new("test_context")),
+            Some(&Context::new("test_context")),
         );
 
         let bytes = request_v08.to_bytes();
@@ -1019,7 +1019,7 @@ mod tests {
             2,
             137,
             AAVersion::MDT,
-            Some(Context::new("test_context")),
+            Some(&Context::new("test_context")),
         );
 
         let bytes_mdt = request_mdt.to_bytes();

@@ -1750,7 +1750,7 @@ impl UserOperationSignatureRequest {
                 cohort_id,
                 chain_id,
                 core_aa_version,
-                context.map(|c| c.backend.clone()),
+                context.map(|c| &c.backend),
             ),
         })
     }
@@ -2081,7 +2081,7 @@ impl PackedUserOperationSignatureRequest {
                 cohort_id,
                 chain_id,
                 core_aa_version,
-                context.map(|c| c.backend.clone()),
+                context.map(|c| &c.backend),
             ),
         })
     }
