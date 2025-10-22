@@ -116,11 +116,6 @@ pub struct UserOperation {
     pub sender: Address,
     /// Nonce for replay protection
     pub nonce: u64,
-    /// Address of factory contract for account creation (empty for existing accounts)
-    pub factory: Option<Address>,
-    /// Data for factory contract account creation (empty for existing accounts)
-    #[serde(with = "serde_bytes::as_base64")]
-    pub factory_data: Box<[u8]>,
     /// The calldata to execute
     #[serde(with = "serde_bytes::as_base64")]
     pub call_data: Box<[u8]>,
@@ -134,6 +129,11 @@ pub struct UserOperation {
     pub max_fee_per_gas: u128,
     /// Maximum priority fee per gas unit
     pub max_priority_fee_per_gas: u128,
+    /// Address of factory contract for account creation (empty for existing accounts)
+    pub factory: Option<Address>,
+    /// Data for factory contract account creation (empty for existing accounts)
+    #[serde(with = "serde_bytes::as_base64")]
+    pub factory_data: Box<[u8]>,
     /// Paymaster address (optional)
     pub paymaster: Option<Address>,
     /// Gas limit for paymaster verification
@@ -151,14 +151,14 @@ impl UserOperation {
     pub fn new(
         sender: Address,
         nonce: u64,
+        call_data: &[u8],
+        call_gas_limit: u128,
+        verification_gas_limit: u128,
+        pre_verification_gas: u128,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
         factory: Option<Address>,
         factory_data: Option<&[u8]>,
-        call_data: Option<&[u8]>,
-        call_gas_limit: Option<u128>,
-        verification_gas_limit: Option<u128>,
-        pre_verification_gas: Option<u128>,
-        max_fee_per_gas: Option<u128>,
-        max_priority_fee_per_gas: Option<u128>,
         paymaster: Option<Address>,
         paymaster_verification_gas_limit: Option<u128>,
         paymaster_post_op_gas_limit: Option<u128>,
@@ -167,18 +167,22 @@ impl UserOperation {
         Self {
             sender,
             nonce,
+            call_data: call_data.to_vec().into_boxed_slice(),
+            call_gas_limit,
+            verification_gas_limit,
+            pre_verification_gas,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
             factory,
-            factory_data: factory_data.unwrap_or_default().into(),
-            call_data: call_data.unwrap_or_default().into(),
-            call_gas_limit: call_gas_limit.unwrap_or(0),
-            verification_gas_limit: verification_gas_limit.unwrap_or(0),
-            pre_verification_gas: pre_verification_gas.unwrap_or(0),
-            max_fee_per_gas: max_fee_per_gas.unwrap_or(0),
-            max_priority_fee_per_gas: max_priority_fee_per_gas.unwrap_or(0),
+            factory_data: factory_data
+                .map(|data| data.to_vec().into_boxed_slice())
+                .unwrap_or_else(|| Box::new([])),
             paymaster,
             paymaster_verification_gas_limit: paymaster_verification_gas_limit.unwrap_or(0),
             paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.unwrap_or(0),
-            paymaster_data: paymaster_data.unwrap_or_default().into(),
+            paymaster_data: paymaster_data
+                .map(|data| data.to_vec().into_boxed_slice())
+                .unwrap_or_else(|| Box::new([])),
         }
     }
 }
@@ -908,14 +912,14 @@ mod tests {
         let user_op = UserOperation::new(
             sender,
             42,
+            b"call_data",
+            100000,
+            200000,
+            50000,
+            20_000_000_000, // 20 gwei
+            1_000_000_000,  // 1 gwei
             factory,
             Some(b"factory_data"),
-            Some(b"call_data"),
-            Some(100000),
-            Some(200000),
-            Some(50000),
-            Some(20_000_000_000), // 20 gwei
-            Some(1_000_000_000),  // 1 gwei
             paymaster,
             Some(300000),
             Some(100000),
@@ -964,14 +968,14 @@ mod tests {
         let user_op = UserOperation::new(
             sender,
             1,
+            b"",
+            0,
+            0,
+            0,
+            0,
+            0,
             None,
             Some(b""),
-            Some(b""),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
             None,
             Some(0),
             Some(0),
@@ -994,18 +998,19 @@ mod tests {
         let user_op_mdt = UserOperation::new(
             sender_mdt,
             2,
+            b"call_data_mdt",
+            0,
+            0,
+            0,
+            0,
+            0,
+            // Optional fields
             None,
-            Some(b""),
-            Some(b""),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
-            Some(0),
             None,
-            Some(0),
-            Some(0),
-            Some(b""),
+            None,
+            None,
+            None,
+            None,
         );
         let request_mdt = UserOperationSignatureRequest::new(
             user_op_mdt,
@@ -1035,14 +1040,14 @@ mod tests {
         let user_op = UserOperation::new(
             sender,
             100,
+            b"execution_data",
+            150000,
+            250000,
+            60000,
+            30_000_000_000,
+            2_000_000_000,
             factory,
             Some(b"factory_data"),
-            Some(b"execution_data"),
-            Some(150000),
-            Some(250000),
-            Some(60000),
-            Some(30_000_000_000),
-            Some(2_000_000_000),
             paymaster,
             Some(400000),
             Some(200000),
@@ -1081,14 +1086,14 @@ mod tests {
         let user_op = UserOperation::new(
             sender,
             123,
+            b"call_data_test",
+            200000,
+            300000,
+            70000,
+            25_000_000_000,
+            1_500_000_000,
             factory,
             Some(b"factory_data"),
-            Some(b"call_data_test"),
-            Some(200000),
-            Some(300000),
-            Some(70000),
-            Some(25_000_000_000),
-            Some(1_500_000_000),
             paymaster,
             Some(500000),
             Some(250000),
