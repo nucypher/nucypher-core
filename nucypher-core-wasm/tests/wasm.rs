@@ -894,3 +894,108 @@ fn threshold_message_kit() {
     );
     assert_eq!(acp, deserialized_tmk.acp());
 }
+
+#[wasm_bindgen_test]
+fn user_operation() {
+    let mut user_op = UserOperation::new(
+        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        1,
+        b"calldata",
+        123,
+        456,
+        789,
+        101112,
+        121314,
+    )
+    .unwrap();
+
+    assert_eq!(
+        user_op.sender(),
+        "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"
+    );
+    assert_eq!(user_op.nonce(), 1);
+    assert_eq!(user_op.call_data(), b"calldata".to_vec().into_boxed_slice());
+    assert_eq!(user_op.call_gas_limit(), 123);
+    assert_eq!(user_op.verification_gas_limit(), 456);
+    assert_eq!(user_op.pre_verification_gas(), 789);
+    assert_eq!(user_op.max_fee_per_gas(), 101112);
+    assert_eq!(user_op.max_priority_fee_per_gas(), 121314);
+    assert_eq!(user_op.factory(), None);
+    assert_eq!(user_op.factory_data(), b"".to_vec().into_boxed_slice());
+    assert_eq!(user_op.paymaster(), None);
+    assert_eq!(user_op.paymaster_verification_gas_limit(), 0);
+    // assert_eq!(user_op.paymaster_post_op_gas_limit().unwrap(), None);
+    // assert_eq!(user_op.paymaster_data().unwrap(), None);
+
+    user_op.set_factory_data(
+        "0x000000000000000000000000000000000000000a",
+        b"factory_data",
+    );
+    assert_eq!(
+        user_op.factory().unwrap(),
+        "0x000000000000000000000000000000000000000A"
+    );
+    assert_eq!(
+        user_op.factory_data(),
+        b"factory_data".to_vec().into_boxed_slice()
+    );
+
+    user_op.set_paymaster_data(
+        "0x000000000000000000000000000000000000000c",
+        202122,
+        303132,
+        b"paymaster_data",
+    );
+    assert_eq!(
+        user_op.paymaster().unwrap(),
+        "0x000000000000000000000000000000000000000C"
+    );
+    assert_eq!(user_op.paymaster_verification_gas_limit(), 202122);
+    assert_eq!(user_op.paymaster_post_op_gas_limit(), 303132);
+    assert_eq!(
+        user_op.paymaster_data(),
+        b"paymaster_data".to_vec().into_boxed_slice()
+    );
+
+    let serialized_user_op = user_op.to_bytes();
+    let deserialized_user_op = UserOperation::from_bytes(&serialized_user_op).unwrap();
+    assert_eq!(&user_op, &deserialized_user_op);
+}
+
+#[wasm_bindgen_test]
+fn user_operation_signature_request() {
+    let user_op = UserOperation::new(
+        "0x0000000000000000000000000000000000000000",
+        123,
+        b"calldata",
+        456,
+        789,
+        101112,
+        121314,
+        131415,
+    )
+    .unwrap();
+
+    let cohort_id: u32 = 42;
+    let chain_id: u64 = 1;
+    let aa_version: &str = "0.8.0";
+    let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
+
+    let request = UserOperationSignatureRequest::new(
+        &user_op,
+        cohort_id,
+        chain_id,
+        &aa_version,
+        &context.unchecked_into::<OptionContext>(),
+    )
+    .unwrap();
+
+    // mimic serialization/deserialization over the wire
+    let serialized_request = request.to_bytes();
+    let deserialized_request =
+        UserOperationSignatureRequest::from_bytes(&serialized_request).unwrap();
+    assert_eq!(&request.user_op(), &deserialized_request.user_op());
+    assert_eq!(request.cohort_id(), deserialized_request.cohort_id());
+    assert_eq!(request.chain_id(), deserialized_request.chain_id());
+    assert_eq!(request.aa_version(), deserialized_request.aa_version());
+}
