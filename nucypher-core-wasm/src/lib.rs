@@ -11,7 +11,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::fmt;
+use core::{fmt, str::FromStr};
 
 use ferveo::bindings_wasm::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant, JsResult, SharedSecret,
@@ -200,9 +200,6 @@ extern "C" {
 
     #[wasm_bindgen(typescript_type = "[Ciphertext, AuthenticatedData]")]
     pub type DkgEncryptionResult;
-
-    #[wasm_bindgen(typescript_type = "Address | null")]
-    pub type OptionAddress;
 }
 
 //
@@ -1542,60 +1539,44 @@ impl UserOperation {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
-        sender: &Address,
+        sender: &str,
         nonce: u64,
-        factory: &OptionAddress,
-        factory_data: &[u8],
         call_data: &[u8],
         call_gas_limit: u128,
         verification_gas_limit: u128,
         pre_verification_gas: u128,
         max_fee_per_gas: u128,
         max_priority_fee_per_gas: u128,
-        paymaster: &OptionAddress,
-        paymaster_verification_gas_limit: u128,
-        paymaster_post_op_gas_limit: u128,
-        paymaster_data: &[u8],
     ) -> Result<Self, Error> {
-        let typed_factory = try_from_js_option::<Address>(factory)?;
-        let typed_paymaster = try_from_js_option::<Address>(paymaster)?;
+        let sender_address = nucypher_core::Address::from_str(sender)
+            .map_err(|_err| Error::new("Invalid sender address"))?;
 
         Ok(Self(nucypher_core::UserOperation::new(
-            sender.0,
+            sender_address,
             nonce,
-            typed_factory.as_ref().map(|f| f.0),
-            Some(factory_data),
-            Some(call_data),
-            Some(call_gas_limit),
-            Some(verification_gas_limit),
-            Some(pre_verification_gas),
-            Some(max_fee_per_gas),
-            Some(max_priority_fee_per_gas),
-            typed_paymaster.as_ref().map(|p| p.0),
-            Some(paymaster_verification_gas_limit),
-            Some(paymaster_post_op_gas_limit),
-            Some(paymaster_data),
+            call_data,
+            call_gas_limit,
+            verification_gas_limit,
+            pre_verification_gas,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
         )))
     }
 
     #[wasm_bindgen(getter)]
-    pub fn sender(&self) -> Address {
-        Address(self.0.sender)
+    pub fn sender(&self) -> String {
+        self.0.sender.to_checksum_address()
     }
 
     #[wasm_bindgen(getter)]
     pub fn nonce(&self) -> u64 {
         self.0.nonce
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn factory(&self) -> Option<Address> {
-        self.0.factory.map(Address)
-    }
-
-    #[wasm_bindgen(getter, js_name = factoryData)]
-    pub fn factory_data(&self) -> Box<[u8]> {
-        self.0.factory_data.clone()
     }
 
     #[wasm_bindgen(getter, js_name = callData)]
@@ -1629,8 +1610,21 @@ impl UserOperation {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn paymaster(&self) -> Option<Address> {
-        self.0.paymaster.map(Address)
+    pub fn factory(&self) -> Option<String> {
+        self.0
+            .factory
+            .as_ref()
+            .map(|address| address.to_checksum_address())
+    }
+
+    #[wasm_bindgen(getter, js_name = factoryData)]
+    pub fn factory_data(&self) -> Box<[u8]> {
+        self.0.factory_data.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn paymaster(&self) -> Option<String> {
+        self.0.paymaster.map(|p| p.to_checksum_address())
     }
 
     #[wasm_bindgen(getter, js_name = paymasterVerificationGasLimit)]
@@ -1646,6 +1640,28 @@ impl UserOperation {
     #[wasm_bindgen(getter, js_name = paymasterData)]
     pub fn paymaster_data(&self) -> Box<[u8]> {
         self.0.paymaster_data.clone()
+    }
+
+    #[wasm_bindgen(js_name = setFactoryData)]
+    pub fn set_factory_data(&mut self, factory: &str, data: &[u8]) {
+        let address = nucypher_core::Address::from_str(factory).unwrap();
+        self.0.factory = Some(address);
+        self.0.factory_data = data.to_vec().into_boxed_slice();
+    }
+
+    #[wasm_bindgen(js_name = setPaymasterData)]
+    pub fn set_paymaster_data(
+        &mut self,
+        paymaster: &str,
+        verification_gas_limit: u128,
+        post_op_gas_limit: u128,
+        data: &[u8],
+    ) {
+        let address = nucypher_core::Address::from_str(paymaster).unwrap();
+        self.0.paymaster = Some(address);
+        self.0.paymaster_verification_gas_limit = verification_gas_limit;
+        self.0.paymaster_post_op_gas_limit = post_op_gas_limit;
+        self.0.paymaster_data = data.to_vec().into_boxed_slice();
     }
 }
 
@@ -1663,7 +1679,7 @@ impl PackedUserOperation {
     #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen(constructor)]
     pub fn new(
-        sender: &Address,
+        sender: &str,
         nonce: u64,
         init_code: &[u8],
         call_data: &[u8],
@@ -1671,9 +1687,11 @@ impl PackedUserOperation {
         pre_verification_gas: u128,
         gas_fees: &[u8],
         paymaster_data: &[u8],
-    ) -> Self {
-        Self(nucypher_core::PackedUserOperation::new(
-            sender.0,
+    ) -> Result<Self, Error> {
+        let sender_address = nucypher_core::Address::from_str(sender)
+            .map_err(|_err| Error::new("Invalid sender address"))?;
+        Ok(Self(nucypher_core::PackedUserOperation::new(
+            sender_address,
             nonce,
             init_code,
             call_data,
@@ -1681,12 +1699,12 @@ impl PackedUserOperation {
             pre_verification_gas,
             gas_fees,
             paymaster_data,
-        ))
+        )))
     }
 
     #[wasm_bindgen(getter)]
-    pub fn sender(&self) -> Address {
-        Address(self.0.sender)
+    pub fn sender(&self) -> String {
+        self.0.sender.to_checksum_address()
     }
 
     #[wasm_bindgen(getter)]
