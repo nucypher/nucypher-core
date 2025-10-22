@@ -1578,19 +1578,19 @@ pub struct UserOperation {
 #[pymethods]
 impl UserOperation {
     #[new]
-    #[pyo3(signature = (sender, nonce, factory=None, factory_data=None, call_data=None, call_gas_limit=None, verification_gas_limit=None, pre_verification_gas=None, max_fee_per_gas=None, max_priority_fee_per_gas=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
+    #[pyo3(signature = (sender, nonce, call_data, call_gas_limit, verification_gas_limit, pre_verification_gas, max_fee_per_gas, max_priority_fee_per_gas, factory=None, factory_data=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
         nonce: u64,
+        call_data: &[u8],
+        call_gas_limit: u128,
+        verification_gas_limit: u128,
+        pre_verification_gas: u128,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
         factory: Option<String>,
         factory_data: Option<&[u8]>,
-        call_data: Option<&[u8]>,
-        call_gas_limit: Option<u128>,
-        verification_gas_limit: Option<u128>,
-        pre_verification_gas: Option<u128>,
-        max_fee_per_gas: Option<u128>,
-        max_priority_fee_per_gas: Option<u128>,
         paymaster: Option<String>,
         paymaster_verification_gas_limit: Option<u128>,
         paymaster_post_op_gas_limit: Option<u128>,
@@ -1614,14 +1614,14 @@ impl UserOperation {
             backend: SignatureRequestUserOperation::new(
                 sender_address,
                 nonce,
-                factory_address,
-                factory_data,
                 call_data,
                 call_gas_limit,
                 verification_gas_limit,
                 pre_verification_gas,
                 max_fee_per_gas,
                 max_priority_fee_per_gas,
+                factory_address,
+                factory_data,
                 paymaster_address,
                 paymaster_verification_gas_limit,
                 paymaster_post_op_gas_limit,

@@ -686,18 +686,18 @@ class UserOperation:
         self,
         sender: str,
         nonce: int,
+        call_data: bytes,
+        call_gas_limit: int,
+        verification_gas_limit: int,
+        pre_verification_gas: int,
+        max_fee_per_gas: int,
+        max_priority_fee_per_gas: int,
         factory: Optional[str] = None,
-        factory_data: bytes = b"",
-        call_data: bytes = b"",
-        call_gas_limit: int = 0,
-        verification_gas_limit: int = 0,
-        pre_verification_gas: int = 0,
-        max_fee_per_gas: int = 0,
-        max_priority_fee_per_gas: int = 0,
+        factory_data: Optional[bytes] = None,
         paymaster: Optional[str] = None,
-        paymaster_verification_gas_limit: int = 0,
-        paymaster_post_op_gas_limit: int = 0,
-        paymaster_data: bytes = b"",
+        paymaster_verification_gas_limit: Optional[int] = None,
+        paymaster_post_op_gas_limit: Optional[int] = None,
+        paymaster_data: Optional[bytes] = None,
     ) -> None:
         """Create a new UserOperation with u128 gas limits."""
         ...
@@ -712,16 +712,6 @@ class UserOperation:
         """Nonce for replay protection."""
         ...
 
-    @property
-    def factory(self) -> Optional[str]:
-        """Address of factory contract for account creation (optional)."""
-        ...
-
-    @property
-    def factory_data(self) -> bytes:
-        """Data for factory contract account creation (optional)."""
-        ...
-    
     @property
     def call_data(self) -> bytes:
         """The calldata to execute."""
@@ -751,6 +741,16 @@ class UserOperation:
     def max_priority_fee_per_gas(self) -> int:
         """Maximum priority fee per gas unit (u128 value)."""
         ...
+
+    @property
+    def factory(self) -> Optional[str]:
+        """Address of factory contract for account creation (optional)."""
+        ...
+
+    @property
+    def factory_data(self) -> Optional[bytes]:
+        """Data for factory contract account creation (optional)."""
+        ...
     
     @property
     def paymaster(self) -> Optional[str]:
@@ -758,17 +758,17 @@ class UserOperation:
         ...
     
     @property
-    def paymaster_verification_gas_limit(self) -> int:
+    def paymaster_verification_gas_limit(self) -> Optional[int]:
         """Gas limit for paymaster verification (u128 value)."""
         ...
     
     @property
-    def paymaster_post_op_gas_limit(self) -> int:
+    def paymaster_post_op_gas_limit(self) -> Optional[int]:
         """Gas limit for paymaster post-operation (u128 value)."""
         ...
     
     @property
-    def paymaster_data(self) -> bytes:
+    def paymaster_data(self) -> Optional[bytes]:
         """Paymaster-specific data."""
         ...
     
