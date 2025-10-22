@@ -6,6 +6,7 @@
 extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
+use core::str::FromStr;
 use ferveo::bindings_python::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
     SharedSecret,
@@ -77,26 +78,6 @@ where
         let arg2: PyObject = PyBytes::new(py, serialized).into();
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
     })
-}
-
-// Helper functions for Address conversion
-fn address_to_string(addr: &rust_nucypher_core::Address) -> String {
-    addr.to_checksum_address()
-}
-
-fn string_to_address(hex_str: &str) -> PyResult<rust_nucypher_core::Address> {
-    let hex_str = hex_str.strip_prefix("0x").unwrap_or(hex_str);
-    let bytes = hex::decode(hex_str)
-        .map_err(|e| PyValueError::new_err(format!("Invalid hex address: {}", e)))?;
-    if bytes.len() != 20 {
-        return Err(PyValueError::new_err(format!(
-            "Invalid address length: expected 20 bytes, got {}",
-            bytes.len()
-        )));
-    }
-    let mut array = [0u8; 20];
-    array.copy_from_slice(&bytes);
-    Ok(rust_nucypher_core::Address::new(&array))
 }
 
 #[pyclass(module = "nucypher_core")]
@@ -1616,12 +1597,18 @@ impl UserOperation {
         paymaster_data: Option<&[u8]>,
     ) -> PyResult<Self> {
         // Convert hex string to Address
-        let sender_address = string_to_address(&sender)?;
+        let sender_address = nucypher_core::Address::from_str(&sender)
+            .map_err(|e| PyValueError::new_err(format!("Invalid sender address: {}", e)))?;
         let paymaster_address = paymaster
             .as_ref()
-            .map(|p| string_to_address(p))
-            .transpose()?;
-        let factory_address = factory.as_ref().map(|f| string_to_address(f)).transpose()?;
+            .map(|p| nucypher_core::Address::from_str(p))
+            .transpose()
+            .map_err(|e| PyValueError::new_err(format!("Invalid paymaster address: {}", e)))?;
+        let factory_address = factory
+            .as_ref()
+            .map(|f| nucypher_core::Address::from_str(f))
+            .transpose()
+            .map_err(|e| PyValueError::new_err(format!("Invalid factory address: {}", e)))?;
 
         Ok(Self {
             backend: SignatureRequestUserOperation::new(
@@ -1645,22 +1632,12 @@ impl UserOperation {
 
     #[getter]
     pub fn sender(&self) -> String {
-        address_to_string(&self.backend.sender)
+        self.backend.sender.to_checksum_address()
     }
 
     #[getter]
     pub fn nonce(&self) -> u64 {
         self.backend.nonce
-    }
-
-    #[getter]
-    pub fn factory(&self) -> Option<String> {
-        self.backend.factory.as_ref().map(address_to_string)
-    }
-
-    #[getter]
-    pub fn factory_data(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.factory_data).into()
     }
 
     #[getter]
@@ -1694,8 +1671,18 @@ impl UserOperation {
     }
 
     #[getter]
+    pub fn factory(&self) -> Option<String> {
+        self.backend.factory.map(|f| f.to_checksum_address())
+    }
+
+    #[getter]
+    pub fn factory_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.factory_data).into()
+    }
+
+    #[getter]
     pub fn paymaster(&self) -> Option<String> {
-        self.backend.paymaster.as_ref().map(address_to_string)
+        self.backend.paymaster.map(|p| p.to_checksum_address())
     }
 
     #[getter]
@@ -1824,7 +1811,8 @@ impl PackedUserOperation {
         paymaster_and_data: &[u8],
     ) -> PyResult<Self> {
         // Convert hex string to Address
-        let sender_address = string_to_address(&sender)?;
+        let sender_address = nucypher_core::Address::from_str(&sender)
+            .map_err(|e| PyValueError::new_err(format!("Invalid sender address: {}", e)))?;
 
         Ok(Self {
             backend: SignatureRequestPackedUserOperation::new(
@@ -1889,7 +1877,9 @@ impl PackedUserOperation {
         match paymaster {
             None => Ok(PyBytes::new(py, &[]).into()),
             Some(addr_str) => {
-                let addr = string_to_address(&addr_str)?;
+                let addr = nucypher_core::Address::from_str(&addr_str).map_err(|e| {
+                    PyValueError::new_err(format!("Invalid paymaster address: {}", e))
+                })?;
                 let mut result = Vec::with_capacity(20 + 16 + 16 + paymaster_data.len());
                 result.extend_from_slice(addr.as_ref());
 
@@ -1907,7 +1897,7 @@ impl PackedUserOperation {
 
     #[getter]
     pub fn sender(&self) -> String {
-        address_to_string(&self.backend.sender)
+        self.backend.sender.to_checksum_address()
     }
 
     #[getter]

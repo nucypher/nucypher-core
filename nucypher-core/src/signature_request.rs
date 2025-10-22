@@ -896,21 +896,14 @@ pub fn deserialize_signature_request(bytes: &[u8]) -> Result<DirectSignatureRequ
 mod tests {
     use super::*;
     use alloc::string::ToString;
-    use hex;
-
-    // Helper function to create an Address from a hex string
-    fn address_from_hex(hex_str: &str) -> Address {
-        let bytes = hex::decode(hex_str).unwrap();
-        let mut array = [0u8; 20];
-        array.copy_from_slice(&bytes);
-        Address::new(&array)
-    }
 
     #[test]
     fn test_user_operation_signature_request_serialization() {
-        let sender = address_from_hex("1234567890123456789012345678901234567890");
-        let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let paymaster =
+            Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
+        let factory =
+            Some(Address::from_str("0x12345678901234567890abcdefabcdefabcdefab").unwrap());
 
         let user_op = UserOperation::new(
             sender,
@@ -967,7 +960,7 @@ mod tests {
     #[test]
     fn test_aa_version_serialization() {
         // Test V08
-        let sender = address_from_hex("789abcdef0123456789abcdef0123456789abcde");
+        let sender = Address::from_str("0x789abcdef0123456789abcdef0123456789abcde").unwrap();
         let user_op = UserOperation::new(
             sender,
             1,
@@ -997,7 +990,7 @@ mod tests {
         assert_eq!(deserialized_v08.aa_version, AAVersion::V08);
 
         // Test MDT
-        let sender_mdt = address_from_hex("abcdef0123456789abcdef0123456789abcdef01");
+        let sender_mdt = Address::from_str("0xabcdef0123456789abcdef0123456789abcdef01").unwrap();
         let user_op_mdt = UserOperation::new(
             sender_mdt,
             2,
@@ -1033,9 +1026,11 @@ mod tests {
 
     #[test]
     fn test_packed_user_operation_conversion() {
-        let sender = address_from_hex("1234567890123456789012345678901234567890");
-        let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let paymaster =
+            Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
+        let factory =
+            Some(Address::from_str("0x12345678901234567890abcdefabcdefabcdefab").unwrap());
 
         let user_op = UserOperation::new(
             sender,
@@ -1077,9 +1072,11 @@ mod tests {
 
     #[test]
     fn test_signed_packed_user_operation() {
-        let sender = address_from_hex("1234567890123456789012345678901234567890");
-        let paymaster = Some(address_from_hex("abcdefabcdefabcdefabcdefabcdefabcdefabcd"));
-        let factory = Some(address_from_hex("12345678901234567890abcdefabcdefabcdefab"));
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let paymaster =
+            Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
+        let factory =
+            Some(Address::from_str("0x12345678901234567890abcdefabcdefabcdefab").unwrap());
 
         let user_op = UserOperation::new(
             sender,

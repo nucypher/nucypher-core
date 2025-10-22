@@ -1,4 +1,6 @@
+use alloc::format;
 use alloc::string::String;
+use core::str::FromStr;
 
 use ethers::{types::Address as Addr, utils::to_checksum};
 use generic_array::{
@@ -42,6 +44,25 @@ impl Address {
     /// Returns the EIP-55 checksummed representation of the address.
     pub fn to_checksum_address(&self) -> String {
         to_checksum(&Addr::from(self.0), None)
+    }
+}
+
+impl FromStr for Address {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.strip_prefix("0x").unwrap_or(s);
+        let bytes = hex::decode(s).map_err(|e| format!("Invalid hex string: {}", e))?;
+        if bytes.len() != Self::SIZE {
+            return Err(format!(
+                "Invalid address length: expected {} bytes, got {} bytes",
+                Self::SIZE,
+                bytes.len()
+            ));
+        }
+        let mut array = [0u8; Self::SIZE];
+        array.copy_from_slice(&bytes);
+        Ok(Self(array))
     }
 }
 
