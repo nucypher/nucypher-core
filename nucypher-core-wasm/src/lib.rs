@@ -1769,7 +1769,7 @@ impl UserOperationSignatureRequest {
         aa_version: &str,
         context: &OptionContext,
     ) -> Result<Self, Error> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version).map_err(map_js_err)?;
         let typed_context = try_from_js_option::<Context>(context)?;
         Ok(Self(nucypher_core::UserOperationSignatureRequest::new(
             user_op.0.clone(),
@@ -1824,7 +1824,7 @@ impl PackedUserOperationSignatureRequest {
         aa_version: &str,
         context: &OptionContext,
     ) -> Result<Self, Error> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version).map_err(map_js_err)?;
         let typed_context = try_from_js_option::<Context>(context)?;
         Ok(Self(
             nucypher_core::PackedUserOperationSignatureRequest::new(

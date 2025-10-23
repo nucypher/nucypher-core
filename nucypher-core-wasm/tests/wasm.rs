@@ -981,7 +981,7 @@ fn user_operation_signature_request() {
     let aa_version: &str = "0.8.0";
     let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
 
-    let request = UserOperationSignatureRequest::new(
+    let v8_request = UserOperationSignatureRequest::new(
         &user_op,
         cohort_id,
         chain_id,
@@ -991,11 +991,49 @@ fn user_operation_signature_request() {
     .unwrap();
 
     // mimic serialization/deserialization over the wire
-    let serialized_request = request.to_bytes();
+    let serialized_request = v8_request.to_bytes();
     let deserialized_request =
         UserOperationSignatureRequest::from_bytes(&serialized_request).unwrap();
-    assert_eq!(&request.user_op(), &deserialized_request.user_op());
-    assert_eq!(request.cohort_id(), deserialized_request.cohort_id());
-    assert_eq!(request.chain_id(), deserialized_request.chain_id());
-    assert_eq!(request.aa_version(), deserialized_request.aa_version());
+    assert_eq!(&v8_request.user_op(), &deserialized_request.user_op());
+    assert_eq!(v8_request.cohort_id(), deserialized_request.cohort_id());
+    assert_eq!(v8_request.chain_id(), deserialized_request.chain_id());
+    assert_eq!(v8_request.aa_version(), deserialized_request.aa_version());
+
+    // mdt version
+    let mdt_context: JsValue = Some(Context::new("{}")).into();
+    let vmdt_request = UserOperationSignatureRequest::new(
+        &user_op,
+        cohort_id,
+        chain_id,
+        "mdt",
+        &mdt_context.unchecked_into::<OptionContext>(),
+    )
+    .unwrap();
+
+    // mimic serialization/deserialization over the wire
+    let mdt_serialized_request = vmdt_request.to_bytes();
+    let mdt_deserialized_request =
+        UserOperationSignatureRequest::from_bytes(&mdt_serialized_request).unwrap();
+    assert_eq!(&vmdt_request.user_op(), &mdt_deserialized_request.user_op());
+    assert_eq!(
+        vmdt_request.cohort_id(),
+        mdt_deserialized_request.cohort_id()
+    );
+    assert_eq!(vmdt_request.chain_id(), mdt_deserialized_request.chain_id());
+    assert_eq!(
+        vmdt_request.aa_version(),
+        mdt_deserialized_request.aa_version()
+    );
+
+    // invalid AA version
+    let aa_context: JsValue = Some(Context::new("{}")).into();
+    let result = UserOperationSignatureRequest::new(
+        &user_op,
+        cohort_id,
+        chain_id,
+        "invalid_version",
+        &aa_context.unchecked_into::<OptionContext>(),
+    );
+    let err = result.unwrap_err();
+    assert_eq!(err.message(), "Invalid AA version: invalid_version");
 }
