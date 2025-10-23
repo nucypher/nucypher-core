@@ -2146,7 +2146,6 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<AccessControlPolicy>()?;
     core_module.add_class::<ThresholdMessageKit>()?;
     core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
-
     // Add signature request/response classes
     core_module.add_class::<UserOperation>()?;
     core_module.add_class::<UserOperationSignatureRequest>()?;
