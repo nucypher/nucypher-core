@@ -1643,10 +1643,11 @@ impl UserOperation {
     }
 
     #[wasm_bindgen(js_name = setFactoryData)]
-    pub fn set_factory_data(&mut self, factory: &str, data: &[u8]) {
-        let address = nucypher_core::Address::from_str(factory).unwrap();
+    pub fn set_factory_data(&mut self, factory: &str, data: &[u8]) -> Result<(), Error> {
+        let address = nucypher_core::Address::from_str(factory).map_err(map_js_err)?;
         self.0.factory = Some(address);
         self.0.factory_data = data.to_vec().into_boxed_slice();
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setPaymasterData)]
@@ -1656,12 +1657,13 @@ impl UserOperation {
         verification_gas_limit: u128,
         post_op_gas_limit: u128,
         data: &[u8],
-    ) {
-        let address = nucypher_core::Address::from_str(paymaster).unwrap();
+    ) -> Result<(), Error> {
+        let address = nucypher_core::Address::from_str(paymaster).map_err(map_js_err)?;
         self.0.paymaster = Some(address);
         self.0.paymaster_verification_gas_limit = verification_gas_limit;
         self.0.paymaster_post_op_gas_limit = post_op_gas_limit;
         self.0.paymaster_data = data.to_vec().into_boxed_slice();
+        Ok(())
     }
 }
 
