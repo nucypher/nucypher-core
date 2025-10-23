@@ -927,10 +927,12 @@ fn user_operation() {
     // assert_eq!(user_op.paymaster_post_op_gas_limit().unwrap(), None);
     // assert_eq!(user_op.paymaster_data().unwrap(), None);
 
-    user_op.set_factory_data(
-        "0x000000000000000000000000000000000000000a",
-        b"factory_data",
-    );
+    user_op
+        .set_factory_data(
+            "0x000000000000000000000000000000000000000a",
+            b"factory_data",
+        )
+        .unwrap();
     assert_eq!(
         user_op.factory().unwrap(),
         "0x000000000000000000000000000000000000000A"
@@ -940,12 +942,14 @@ fn user_operation() {
         b"factory_data".to_vec().into_boxed_slice()
     );
 
-    user_op.set_paymaster_data(
-        "0x000000000000000000000000000000000000000c",
-        202122,
-        303132,
-        b"paymaster_data",
-    );
+    user_op
+        .set_paymaster_data(
+            "0x000000000000000000000000000000000000000c",
+            202122,
+            303132,
+            b"paymaster_data",
+        )
+        .unwrap();
     assert_eq!(
         user_op.paymaster().unwrap(),
         "0x000000000000000000000000000000000000000C"
