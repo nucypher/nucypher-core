@@ -669,16 +669,19 @@ class SessionSecretFactory:
 # Signature request/response types
 #
 
+@final
 class SignatureRequestType:
     USEROP: int = 0
     PACKED_USER_OP: int = 1 
 
 
+@final
 class AAVersion:
     V08: str = "0.8.0"
     MDT: str = "mdt"
 
 
+@final
 class UserOperation:
     """UserOperation for signature requests."""
     
@@ -782,6 +785,7 @@ class UserOperation:
         ...
 
 
+@final
 class UserOperationSignatureRequest:
 
     def __init__(
@@ -826,6 +830,7 @@ class UserOperationSignatureRequest:
         ...
 
 
+@final
 class PackedUserOperation:
     """Packed UserOperation for optimized format with u128 gas limits."""
     
@@ -941,6 +946,7 @@ class SignedPackedUserOperation:
         ...
 
 
+@final
 class PackedUserOperationSignatureRequest:
 
     def __init__(
@@ -985,6 +991,7 @@ class PackedUserOperationSignatureRequest:
         ...
 
 
+@final
 class SignatureResponse:
     """Response object containing signature hash, signature bytes, and type."""
     
