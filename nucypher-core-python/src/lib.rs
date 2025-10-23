@@ -1730,7 +1730,8 @@ impl UserOperationSignatureRequest {
         aa_version: &str,
         context: Option<&Context>,
     ) -> PyResult<Self> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(Self {
             backend: nucypher_core::UserOperationSignatureRequest::new(
                 user_op.backend.clone(),
@@ -1945,7 +1946,8 @@ impl PackedUserOperation {
     }
 
     pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let eip712_struct = self.backend.to_eip712_struct(&core_aa_version, chain_id);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
@@ -1953,7 +1955,8 @@ impl PackedUserOperation {
 
     #[pyo3(name = "_to_eip712_message")]
     pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let message = self.backend.to_eip712_message(&core_aa_version);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
@@ -1961,7 +1964,8 @@ impl PackedUserOperation {
 
     #[pyo3(name = "_get_domain")]
     pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let domain = self.backend.get_domain(&core_aa_version, chain_id);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
@@ -2012,7 +2016,8 @@ impl SignedPackedUserOperation {
     }
 
     pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let eip712_struct = self.backend.to_eip712_struct(&core_aa_version, chain_id);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
@@ -2020,7 +2025,8 @@ impl SignedPackedUserOperation {
 
     #[pyo3(name = "_to_eip712_message")]
     pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let message = self.backend.to_eip712_message(&core_aa_version);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
@@ -2028,7 +2034,8 @@ impl SignedPackedUserOperation {
 
     #[pyo3(name = "_get_domain")]
     pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let domain = self.backend.get_domain(&core_aa_version, chain_id);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
@@ -2064,7 +2071,8 @@ impl PackedUserOperationSignatureRequest {
         aa_version: &str,
         context: Option<&Context>,
     ) -> PyResult<Self> {
-        let core_aa_version = aa_version.parse().unwrap();
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(Self {
             backend: nucypher_core::PackedUserOperationSignatureRequest::new(
                 packed_user_op.backend.clone(),
