@@ -1836,66 +1836,6 @@ impl PackedUserOperation {
         }
     }
 
-    #[staticmethod]
-    #[pyo3(name = "_pack_account_gas_limits")]
-    pub fn pack_account_gas_limits(
-        py: Python,
-        call_gas_limit: u128,
-        verification_gas_limit: u128,
-    ) -> PyObject {
-        let mut result = [0u8; 32];
-        // Pack as: verification_gas_limit << 128 | call_gas_limit
-        // Each value is u128, so verification goes in upper 16 bytes, call in lower 16 bytes
-        result[0..16].copy_from_slice(&verification_gas_limit.to_be_bytes());
-        result[16..32].copy_from_slice(&call_gas_limit.to_be_bytes());
-        PyBytes::new(py, &result).into()
-    }
-
-    #[staticmethod]
-    #[pyo3(name = "_pack_gas_fees")]
-    pub fn pack_gas_fees(
-        py: Python,
-        max_fee_per_gas: u128,
-        max_priority_fee_per_gas: u128,
-    ) -> PyObject {
-        let mut result = [0u8; 32];
-        // Pack as: max_priority_fee_per_gas << 128 | max_fee_per_gas
-        // Each value is u128, so priority goes in upper 16 bytes, max_fee in lower 16 bytes
-        result[0..16].copy_from_slice(&max_priority_fee_per_gas.to_be_bytes());
-        result[16..32].copy_from_slice(&max_fee_per_gas.to_be_bytes());
-        PyBytes::new(py, &result).into()
-    }
-
-    #[staticmethod]
-    #[pyo3(name = "_pack_paymaster_and_data", signature = (paymaster, paymaster_verification_gas_limit, paymaster_post_op_gas_limit, paymaster_data))]
-    pub fn pack_paymaster_and_data(
-        py: Python,
-        paymaster: Option<String>,
-        paymaster_verification_gas_limit: u128,
-        paymaster_post_op_gas_limit: u128,
-        paymaster_data: &[u8],
-    ) -> PyResult<PyObject> {
-        match paymaster {
-            None => Ok(PyBytes::new(py, &[]).into()),
-            Some(addr_str) => {
-                let addr = nucypher_core::Address::from_str(&addr_str).map_err(|e| {
-                    PyValueError::new_err(format!("Invalid paymaster address: {}", e))
-                })?;
-                let mut result = Vec::with_capacity(20 + 16 + 16 + paymaster_data.len());
-                result.extend_from_slice(addr.as_ref());
-
-                // Verification gas limit as 16 bytes big-endian (full u128)
-                result.extend_from_slice(&paymaster_verification_gas_limit.to_be_bytes());
-
-                // Post-op gas limit as 16 bytes big-endian (full u128)
-                result.extend_from_slice(&paymaster_post_op_gas_limit.to_be_bytes());
-
-                result.extend_from_slice(paymaster_data);
-                Ok(PyBytes::new(py, &result).into())
-            }
-        }
-    }
-
     #[getter]
     pub fn sender(&self) -> String {
         self.backend.sender.to_checksum_address()
