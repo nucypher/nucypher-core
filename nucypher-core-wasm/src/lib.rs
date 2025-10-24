@@ -1548,8 +1548,7 @@ impl UserOperation {
         max_fee_per_gas: u128,
         max_priority_fee_per_gas: u128,
     ) -> Result<Self, Error> {
-        let sender_address = nucypher_core::Address::from_str(sender)
-            .map_err(|_err| Error::new("Invalid sender address"))?;
+        let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
 
         Ok(Self(nucypher_core::UserOperation::new(
             sender_address,
@@ -1690,8 +1689,7 @@ impl PackedUserOperation {
         gas_fees: &[u8],
         paymaster_data: &[u8],
     ) -> Result<Self, Error> {
-        let sender_address = nucypher_core::Address::from_str(sender)
-            .map_err(|_err| Error::new("Invalid sender address"))?;
+        let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
         Ok(Self(nucypher_core::PackedUserOperation::new(
             sender_address,
             nonce,
