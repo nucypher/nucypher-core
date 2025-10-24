@@ -32,7 +32,6 @@ from ._nucypher_core import (
     UserOperation,
     UserOperationSignatureRequest,
     PackedUserOperation,
-    SignedPackedUserOperation,
     PackedUserOperationSignatureRequest,
     SignatureResponse,
     deserialize_signature_request,

@@ -24,7 +24,6 @@ use umbral_pre::bindings_python::{
 use nucypher_core as rust_nucypher_core;
 use rust_nucypher_core::{
     PackedUserOperation as SignatureRequestPackedUserOperation, SignatureRequestType,
-    SignedPackedUserOperation as SignatureRequestSignedPackedUserOperation,
     UserOperation as SignatureRequestUserOperation,
 };
 
@@ -1913,85 +1912,6 @@ impl PackedUserOperation {
 }
 
 //
-// SignedPackedUserOperation
-//
-
-/// Python bindings for SignedPackedUserOperation
-#[pyclass(module = "nucypher_core")]
-#[derive(derive_more::From, derive_more::AsRef)]
-pub struct SignedPackedUserOperation {
-    backend: SignatureRequestSignedPackedUserOperation,
-}
-
-#[pymethods]
-impl SignedPackedUserOperation {
-    #[new]
-    pub fn new(operation: &PackedUserOperation, signature: &[u8]) -> Self {
-        Self {
-            backend: SignatureRequestSignedPackedUserOperation::new(
-                operation.backend.clone(),
-                signature,
-            ),
-        }
-    }
-
-    #[getter]
-    pub fn operation(&self) -> PackedUserOperation {
-        PackedUserOperation::from(self.backend.operation().clone())
-    }
-
-    #[getter]
-    pub fn signature(&self, py: Python) -> PyObject {
-        PyBytes::new(py, self.backend.signature()).into()
-    }
-
-    pub fn into_parts(&self) -> (PackedUserOperation, PyObject) {
-        let (operation, signature) = (self.backend.operation().clone(), self.backend.signature());
-        Python::with_gil(|py| {
-            (
-                PackedUserOperation::from(operation),
-                PyBytes::new(py, signature).into(),
-            )
-        })
-    }
-
-    pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        let eip712_struct = self.backend.to_eip712_struct(&core_aa_version, chain_id);
-
-        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
-    }
-
-    #[pyo3(name = "_to_eip712_message")]
-    pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
-        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        let message = self.backend.to_eip712_message(&core_aa_version);
-
-        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
-    }
-
-    #[pyo3(name = "_get_domain")]
-    pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
-        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
-            .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        let domain = self.backend.get_domain(&core_aa_version, chain_id);
-
-        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
-    }
-
-    fn __bytes__(&self) -> PyObject {
-        to_bytes(self)
-    }
-
-    #[staticmethod]
-    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
-        from_bytes::<_, SignatureRequestSignedPackedUserOperation>(data)
-    }
-}
-
-//
 // PackedUserOperationSignatureRequest
 //
 
@@ -2150,7 +2070,6 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<UserOperation>()?;
     core_module.add_class::<UserOperationSignatureRequest>()?;
     core_module.add_class::<PackedUserOperation>()?;
-    core_module.add_class::<SignedPackedUserOperation>()?;
     core_module.add_class::<PackedUserOperationSignatureRequest>()?;
     core_module.add_class::<SignatureResponse>()?;
     core_module.add_function(wrap_pyfunction!(

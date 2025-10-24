@@ -907,45 +907,6 @@ class PackedUserOperation:
         ...
 
 
-class SignedPackedUserOperation:
-    """Signed Packed UserOperation - combines a PackedUserOperation with a signature."""
-    
-    def __init__(
-        self,
-        operation: PackedUserOperation,
-        signature: bytes,
-    ) -> None:
-        """Create a new SignedPackedUserOperation."""
-        ...
-    
-    @property
-    def operation(self) -> PackedUserOperation:
-        """The packed user operation without signature."""
-        ...
-    
-    @property
-    def signature(self) -> bytes:
-        """The signature over the operation."""
-        ...
-    
-    def into_parts(self) -> Tuple[PackedUserOperation, bytes]:
-        """Returns the operation and signature as separate components."""
-        ...
-    
-    def to_eip712_struct(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
-        """Convert to EIP-712 struct format."""
-        ...
-    
-    def __bytes__(self) -> bytes:
-        """Serialize to bytes."""
-        ...
-    
-    @staticmethod
-    def from_bytes(data: bytes) -> 'SignedPackedUserOperation':
-        """Deserialize from bytes."""
-        ...
-
-
 @final
 class PackedUserOperationSignatureRequest:
 
