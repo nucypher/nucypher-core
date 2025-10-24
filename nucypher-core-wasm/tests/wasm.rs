@@ -1041,3 +1041,36 @@ fn user_operation_signature_request() {
     let err = result.unwrap_err();
     assert_eq!(err.message(), "Invalid AA version: invalid_version");
 }
+
+#[wasm_bindgen_test]
+fn signature_response() {
+    let signer = "0x000000000000000000000000000000000000000C";
+    let hash = b"hash_bytes".to_vec().into_boxed_slice();
+    let signature = b"signature_bytes".to_vec().into_boxed_slice();
+    let signature_type = nucypher_core::SignatureRequestType::UserOp.as_u8();
+    let response = SignatureResponse::new(&signer, &hash, &signature, signature_type).unwrap();
+
+    assert_eq!(response.signer(), signer);
+    assert_eq!(response.hash(), hash);
+    assert_eq!(response.signature(), signature);
+    assert_eq!(response.signature_type(), signature_type);
+
+    // mimic serialization/deserialization over the wire
+    let serialized_response = response.to_bytes();
+    let deserialized_response = SignatureResponse::from_bytes(&serialized_response).unwrap();
+    assert_eq!(response, deserialized_response);
+
+    // modify request type
+    let packed_response = SignatureResponse::new(
+        &signer,
+        &hash,
+        &signature,
+        nucypher_core::SignatureRequestType::PackedUserOp.as_u8(),
+    )
+    .unwrap();
+    assert_ne!(response, packed_response);
+    let serialized_packed_response = packed_response.to_bytes();
+    let deserialized_packed_response =
+        SignatureResponse::from_bytes(&serialized_packed_response).unwrap();
+    assert_eq!(packed_response, deserialized_packed_response);
+}

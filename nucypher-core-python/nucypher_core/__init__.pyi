@@ -955,9 +955,14 @@ class PackedUserOperationSignatureRequest:
 @final
 class SignatureResponse:
     """Response object containing signature hash, signature bytes, and type."""
-    
-    def __init__(self, hash: bytes, signature: bytes, signature_type: int) -> None:
+
+    def __init__(self, signer: str, hash: bytes, signature: bytes, signature_type: int) -> None:
         """Create a new SignatureResponse."""
+        ...
+
+    @property
+    def signer(self) -> str:
+        """Address of signer."""
         ...
     
     @property

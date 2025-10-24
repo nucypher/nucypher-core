@@ -2000,12 +2000,29 @@ pub struct SignatureResponse {
 #[pymethods]
 impl SignatureResponse {
     #[new]
-    pub fn new(hash: &[u8], signature: &[u8], signature_type: u8) -> PyResult<Self> {
+    pub fn new(
+        signer: String,
+        hash: &[u8],
+        signature: &[u8],
+        signature_type: u8,
+    ) -> PyResult<Self> {
+        let core_signer = nucypher_core::Address::from_str(&signer)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
         let core_signature_type = SignatureRequestType::from_u8(signature_type)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
         Ok(Self {
-            backend: nucypher_core::SignatureResponse::new(hash, signature, core_signature_type),
+            backend: nucypher_core::SignatureResponse::new(
+                core_signer,
+                hash,
+                signature,
+                core_signature_type,
+            ),
         })
+    }
+
+    #[getter]
+    fn signer(&self) -> String {
+        self.backend.signer.to_checksum_address()
     }
 
     #[getter]

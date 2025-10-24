@@ -1874,14 +1874,26 @@ generate_equals!(SignatureResponse);
 #[wasm_bindgen]
 impl SignatureResponse {
     #[wasm_bindgen(constructor)]
-    pub fn new(hash: &[u8], signature: &[u8], signature_type: u8) -> Result<Self, Error> {
+    pub fn new(
+        signer: &str,
+        hash: &[u8],
+        signature: &[u8],
+        signature_type: u8,
+    ) -> Result<Self, Error> {
+        let core_signer = nucypher_core::Address::from_str(signer).map_err(map_js_err)?;
         let core_signature_type =
             nucypher_core::SignatureRequestType::from_u8(signature_type).map_err(map_js_err)?;
         Ok(Self(nucypher_core::SignatureResponse::new(
+            core_signer,
             hash,
             signature,
             core_signature_type,
         )))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn signer(&self) -> String {
+        self.0.signer.to_checksum_address()
     }
 
     #[wasm_bindgen(getter)]
