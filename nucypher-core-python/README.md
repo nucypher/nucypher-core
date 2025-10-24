@@ -13,7 +13,7 @@ You will need to have `setuptools-rust` installed. Then, for development you can
 
 Update `nucypher-core-python/stubtest-allowlist.txt` with:
 ```bash
-cd umbral-pre-python
+cd nucypher-core-python
 python -m mypy.stubtest nucypher_core --generate-allowlist > stubtest-allowlist.txt
 ```
 
