@@ -540,64 +540,6 @@ impl PackedUserOperation {
     }
 }
 
-/// Signed Packed UserOperation - combines a PackedUserOperation with a signature
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SignedPackedUserOperation {
-    /// The packed user operation without signature
-    pub operation: PackedUserOperation,
-    /// The signature over the operation
-    #[serde(with = "serde_bytes::as_base64")]
-    pub signature: Box<[u8]>,
-}
-
-impl SignedPackedUserOperation {
-    /// Creates a new SignedPackedUserOperation
-    pub fn new(operation: PackedUserOperation, signature: &[u8]) -> Self {
-        Self {
-            operation,
-            signature: signature.to_vec().into_boxed_slice(),
-        }
-    }
-
-    /// Gets a reference to the operation part
-    pub fn operation(&self) -> &PackedUserOperation {
-        &self.operation
-    }
-
-    /// Gets a reference to the signature
-    pub fn signature(&self) -> &[u8] {
-        &self.signature
-    }
-
-    /// Returns the operation and signature as separate components
-    pub fn into_parts(self) -> (PackedUserOperation, Box<[u8]>) {
-        (self.operation, self.signature)
-    }
-
-    /// Converts to EIP-712 message format (delegates to operation)
-    pub fn to_eip712_message(&self, aa_version: &AAVersion) -> serde_json::Map<String, JsonValue> {
-        self.operation.to_eip712_message(aa_version)
-    }
-
-    /// Gets the EIP-712 domain (delegates to operation)
-    pub fn get_domain(
-        &self,
-        aa_version: &AAVersion,
-        chain_id: u64,
-    ) -> serde_json::Map<String, JsonValue> {
-        self.operation.get_domain(aa_version, chain_id)
-    }
-
-    /// Converts to EIP-712 struct format (delegates to operation)
-    pub fn to_eip712_struct(
-        &self,
-        aa_version: &AAVersion,
-        chain_id: u64,
-    ) -> serde_json::Map<String, JsonValue> {
-        self.operation.to_eip712_struct(aa_version, chain_id)
-    }
-}
-
 /// Packed UserOperation signature request
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PackedUserOperationSignatureRequest {
@@ -798,30 +740,6 @@ impl<'a> ProtocolObjectInner<'a> for PackedUserOperation {
 }
 
 impl<'a> ProtocolObject<'a> for PackedUserOperation {}
-
-impl<'a> ProtocolObjectInner<'a> for SignedPackedUserOperation {
-    fn brand() -> [u8; 4] {
-        *b"SPUO"
-    }
-
-    fn version() -> (u16, u16) {
-        (1, 0)
-    }
-
-    fn unversioned_to_bytes(&self) -> Box<[u8]> {
-        messagepack_serialize(&self)
-    }
-
-    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
-        if minor_version == 0 {
-            Some(messagepack_deserialize(bytes))
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a> ProtocolObject<'a> for SignedPackedUserOperation {}
 
 /// Enum to hold any type of signature request for direct returns
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1073,59 +991,5 @@ mod tests {
             packed.paymaster_and_data.len(),
             20 + 16 + 16 + b"paymaster_specific_data".len()
         );
-    }
-
-    #[test]
-    fn test_signed_packed_user_operation() {
-        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
-        let paymaster =
-            Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
-        let factory =
-            Some(Address::from_str("0x12345678901234567890abcdefabcdefabcdefab").unwrap());
-
-        let user_op = UserOperation::new(
-            sender,
-            123,
-            b"call_data_test",
-            200000,
-            300000,
-            70000,
-            25_000_000_000,
-            1_500_000_000,
-            factory,
-            Some(b"factory_data"),
-            paymaster,
-            Some(500000),
-            Some(250000),
-            Some(b"paymaster_test_data"),
-        );
-
-        let packed = PackedUserOperation::from_user_operation(&user_op);
-        let test_signature = b"test_signature";
-
-        // Test creating SignedPackedUserOperation
-        let signed_packed = SignedPackedUserOperation::new(packed.clone(), test_signature);
-
-        assert_eq!(signed_packed.signature(), test_signature);
-        assert_eq!(signed_packed.operation().sender, sender);
-        assert_eq!(signed_packed.operation().nonce, 123);
-
-        // Test into_parts method
-        let (reconstructed_operation, reconstructed_signature) = signed_packed.clone().into_parts();
-        assert_eq!(reconstructed_signature.as_ref(), test_signature);
-        assert_eq!(reconstructed_operation.sender, sender);
-        assert_eq!(reconstructed_operation.nonce, 123);
-
-        // Test serialization
-        let bytes = signed_packed.to_bytes();
-        let deserialized = SignedPackedUserOperation::from_bytes(&bytes).unwrap();
-        assert_eq!(signed_packed, deserialized);
-        assert_eq!(deserialized.signature(), test_signature);
-        assert_eq!(deserialized.operation().sender, sender);
-
-        // Test EIP-712 methods delegate correctly
-        let eip712_message = signed_packed.to_eip712_message(&AAVersion::V08);
-        let operation_message = signed_packed.operation().to_eip712_message(&AAVersion::V08);
-        assert_eq!(eip712_message, operation_message);
     }
 }

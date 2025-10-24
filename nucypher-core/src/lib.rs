@@ -51,7 +51,7 @@ pub use revocation_order::RevocationOrder;
 pub use signature_request::{
     deserialize_signature_request, AAVersion, BaseSignatureRequest, DirectSignatureRequest,
     PackedUserOperation, PackedUserOperationSignatureRequest, SignatureRequestType,
-    SignatureResponse, SignedPackedUserOperation, UserOperation, UserOperationSignatureRequest,
+    SignatureResponse, UserOperation, UserOperationSignatureRequest,
 };
 pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
