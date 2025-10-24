@@ -598,6 +598,8 @@ impl BaseSignatureRequest for PackedUserOperationSignatureRequest {
 /// Signature response
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SignatureResponse {
+    /// Signer
+    pub signer: Address,
     /// Message hash
     #[serde(rename = "message_hash", with = "serde_bytes::as_base64")]
     pub hash: Box<[u8]>,
@@ -610,8 +612,14 @@ pub struct SignatureResponse {
 
 impl SignatureResponse {
     /// Creates a new signature response
-    pub fn new(hash: &[u8], signature: &[u8], signature_type: SignatureRequestType) -> Self {
+    pub fn new(
+        signer: Address,
+        hash: &[u8],
+        signature: &[u8],
+        signature_type: SignatureRequestType,
+    ) -> Self {
         Self {
+            signer,
             hash: hash.to_vec().into_boxed_slice(),
             signature: signature.to_vec().into_boxed_slice(),
             signature_type,
@@ -866,14 +874,17 @@ mod tests {
 
     #[test]
     fn test_signature_response_serialization() {
+        let signer = Address::from_str("0x789abcdef0123456789abcdef0123456789abcde").unwrap();
         let hash = b"test_hash";
         let signature = b"test_signature";
-        let response = SignatureResponse::new(hash, signature, SignatureRequestType::UserOp);
+        let response =
+            SignatureResponse::new(signer, hash, signature, SignatureRequestType::UserOp);
 
         let bytes = response.to_bytes();
         let deserialized = SignatureResponse::from_bytes(&bytes).unwrap();
 
         assert_eq!(response, deserialized);
+        assert_eq!(deserialized.signer, signer);
         assert_eq!(deserialized.hash.as_ref(), hash);
         assert_eq!(deserialized.signature.as_ref(), signature);
         assert_eq!(deserialized.signature_type, SignatureRequestType::UserOp);
