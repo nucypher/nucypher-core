@@ -993,6 +993,10 @@ fn user_operation_signature_request() {
         &context.unchecked_into::<OptionContext>(),
     )
     .unwrap();
+    assert_eq!(&v8_request.user_op(), &user_op);
+    assert_eq!(v8_request.cohort_id(), cohort_id);
+    assert_eq!(v8_request.chain_id(), chain_id);
+    assert_eq!(v8_request.aa_version(), aa_version);
 
     // mimic serialization/deserialization over the wire
     let serialized_request = v8_request.to_bytes();
@@ -1033,6 +1037,140 @@ fn user_operation_signature_request() {
     let aa_context: JsValue = Some(Context::new("{}")).into();
     let result = UserOperationSignatureRequest::new(
         &user_op,
+        cohort_id,
+        chain_id,
+        "invalid_version",
+        &aa_context.unchecked_into::<OptionContext>(),
+    );
+    let err = result.unwrap_err();
+    assert_eq!(err.message(), "Invalid AA version: invalid_version");
+}
+
+#[wasm_bindgen_test]
+fn packed_user_operation() {
+    let packed_user_op = PackedUserOperation::new(
+        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", // sender
+        123,                                          // nonce
+        b"initCode",                                  // init_code
+        b"callData",                                  // call_data
+        b"accountGasLimits",                          // account_gas_limits
+        456,                                          // pre_verification_gas
+        b"gasFees",                                   // gas_fees
+        b"paymasterAndData",                          // paymaster_and_data
+    )
+    .unwrap();
+
+    assert_eq!(
+        packed_user_op.sender(),
+        "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"
+    );
+    assert_eq!(packed_user_op.nonce(), 123);
+    assert_eq!(
+        packed_user_op.init_code(),
+        b"initCode".to_vec().into_boxed_slice()
+    );
+    assert_eq!(
+        packed_user_op.call_data(),
+        b"callData".to_vec().into_boxed_slice()
+    );
+    assert_eq!(
+        packed_user_op.account_gas_limits(),
+        b"accountGasLimits".to_vec().into_boxed_slice()
+    );
+    assert_eq!(packed_user_op.pre_verification_gas(), 456);
+    assert_eq!(
+        packed_user_op.gas_fees(),
+        b"gasFees".to_vec().into_boxed_slice()
+    );
+    assert_eq!(
+        packed_user_op.paymaster_and_data(),
+        b"paymasterAndData".to_vec().into_boxed_slice()
+    );
+
+    let serialized_packed_user_op = packed_user_op.to_bytes();
+    let deserialized_packed_user_op =
+        PackedUserOperation::from_bytes(&serialized_packed_user_op).unwrap();
+    assert_eq!(&packed_user_op, &deserialized_packed_user_op);
+}
+
+#[wasm_bindgen_test]
+fn packed_user_operation_signature_request() {
+    let packed_user_op = PackedUserOperation::new(
+        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", // sender
+        123,                                          // nonce
+        b"initCode",                                  // init_code
+        b"callData",                                  // call_data
+        b"accountGasLimits",                          // account_gas_limits
+        456,                                          // pre_verification_gas
+        b"gasFees",                                   // gas_fees
+        b"paymasterAndData",                          // paymaster_and_data
+    )
+    .unwrap();
+
+    let cohort_id: u32 = 42;
+    let chain_id: u64 = 1;
+    let aa_version: &str = "0.8.0";
+    let context: JsValue = Some(Context::new("{'user': 'context'}")).into();
+
+    let v8_request = PackedUserOperationSignatureRequest::new(
+        &packed_user_op,
+        cohort_id,
+        chain_id,
+        &aa_version,
+        &context.unchecked_into::<OptionContext>(),
+    )
+    .unwrap();
+
+    assert_eq!(&v8_request.packed_user_op(), &packed_user_op);
+    assert_eq!(v8_request.cohort_id(), cohort_id);
+    assert_eq!(v8_request.chain_id(), chain_id);
+    assert_eq!(v8_request.aa_version(), aa_version);
+
+    // mimic serialization/deserialization over the wire
+    let serialized_request = v8_request.to_bytes();
+    let deserialized_request =
+        PackedUserOperationSignatureRequest::from_bytes(&serialized_request).unwrap();
+    assert_eq!(
+        &v8_request.packed_user_op(),
+        &deserialized_request.packed_user_op()
+    );
+    assert_eq!(v8_request.cohort_id(), deserialized_request.cohort_id());
+    assert_eq!(v8_request.chain_id(), deserialized_request.chain_id());
+    assert_eq!(v8_request.aa_version(), deserialized_request.aa_version());
+
+    // mdt version
+    let mdt_context: JsValue = Some(Context::new("{}")).into();
+    let vmdt_request = PackedUserOperationSignatureRequest::new(
+        &packed_user_op,
+        cohort_id,
+        chain_id,
+        "mdt",
+        &mdt_context.unchecked_into::<OptionContext>(),
+    )
+    .unwrap();
+
+    // mimic serialization/deserialization over the wire
+    let mdt_serialized_request = vmdt_request.to_bytes();
+    let mdt_deserialized_request =
+        PackedUserOperationSignatureRequest::from_bytes(&mdt_serialized_request).unwrap();
+    assert_eq!(
+        &vmdt_request.packed_user_op(),
+        &mdt_deserialized_request.packed_user_op()
+    );
+    assert_eq!(
+        vmdt_request.cohort_id(),
+        mdt_deserialized_request.cohort_id()
+    );
+    assert_eq!(vmdt_request.chain_id(), mdt_deserialized_request.chain_id());
+    assert_eq!(
+        vmdt_request.aa_version(),
+        mdt_deserialized_request.aa_version()
+    );
+
+    // invalid AA version
+    let aa_context: JsValue = Some(Context::new("{}")).into();
+    let result = PackedUserOperationSignatureRequest::new(
+        &packed_user_op,
         cohort_id,
         chain_id,
         "invalid_version",
