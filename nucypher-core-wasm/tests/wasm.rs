@@ -924,8 +924,8 @@ fn user_operation() {
     assert_eq!(user_op.factory_data(), b"".to_vec().into_boxed_slice());
     assert_eq!(user_op.paymaster(), None);
     assert_eq!(user_op.paymaster_verification_gas_limit(), 0);
-    // assert_eq!(user_op.paymaster_post_op_gas_limit().unwrap(), None);
-    // assert_eq!(user_op.paymaster_data().unwrap(), None);
+    assert_eq!(user_op.paymaster_post_op_gas_limit(), 0);
+    assert_eq!(user_op.paymaster_data(), b"".to_vec().into_boxed_slice());
 
     user_op
         .set_factory_data(

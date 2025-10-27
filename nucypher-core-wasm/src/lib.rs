@@ -1687,7 +1687,7 @@ impl PackedUserOperation {
         account_gas_limits: &[u8],
         pre_verification_gas: u128,
         gas_fees: &[u8],
-        paymaster_data: &[u8],
+        paymaster_and_data: &[u8],
     ) -> Result<Self, Error> {
         let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
         Ok(Self(nucypher_core::PackedUserOperation::new(
@@ -1698,7 +1698,7 @@ impl PackedUserOperation {
             account_gas_limits,
             pre_verification_gas,
             gas_fees,
-            paymaster_data,
+            paymaster_and_data,
         )))
     }
 
@@ -1737,8 +1737,8 @@ impl PackedUserOperation {
         self.0.gas_fees.clone()
     }
 
-    #[wasm_bindgen(getter, js_name = paymasterData)]
-    pub fn paymaster_data(&self) -> Box<[u8]> {
+    #[wasm_bindgen(getter, js_name = paymasterAndData)]
+    pub fn paymaster_and_data(&self) -> Box<[u8]> {
         self.0.paymaster_and_data.clone()
     }
 
