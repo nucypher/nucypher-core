@@ -828,7 +828,57 @@ mod tests {
     use alloc::string::ToString;
 
     #[test]
-    fn test_user_operation_signature_request_serialization() {
+    fn test_signature_type() {
+        assert_eq!(
+            SignatureRequestType::UserOp.as_u8(),
+            0,
+            "UserOp signature type does not match"
+        );
+        assert_eq!(
+            SignatureRequestType::PackedUserOp.as_u8(),
+            1,
+            "PackedUserOp signature type does not match"
+        );
+
+        assert_eq!(
+            SignatureRequestType::from_u8(0).unwrap(),
+            SignatureRequestType::UserOp,
+            "UserOp signature type from_u8 does not match"
+        );
+        assert_eq!(
+            SignatureRequestType::from_u8(1).unwrap(),
+            SignatureRequestType::PackedUserOp,
+            "PackedUserOp signature type from_u8 does not match"
+        );
+    }
+
+    #[test]
+    fn test_aa_version() {
+        assert_eq!(
+            AAVersion::from_str("0.8.0").unwrap(),
+            AAVersion::V08,
+            "AA version 0.8.0 from_str does not match"
+        );
+        assert_eq!(
+            AAVersion::from_str("mdt").unwrap(),
+            AAVersion::MDT,
+            "AA version mdt from_str does not match"
+        );
+
+        assert_eq!(
+            AAVersion::V08.to_string(),
+            "0.8.0",
+            "AA version V08 to_string does not match"
+        );
+        assert_eq!(
+            AAVersion::MDT.to_string(),
+            "mdt",
+            "AA version MDT to_string does not match"
+        );
+    }
+
+    #[test]
+    fn test_user_operation() {
         let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
         let paymaster =
             Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
@@ -851,25 +901,60 @@ mod tests {
             Some(100000),
             Some(b"paymaster_data"),
         );
-        let request = UserOperationSignatureRequest::new(
-            user_op.clone(),
-            1,
-            137,
-            AAVersion::V08,
-            Some(&Context::new("test_context")),
+
+        assert_eq!(user_op.sender, sender);
+        assert_eq!(user_op.nonce, 42);
+        assert_eq!(user_op.call_data.as_ref(), b"call_data");
+        assert_eq!(user_op.call_gas_limit, 100000);
+        assert_eq!(user_op.verification_gas_limit, 200000);
+        assert_eq!(user_op.pre_verification_gas, 50000);
+        assert_eq!(user_op.max_fee_per_gas, 20_000_000_000);
+        assert_eq!(user_op.max_priority_fee_per_gas, 1_000_000_000);
+        assert_eq!(user_op.factory, factory);
+        assert_eq!(user_op.factory_data.as_ref(), b"factory_data");
+        assert_eq!(user_op.paymaster, paymaster);
+        assert_eq!(user_op.paymaster_verification_gas_limit, 300000);
+        assert_eq!(user_op.paymaster_post_op_gas_limit, 100000);
+        assert_eq!(user_op.paymaster_data.as_ref(), b"paymaster_data");
+
+        let serialized_user_op = user_op.to_bytes();
+        let deserialized_user_op = UserOperation::from_bytes(&serialized_user_op).unwrap();
+        assert_eq!(user_op, deserialized_user_op);
+    }
+
+    #[test]
+    fn test_packed_user_operation() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+
+        let packed_user_op = PackedUserOperation::new(
+            sender,
+            42,
+            b"init_code",
+            b"call_data",
+            b"account_gas_limits",
+            50000,
+            b"gas_fees",
+            b"paymaster_and_data",
         );
-
-        let bytes = request.to_bytes();
-        let deserialized = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
-
-        assert_eq!(request, deserialized);
-        assert_eq!(deserialized.user_op.sender, sender);
-        assert_eq!(deserialized.user_op.nonce, 42);
-        assert_eq!(deserialized.aa_version, AAVersion::V08);
+        assert_eq!(packed_user_op.sender, sender);
+        assert_eq!(packed_user_op.nonce, 42);
+        assert_eq!(packed_user_op.init_code.as_ref(), b"init_code");
+        assert_eq!(packed_user_op.call_data.as_ref(), b"call_data");
         assert_eq!(
-            deserialized.context.as_ref().unwrap().as_ref(),
-            "test_context"
+            packed_user_op.account_gas_limits.as_ref(),
+            b"account_gas_limits"
         );
+        assert_eq!(packed_user_op.pre_verification_gas, 50000);
+        assert_eq!(packed_user_op.gas_fees.as_ref(), b"gas_fees");
+        assert_eq!(
+            packed_user_op.paymaster_and_data.as_ref(),
+            b"paymaster_and_data"
+        );
+
+        let serialized_packed_user_op = packed_user_op.to_bytes();
+        let deserialized_packed_user_op =
+            PackedUserOperation::from_bytes(&serialized_packed_user_op).unwrap();
+        assert_eq!(packed_user_op, deserialized_packed_user_op);
     }
 
     #[test]
@@ -911,7 +996,7 @@ mod tests {
             Some(b""),
         );
         let request_v08 = UserOperationSignatureRequest::new(
-            user_op.clone(),
+            user_op,
             1,
             137,
             AAVersion::V08,
@@ -1001,6 +1086,94 @@ mod tests {
         assert_eq!(
             packed.paymaster_and_data.len(),
             20 + 16 + 16 + b"paymaster_specific_data".len()
+        );
+    }
+
+    #[test]
+    fn test_user_operation_signature_request_serialization() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let paymaster =
+            Some(Address::from_str("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd").unwrap());
+        let factory =
+            Some(Address::from_str("0x12345678901234567890abcdefabcdefabcdefab").unwrap());
+        let cohort_id = 1;
+        let chain_id = 137;
+
+        let user_op = UserOperation::new(
+            sender,
+            42,
+            b"call_data",
+            100000,
+            200000,
+            50000,
+            20_000_000_000, // 20 gwei
+            1_000_000_000,  // 1 gwei
+            factory,
+            Some(b"factory_data"),
+            paymaster,
+            Some(300000),
+            Some(100000),
+            Some(b"paymaster_data"),
+        );
+        let request = UserOperationSignatureRequest::new(
+            user_op,
+            cohort_id,
+            chain_id,
+            AAVersion::V08,
+            Some(&Context::new("test_context")),
+        );
+
+        let bytes = request.to_bytes();
+        let deserialized = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
+
+        assert_eq!(request, deserialized);
+        assert_eq!(deserialized.user_op.sender, sender);
+        assert_eq!(deserialized.user_op.nonce, 42);
+        assert_eq!(deserialized.aa_version, AAVersion::V08);
+        assert_eq!(deserialized.cohort_id, cohort_id);
+        assert_eq!(deserialized.chain_id, chain_id);
+        assert_eq!(
+            deserialized.context.as_ref().unwrap().as_ref(),
+            "test_context"
+        );
+    }
+
+    #[test]
+    fn test_packed_user_operation_signature_request_serialization() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let cohort_id = 1;
+        let chain_id = 137;
+
+        let packed_user_op = PackedUserOperation::new(
+            sender,
+            42,
+            b"init_code",
+            b"call_data",
+            b"account_gas_limits",
+            50000,
+            b"gas_fees",
+            b"paymaster_and_data",
+        );
+        let request = PackedUserOperationSignatureRequest::new(
+            packed_user_op,
+            cohort_id,
+            chain_id,
+            AAVersion::V08,
+            Some(&Context::new("test_context")),
+        );
+
+        let bytes = request.to_bytes();
+        let deserialized = PackedUserOperationSignatureRequest::from_bytes(&bytes).unwrap();
+
+        assert_eq!(request, deserialized);
+        assert_eq!(deserialized.packed_user_op.sender, sender);
+        assert_eq!(deserialized.packed_user_op.nonce, 42);
+        assert_eq!(deserialized.aa_version, AAVersion::V08);
+        assert_eq!(deserialized.cohort_id, cohort_id);
+        assert_eq!(deserialized.chain_id, chain_id);
+        assert_eq!(
+            deserialized.context.as_ref().unwrap().as_ref(),
+            "test_context"
         );
     }
 }
