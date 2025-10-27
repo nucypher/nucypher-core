@@ -3,6 +3,14 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - Unreleased
+
+### Added
+- Expose `UserOperation`, `PackedUserOperation`, `UserOperationSigningRequest`, `PackedUserOperationSigningRequest`, `SignatureResponse` common objects and bindings for TACo Action Control ([#113])
+
+[#113]: https://github.com/nucypher/nucypher-core/pull/113
+
+
 ## [0.15.0] - 2025-08-15
 
 ### Changed
