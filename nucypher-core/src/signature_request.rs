@@ -787,8 +787,8 @@ impl DirectSignatureRequest {
     /// Get the signature type for this request
     pub fn signature_type(&self) -> SignatureRequestType {
         match self {
-            Self::UserOp(_) => SignatureRequestType::UserOp,
-            Self::PackedUserOp(_) => SignatureRequestType::PackedUserOp,
+            Self::UserOp(req) => req.signature_type(),
+            Self::PackedUserOp(req) => req.signature_type(),
         }
     }
 
@@ -829,52 +829,39 @@ mod tests {
 
     #[test]
     fn test_signature_type() {
-        assert_eq!(
-            SignatureRequestType::UserOp.as_u8(),
-            0,
-            "UserOp signature type does not match"
-        );
-        assert_eq!(
-            SignatureRequestType::PackedUserOp.as_u8(),
-            1,
-            "PackedUserOp signature type does not match"
-        );
+        assert_eq!(SignatureRequestType::UserOp.as_u8(), 0,);
+        assert_eq!(SignatureRequestType::PackedUserOp.as_u8(), 1,);
 
         assert_eq!(
             SignatureRequestType::from_u8(0).unwrap(),
             SignatureRequestType::UserOp,
-            "UserOp signature type from_u8 does not match"
         );
         assert_eq!(
             SignatureRequestType::from_u8(1).unwrap(),
             SignatureRequestType::PackedUserOp,
-            "PackedUserOp signature type from_u8 does not match"
+        );
+
+        let result = SignatureRequestType::from_u8(22);
+        assert!(result
+            .unwrap_err()
+            .contains("Invalid signature request type"));
+
+        assert_eq!(SignatureRequestType::UserOp.to_string(), "userop",);
+        assert_eq!(
+            SignatureRequestType::PackedUserOp.to_string(),
+            "packedUserOp",
         );
     }
 
     #[test]
     fn test_aa_version() {
-        assert_eq!(
-            AAVersion::from_str("0.8.0").unwrap(),
-            AAVersion::V08,
-            "AA version 0.8.0 from_str does not match"
-        );
-        assert_eq!(
-            AAVersion::from_str("mdt").unwrap(),
-            AAVersion::MDT,
-            "AA version mdt from_str does not match"
-        );
+        assert_eq!(AAVersion::from_str("0.8.0").unwrap(), AAVersion::V08);
+        assert_eq!(AAVersion::from_str("mdt").unwrap(), AAVersion::MDT);
+        let result = AAVersion::from_str("invalid_version");
+        assert!(result.unwrap_err().contains("Invalid AA version"));
 
-        assert_eq!(
-            AAVersion::V08.to_string(),
-            "0.8.0",
-            "AA version V08 to_string does not match"
-        );
-        assert_eq!(
-            AAVersion::MDT.to_string(),
-            "mdt",
-            "AA version MDT to_string does not match"
-        );
+        assert_eq!(AAVersion::V08.to_string(), "0.8.0",);
+        assert_eq!(AAVersion::MDT.to_string(), "mdt",);
     }
 
     #[test]
@@ -1037,10 +1024,6 @@ mod tests {
         let bytes_mdt = request_mdt.to_bytes();
         let deserialized_mdt = UserOperationSignatureRequest::from_bytes(&bytes_mdt).unwrap();
         assert_eq!(deserialized_mdt.aa_version, AAVersion::MDT);
-
-        // Test Display trait
-        assert_eq!(AAVersion::V08.to_string(), "0.8.0");
-        assert_eq!(AAVersion::MDT.to_string(), "mdt");
     }
 
     #[test]
@@ -1136,6 +1119,17 @@ mod tests {
             deserialized.context.as_ref().unwrap().as_ref(),
             "test_context"
         );
+
+        // test DirectSignatureRequest deserialization
+        let direct_request = DirectSignatureRequest::from_bytes(&bytes).unwrap();
+        assert_eq!(direct_request, DirectSignatureRequest::UserOp(request));
+        assert_eq!(
+            direct_request.signature_type(),
+            SignatureRequestType::UserOp
+        );
+        assert_eq!(direct_request.cohort_id(), cohort_id);
+        assert_eq!(direct_request.chain_id(), chain_id);
+        assert_eq!(direct_request.context().unwrap().as_ref(), "test_context");
     }
 
     #[test]
@@ -1175,5 +1169,189 @@ mod tests {
             deserialized.context.as_ref().unwrap().as_ref(),
             "test_context"
         );
+
+        // test DirectSignatureRequest deserialization
+        let direct_request = DirectSignatureRequest::from_bytes(&bytes).unwrap();
+        assert_eq!(
+            direct_request,
+            DirectSignatureRequest::PackedUserOp(request)
+        );
+        assert_eq!(
+            direct_request.signature_type(),
+            SignatureRequestType::PackedUserOp
+        );
+        assert_eq!(direct_request.cohort_id(), cohort_id);
+        assert_eq!(direct_request.chain_id(), chain_id);
+        assert_eq!(direct_request.context().unwrap().as_ref(), "test_context");
+    }
+
+    #[test]
+    fn test_deserialize_signature_request_invalid_brand() {
+        let invalid_bytes = b"XXXXinvalid_data";
+        let result = deserialize_signature_request(invalid_bytes);
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown signature request brand"));
+    }
+
+    fn validate_eip712_domain(
+        eip712_domain: &serde_json::Map<String, JsonValue>,
+        packed_user_op: &PackedUserOperation,
+        is_v08: bool,
+    ) {
+        assert_eq!(eip712_domain.get("version").unwrap(), "1");
+        assert_eq!(eip712_domain.get("chainId").unwrap(), 137);
+        if is_v08 {
+            assert_eq!(eip712_domain.get("name").unwrap(), "ERC4337");
+            assert_eq!(
+                eip712_domain.get("verifyingContract").unwrap(),
+                ENTRYPOINT_V08
+            );
+        } else {
+            assert_eq!(eip712_domain.get("name").unwrap(), "MultiSigDeleGator");
+            assert_eq!(
+                eip712_domain.get("verifyingContract").unwrap(),
+                &JsonValue::String(packed_user_op.sender.to_checksum_address().to_string())
+            );
+        }
+    }
+
+    fn validate_eip712_message(
+        eip712_message: &serde_json::Map<String, JsonValue>,
+        packed_user_op: &PackedUserOperation,
+        is_v08: bool,
+    ) {
+        assert_eq!(
+            eip712_message.get("sender").unwrap(),
+            &JsonValue::String(packed_user_op.sender.to_checksum_address().to_string())
+        );
+        assert_eq!(
+            eip712_message.get("nonce").unwrap(),
+            &JsonValue::Number(packed_user_op.nonce.into())
+        );
+        assert_eq!(
+            eip712_message.get("initCode").unwrap(),
+            &JsonValue::String(format!("0x{}", hex::encode(&packed_user_op.init_code)))
+        );
+        assert_eq!(
+            eip712_message.get("callData").unwrap(),
+            &JsonValue::String(format!("0x{}", hex::encode(&packed_user_op.call_data)))
+        );
+        assert_eq!(
+            eip712_message.get("accountGasLimits").unwrap(),
+            &JsonValue::String(format!(
+                "0x{}",
+                hex::encode(&packed_user_op.account_gas_limits)
+            ))
+        );
+        assert_eq!(
+            eip712_message.get("preVerificationGas").unwrap(),
+            &JsonValue::String(format!("{}", packed_user_op.pre_verification_gas))
+        );
+        assert_eq!(
+            eip712_message.get("gasFees").unwrap(),
+            &JsonValue::String(format!("0x{}", hex::encode(&packed_user_op.gas_fees)))
+        );
+        assert_eq!(
+            eip712_message.get("paymasterAndData").unwrap(),
+            &JsonValue::String(format!(
+                "0x{}",
+                hex::encode(&packed_user_op.paymaster_and_data)
+            ))
+        );
+
+        if is_v08 {
+            // V08 should NOT have entryPoint field
+            assert!(eip712_message.get("entryPoint").is_none());
+        } else {
+            // MDT should have entryPoint field set to ENTRYPOINT_V07
+            assert_eq!(
+                eip712_message.get("entryPoint").unwrap(),
+                &JsonValue::String(ENTRYPOINT_V07.into())
+            );
+        }
+    }
+
+    fn validate_eip712_types(eip712_types: &serde_json::Map<String, JsonValue>, is_v08: bool) {
+        // Validate PackedUserOperation type
+        let packed_user_op_type = eip712_types
+            .get("PackedUserOperation")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        let expected_packed_user_op_fields = vec![
+            ("sender", "address"),
+            ("nonce", "uint256"),
+            ("initCode", "bytes"),
+            ("callData", "bytes"),
+            ("accountGasLimits", "bytes32"),
+            ("preVerificationGas", "uint256"),
+            ("gasFees", "bytes32"),
+            ("paymasterAndData", "bytes"),
+            ("entryPoint", "address"),
+        ];
+        for (i, (field, field_type)) in expected_packed_user_op_fields.iter().enumerate() {
+            if is_v08 && *field == "entryPoint" {
+                // V08 should NOT have entryPoint field
+                continue;
+            }
+            let field_obj = packed_user_op_type.get(i).unwrap().as_object().unwrap();
+            assert_eq!(field_obj.get("name").unwrap(), field);
+            assert_eq!(field_obj.get("type").unwrap(), field_type);
+        }
+    }
+
+    #[test]
+    fn test_packed_user_operation_to_eip712_struct() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let packed_user_op = PackedUserOperation::new(
+            sender,
+            42,
+            b"init_code",
+            b"call_data",
+            b"account_gas_limits",
+            50000,
+            b"gas_fees",
+            b"paymaster_and_data",
+        );
+
+        // v08
+        let eip712_struct_v08 = packed_user_op.to_eip712_struct(&AAVersion::V08, 137);
+
+        assert_eq!(
+            eip712_struct_v08.get("primaryType").unwrap(),
+            &JsonValue::String("PackedUserOperation".into())
+        );
+
+        let v08_types = eip712_struct_v08.get("types").unwrap().as_object().unwrap();
+        validate_eip712_types(&v08_types, true);
+
+        let v08_domain = eip712_struct_v08
+            .get("domain")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        validate_eip712_domain(&v08_domain, &packed_user_op, true);
+        let v08_message = eip712_struct_v08.get("message").unwrap();
+        validate_eip712_message(v08_message.as_object().unwrap(), &packed_user_op, true);
+
+        // mdt version
+        let eip712_struct_mdt = packed_user_op.to_eip712_struct(&AAVersion::MDT, 137);
+        assert_eq!(
+            eip712_struct_mdt.get("primaryType").unwrap(),
+            &JsonValue::String("PackedUserOperation".into())
+        );
+
+        let mdt_types = eip712_struct_mdt.get("types").unwrap().as_object().unwrap();
+        validate_eip712_types(&mdt_types, false);
+
+        let mdt_domain = eip712_struct_mdt
+            .get("domain")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        validate_eip712_domain(&mdt_domain, &packed_user_op, false);
+        let mdt_message = eip712_struct_mdt.get("message").unwrap();
+        validate_eip712_message(mdt_message.as_object().unwrap(), &packed_user_op, false);
     }
 }
