@@ -75,6 +75,7 @@ impl AsRef<[u8]> for Address {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use umbral_pre::SecretKey;
 
     #[test]
     fn test_checksum_address() {
@@ -98,6 +99,39 @@ mod tests {
         assert_eq!(
             address2.to_checksum_address(),
             "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"
+        );
+    }
+
+    #[test]
+    fn test_from_str() {
+        let address_str = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
+        let address = Address::from_str(address_str).unwrap();
+        assert_eq!(address.to_checksum_address(), address_str);
+    }
+
+    #[test]
+    fn test_from_str_invalid_hex() {
+        let address_str = "0x5aAzzzzzzz"; // 19 bytes
+        let result = Address::from_str(address_str);
+        assert!(result.unwrap_err().contains("Invalid hex string"));
+    }
+
+    #[test]
+    fn test_from_str_invalid_length() {
+        let address_str = "0x5aAeb6053F3E94C9b9A09f3366"; // too little bytes
+        let result = Address::from_str(address_str);
+        assert!(result.unwrap_err().contains("Invalid address length"));
+    }
+
+    #[test]
+    fn test_from_public_key() {
+        let public_key = SecretKey::random().public_key();
+        let address_from_public_key = Address::from_public_key(&public_key);
+        let address_from_str =
+            Address::from_str(&address_from_public_key.to_checksum_address()).unwrap();
+        assert_eq!(
+            address_from_str.to_checksum_address(),
+            address_from_public_key.to_checksum_address()
         );
     }
 }
