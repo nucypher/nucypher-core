@@ -1,4 +1,15 @@
-from typing import Dict, List, Mapping, Optional, Sequence, Set, Tuple, Union, final, Any
+from typing import (
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    final,
+)
 
 from .ferveo import (
     Ciphertext,
@@ -980,7 +991,9 @@ class PackedUserOperationSignatureRequest:
 class SignatureResponse:
     """Response object containing signature hash, signature bytes, and type."""
 
-    def __init__(self, signer: str, hash: bytes, signature: bytes, signature_type: int) -> None:
+    def __init__(
+        self, signer: str, hash: bytes, signature: bytes, signature_type: int
+    ) -> None:
         """Create a new SignatureResponse."""
         ...
 
@@ -1014,6 +1027,11 @@ class SignatureResponse:
         ...
 
 
-def deserialize_signature_request(data: bytes) -> Union[UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
-    """Utility function to deserialize any signature request from bytes and return the specific type directly."""
+def deserialize_signature_request(
+    data: bytes
+) -> Union[UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
+    """
+    Utility function to deserialize any signature request 
+    from bytes and return the specific type directly.
+    """
     ...
