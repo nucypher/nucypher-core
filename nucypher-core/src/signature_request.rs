@@ -955,6 +955,61 @@ mod tests {
         let deserialized_packed_user_op =
             PackedUserOperation::from_bytes(&serialized_packed_user_op).unwrap();
         assert_eq!(packed_user_op, deserialized_packed_user_op);
+
+        // pack account gas limits
+        let packed_gas_limits = PackedUserOperation::pack_account_gas_limits(100000, 200000);
+        let mut expected_gas_limits = [0u8; 32];
+        expected_gas_limits[0..16].copy_from_slice(&200000u128.to_be_bytes());
+        expected_gas_limits[16..32].copy_from_slice(&100000u128.to_be_bytes());
+        assert_eq!(packed_gas_limits, expected_gas_limits);
+
+        // pack gas fees
+        let packed_gas_fees = PackedUserOperation::pack_gas_fees(20_000_000_000, 1_000_000_000);
+        let mut expected_gas_fees = [0u8; 32];
+        expected_gas_fees[0..16].copy_from_slice(&1_000_000_000u128.to_be_bytes());
+        expected_gas_fees[16..32].copy_from_slice(&20_000_000_000u128.to_be_bytes());
+        assert_eq!(packed_gas_fees, expected_gas_fees);
+
+        // pack init code without factory data
+        let packed_init_code = PackedUserOperation::pack_init_code(Some(&sender), None);
+        assert_eq!(packed_init_code, sender.as_ref().to_vec());
+
+        // pack init code with factory data
+        let packed_init_code_with_data =
+            PackedUserOperation::pack_init_code(Some(&sender), Some(b"data"));
+        let mut expected = sender.as_ref().to_vec();
+        expected.extend_from_slice(b"data");
+        assert_eq!(packed_init_code_with_data, expected);
+
+        // pack paymaster and data without paymaster_data
+        let packed_paymaster_and_data = PackedUserOperation::pack_paymaster_and_data(
+            Some(&sender),
+            Some(300000),
+            Some(100000),
+            None,
+        );
+        let mut expected_paymaster = Vec::new();
+        expected_paymaster.extend_from_slice(sender.as_ref());
+        expected_paymaster.extend_from_slice(&300000u128.to_be_bytes());
+        expected_paymaster.extend_from_slice(&100000u128.to_be_bytes());
+        assert_eq!(packed_paymaster_and_data, expected_paymaster);
+
+        // pack paymaster and data with paymaster_data
+        let packed_paymaster_and_data_with_data = PackedUserOperation::pack_paymaster_and_data(
+            Some(&sender),
+            Some(300000),
+            Some(100000),
+            Some(b"data"),
+        );
+        let mut expected_paymaster_with_data = Vec::new();
+        expected_paymaster_with_data.extend_from_slice(sender.as_ref());
+        expected_paymaster_with_data.extend_from_slice(&300000u128.to_be_bytes());
+        expected_paymaster_with_data.extend_from_slice(&100000u128.to_be_bytes());
+        expected_paymaster_with_data.extend_from_slice(b"data");
+        assert_eq!(
+            packed_paymaster_and_data_with_data,
+            expected_paymaster_with_data
+        );
     }
 
     #[test]
