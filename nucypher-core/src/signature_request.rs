@@ -129,20 +129,18 @@ pub struct UserOperation {
     pub max_fee_per_gas: u128,
     /// Maximum priority fee per gas unit
     pub max_priority_fee_per_gas: u128,
-    /// Address of factory contract for account creation (empty for existing accounts)
+    /// Address of factory contract for account creation (optional)
     pub factory: Option<Address>,
-    /// Data for factory contract account creation (empty for existing accounts)
-    #[serde(with = "serde_bytes::as_base64")]
-    pub factory_data: Box<[u8]>,
+    /// Data for factory contract account creation (optional); can't use base64 due to optionality
+    pub factory_data: Option<Box<[u8]>>,
     /// Paymaster address (optional)
     pub paymaster: Option<Address>,
-    /// Gas limit for paymaster verification
-    pub paymaster_verification_gas_limit: u128,
-    /// Gas limit for paymaster post-operation
-    pub paymaster_post_op_gas_limit: u128,
-    /// Paymaster-specific data
-    #[serde(with = "serde_bytes::as_base64")]
-    pub paymaster_data: Box<[u8]>,
+    /// Gas limit for paymaster verification (optional)
+    pub paymaster_verification_gas_limit: Option<u128>,
+    /// Gas limit for paymaster post-operation (optional)
+    pub paymaster_post_op_gas_limit: Option<u128>,
+    /// Paymaster-specific data (optional); can't use base64 due to optionality
+    pub paymaster_data: Option<Box<[u8]>>,
 }
 
 impl UserOperation {
@@ -174,15 +172,11 @@ impl UserOperation {
             max_fee_per_gas,
             max_priority_fee_per_gas,
             factory,
-            factory_data: factory_data
-                .map(|data| data.to_vec().into_boxed_slice())
-                .unwrap_or_else(|| Box::new([])),
+            factory_data: factory_data.map(|data| data.to_vec().into_boxed_slice()),
             paymaster,
-            paymaster_verification_gas_limit: paymaster_verification_gas_limit.unwrap_or(0),
-            paymaster_post_op_gas_limit: paymaster_post_op_gas_limit.unwrap_or(0),
-            paymaster_data: paymaster_data
-                .map(|data| data.to_vec().into_boxed_slice())
-                .unwrap_or_else(|| Box::new([])),
+            paymaster_verification_gas_limit,
+            paymaster_post_op_gas_limit,
+            paymaster_data: paymaster_data.map(|data| data.to_vec().into_boxed_slice()),
         }
     }
 }
@@ -316,35 +310,45 @@ impl PackedUserOperation {
     /// Packs paymaster data with u128 gas limits
     fn pack_paymaster_and_data(
         paymaster: Option<&Address>,
-        paymaster_verification_gas_limit: u128,
-        paymaster_post_op_gas_limit: u128,
-        paymaster_data: &[u8],
+        paymaster_verification_gas_limit: Option<u128>,
+        paymaster_post_op_gas_limit: Option<u128>,
+        paymaster_data: Option<&[u8]>,
     ) -> Vec<u8> {
         match paymaster {
             None => Vec::new(),
             Some(addr) => {
-                let mut result = Vec::with_capacity(20 + 16 + 16 + paymaster_data.len());
+                let unwrapped_paymaster_data = match paymaster_data {
+                    None => &[][..],
+                    Some(data) => data,
+                };
+                let mut result = Vec::with_capacity(20 + 16 + 16 + unwrapped_paymaster_data.len());
                 result.extend_from_slice(addr.as_ref());
 
                 // Verification gas limit as 16 bytes big-endian (full u128)
-                result.extend_from_slice(&paymaster_verification_gas_limit.to_be_bytes());
+                result.extend_from_slice(
+                    &paymaster_verification_gas_limit.unwrap_or(0).to_be_bytes(),
+                );
 
                 // Post-op gas limit as 16 bytes big-endian (full u128)
-                result.extend_from_slice(&paymaster_post_op_gas_limit.to_be_bytes());
+                result.extend_from_slice(&paymaster_post_op_gas_limit.unwrap_or(0).to_be_bytes());
 
-                result.extend_from_slice(paymaster_data);
+                result.extend_from_slice(unwrapped_paymaster_data);
                 result
             }
         }
     }
 
-    fn pack_init_code(factory: Option<&Address>, factory_data: &[u8]) -> Vec<u8> {
+    fn pack_init_code(factory: Option<&Address>, factory_data: Option<&[u8]>) -> Vec<u8> {
         match factory {
             None => Vec::new(),
             Some(addr) => {
-                let mut result = Vec::with_capacity(20 + factory_data.len());
+                let unwrapped_factory_data = match factory_data {
+                    None => &[][..],
+                    Some(data) => data,
+                };
+                let mut result = Vec::with_capacity(20 + unwrapped_factory_data.len());
                 result.extend_from_slice(addr.as_ref());
-                result.extend_from_slice(factory_data);
+                result.extend_from_slice(unwrapped_factory_data.as_ref());
                 result
             }
         }
@@ -362,10 +366,13 @@ impl PackedUserOperation {
             user_op.paymaster.as_ref(),
             user_op.paymaster_verification_gas_limit,
             user_op.paymaster_post_op_gas_limit,
-            &user_op.paymaster_data,
+            user_op.paymaster_data.as_ref().map(|data| data.as_ref()),
         );
 
-        let init_code = Self::pack_init_code(user_op.factory.as_ref(), &user_op.factory_data);
+        let init_code = Self::pack_init_code(
+            user_op.factory.as_ref(),
+            user_op.factory_data.as_ref().map(|data| data.as_ref()),
+        );
 
         Self {
             sender: user_op.sender,
@@ -898,11 +905,17 @@ mod tests {
         assert_eq!(user_op.max_fee_per_gas, 20_000_000_000);
         assert_eq!(user_op.max_priority_fee_per_gas, 1_000_000_000);
         assert_eq!(user_op.factory, factory);
-        assert_eq!(user_op.factory_data.as_ref(), b"factory_data");
+        assert_eq!(
+            user_op.factory_data.clone().unwrap(),
+            b"factory_data".to_vec().into_boxed_slice()
+        );
         assert_eq!(user_op.paymaster, paymaster);
-        assert_eq!(user_op.paymaster_verification_gas_limit, 300000);
-        assert_eq!(user_op.paymaster_post_op_gas_limit, 100000);
-        assert_eq!(user_op.paymaster_data.as_ref(), b"paymaster_data");
+        assert_eq!(user_op.paymaster_verification_gas_limit.unwrap(), 300000);
+        assert_eq!(user_op.paymaster_post_op_gas_limit.unwrap(), 100000);
+        assert_eq!(
+            user_op.paymaster_data.clone().unwrap(),
+            b"paymaster_data".to_vec().into_boxed_slice()
+        );
 
         let serialized_user_op = user_op.to_bytes();
         let deserialized_user_op = UserOperation::from_bytes(&serialized_user_op).unwrap();
