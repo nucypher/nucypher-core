@@ -2188,3 +2188,598 @@ pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
         }),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::types::PyModule;
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+
+    fn init_python() {
+        INIT.call_once(|| {
+            pyo3::prepare_freethreaded_python();
+        });
+    }
+
+    #[test]
+    fn test_user_operation() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let user_op_class = core_module.getattr("UserOperation").unwrap();
+
+            // Create a UserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs.set_item("call_gas_limit", 21000u128).unwrap();
+            kwargs
+                .set_item("verification_gas_limit", 100000u128)
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs.set_item("max_fee_per_gas", 1000000000u128).unwrap();
+            kwargs
+                .set_item("max_priority_fee_per_gas", 2000000000u128)
+                .unwrap();
+
+            let user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let sender: String = user_op_instance
+                .getattr("sender")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let nonce: u64 = user_op_instance
+                .getattr("nonce")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(nonce, 1u64);
+
+            let call_data: &PyBytes = user_op_instance
+                .getattr("call_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_data.as_bytes(), b"call_data");
+
+            let call_gas_limit: u128 = user_op_instance
+                .getattr("call_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_gas_limit, 21000u128);
+
+            let verification_gas_limit: u128 = user_op_instance
+                .getattr("verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(verification_gas_limit, 100000u128);
+
+            let pre_verification_gas: u128 = user_op_instance
+                .getattr("pre_verification_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(pre_verification_gas, 21000u128);
+
+            let max_fee_per_gas: u128 = user_op_instance
+                .getattr("max_fee_per_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(max_fee_per_gas, 1000000000u128);
+
+            let max_priority_fee_per_gas: u128 = user_op_instance
+                .getattr("max_priority_fee_per_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(max_priority_fee_per_gas, 2000000000u128);
+
+            // optional fields
+            let factory: &PyAny = user_op_instance
+                .getattr("factory")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(factory.is_none());
+
+            let factory_data: &PyBytes = user_op_instance
+                .getattr("factory_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(factory_data.as_bytes(), b"");
+
+            let paymaster: &PyAny = user_op_instance
+                .getattr("paymaster")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(paymaster.is_none());
+
+            let paymaster_verification_gas_limit: u128 = user_op_instance
+                .getattr("paymaster_verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_verification_gas_limit, 0u128);
+
+            let paymaster_post_op_gas_limit: u128 = user_op_instance
+                .getattr("paymaster_post_op_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_post_op_gas_limit, 0u128);
+
+            let paymaster_data: &PyBytes = user_op_instance
+                .getattr("paymaster_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_data.as_bytes(), b"");
+
+            // explicitly set optional fields
+            kwargs
+                .set_item("factory", "0xe49e04F40C272F405eCB9a668a73EEAD4b3B5624")
+                .unwrap();
+            kwargs
+                .set_item("factory_data", PyBytes::new(py, b"factory_data"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster", "0xB4687cf0aa7170f12E488059c46689bAcABCD311")
+                .unwrap();
+            kwargs
+                .set_item("paymaster_verification_gas_limit", 1u128)
+                .unwrap();
+            kwargs
+                .set_item("paymaster_post_op_gas_limit", 2u128)
+                .unwrap();
+            kwargs
+                .set_item("paymaster_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let updated_user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+            let factory: String = updated_user_op_instance
+                .getattr("factory")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(factory, "0xe49e04F40C272F405eCB9a668a73EEAD4b3B5624");
+            let factory_data: &PyBytes = updated_user_op_instance
+                .getattr("factory_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(factory_data.as_bytes(), b"factory_data");
+            let paymaster: String = updated_user_op_instance
+                .getattr("paymaster")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster, "0xB4687cf0aa7170f12E488059c46689bAcABCD311");
+            let paymaster_verification_gas_limit: u128 = updated_user_op_instance
+                .getattr("paymaster_verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_verification_gas_limit, 1u128);
+            let paymaster_post_op_gas_limit: u128 = updated_user_op_instance
+                .getattr("paymaster_post_op_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_post_op_gas_limit, 2u128);
+            let paymaster_data: &PyBytes = updated_user_op_instance
+                .getattr("paymaster_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_data.as_bytes(), b"paymaster_data");
+
+            // serialization/deserialization test
+            let serialized: &PyAny = user_op_instance.call_method0("__bytes__").unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = user_op_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_packed_user_operation() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let packed_user_op_class = core_module.getattr("PackedUserOperation").unwrap();
+
+            // Create a PackedUserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("init_code", PyBytes::new(py, b"init_code"))
+                .unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs
+                .set_item("account_gas_limits", PyBytes::new(py, b"gas_limits"))
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs
+                .set_item("gas_fees", PyBytes::new(py, b"gas_fees"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster_and_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let packed_user_op_instance = packed_user_op_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let sender: String = packed_user_op_instance
+                .getattr("sender")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let nonce: u64 = packed_user_op_instance
+                .getattr("nonce")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(nonce, 1u64);
+
+            let init_code: &PyBytes = packed_user_op_instance
+                .getattr("init_code")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(init_code.as_bytes(), b"init_code");
+
+            let call_data: &PyBytes = packed_user_op_instance
+                .getattr("call_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_data.as_bytes(), b"call_data");
+
+            let account_gas_limits: &PyBytes = packed_user_op_instance
+                .getattr("account_gas_limits")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(account_gas_limits.as_bytes(), b"gas_limits");
+
+            let pre_verification_gas: u128 = packed_user_op_instance
+                .getattr("pre_verification_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(pre_verification_gas, 21000u128);
+
+            let gas_fees: &PyBytes = packed_user_op_instance
+                .getattr("gas_fees")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(gas_fees.as_bytes(), b"gas_fees");
+
+            let paymaster_and_data: &PyBytes = packed_user_op_instance
+                .getattr("paymaster_and_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_and_data.as_bytes(), b"paymaster_data");
+
+            // serialization/deserialization test
+            let serialized: &PyAny = packed_user_op_instance.call_method0("__bytes__").unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = packed_user_op_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_user_operation_signature_request() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let user_op_class = core_module.getattr("UserOperation").unwrap();
+
+            // Create a UserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs.set_item("call_gas_limit", 21000u128).unwrap();
+            kwargs
+                .set_item("verification_gas_limit", 100000u128)
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs.set_item("max_fee_per_gas", 1000000000u128).unwrap();
+            kwargs
+                .set_item("max_priority_fee_per_gas", 2000000000u128)
+                .unwrap();
+
+            let user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+            let user_op_signature_request_class = core_module
+                .getattr("UserOperationSignatureRequest")
+                .unwrap();
+
+            // Create a UserOperationSignatureRequest instance using keyword arguments
+            let request_kwargs = PyDict::new(py);
+            request_kwargs
+                .set_item("user_op", user_op_instance)
+                .unwrap();
+            request_kwargs.set_item("cohort_id", 42u32).unwrap();
+            request_kwargs.set_item("chain_id", 1u64).unwrap();
+            request_kwargs.set_item("aa_version", "0.8.0").unwrap();
+            let user_op_signature_request_instance = user_op_signature_request_class
+                .call((), Some(request_kwargs))
+                .unwrap();
+
+            // Verify attributes
+            let request_user_op: &PyAny = user_op_signature_request_instance
+                .getattr("user_op")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let serialized_request_user_op: &PyBytes = request_user_op
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_serialized_user_op: &PyBytes = user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                serialized_request_user_op.as_bytes(),
+                original_serialized_user_op.as_bytes()
+            );
+            let cohort_id: u32 = user_op_signature_request_instance
+                .getattr("cohort_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(cohort_id, 42u32);
+            let chain_id: u64 = user_op_signature_request_instance
+                .getattr("chain_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(chain_id, 1u64);
+            let aa_version: &str = user_op_signature_request_instance
+                .getattr("aa_version")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(aa_version, "0.8.0");
+
+            // serialization/deserialization test
+            let serialized_bytes: &PyBytes = user_op_signature_request_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+
+            let deserialized_instance =
+                deserialize_signature_request(serialized_bytes.as_bytes()).unwrap();
+            let reserialized: PyObject =
+                deserialized_instance.call_method0(py, "__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_packed_user_operation_signature_request() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let packed_user_op_class = core_module.getattr("PackedUserOperation").unwrap();
+
+            // Create a PackedUserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("init_code", PyBytes::new(py, b"init_code"))
+                .unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs
+                .set_item("account_gas_limits", PyBytes::new(py, b"gas_limits"))
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs
+                .set_item("gas_fees", PyBytes::new(py, b"gas_fees"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster_and_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let packed_user_op_instance = packed_user_op_class.call((), Some(kwargs)).unwrap();
+            let packed_user_op_signature_request_class = core_module
+                .getattr("PackedUserOperationSignatureRequest")
+                .unwrap();
+            // Create a PackedUserOperationSignatureRequest instance using keyword arguments
+            let request_kwargs = PyDict::new(py);
+            request_kwargs
+                .set_item("packed_user_op", packed_user_op_instance)
+                .unwrap();
+            request_kwargs.set_item("cohort_id", 42u32).unwrap();
+            request_kwargs.set_item("chain_id", 1u64).unwrap();
+            request_kwargs.set_item("aa_version", "mdt").unwrap();
+            let packed_user_op_signature_request_instance = packed_user_op_signature_request_class
+                .call((), Some(request_kwargs))
+                .unwrap();
+
+            // Verify attributes
+            let request_packed_user_op: &PyAny = packed_user_op_signature_request_instance
+                .getattr("packed_user_op")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let serialized_request_packed_user_op: &PyBytes = request_packed_user_op
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_serialized_packed_user_op: &PyBytes = packed_user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                serialized_request_packed_user_op.as_bytes(),
+                original_serialized_packed_user_op.as_bytes()
+            );
+
+            let cohort_id: u32 = packed_user_op_signature_request_instance
+                .getattr("cohort_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(cohort_id, 42u32);
+            let chain_id: u64 = packed_user_op_signature_request_instance
+                .getattr("chain_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(chain_id, 1u64);
+            let aa_version: &str = packed_user_op_signature_request_instance
+                .getattr("aa_version")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(aa_version, "mdt");
+
+            // serialization/deserialization test
+            let serialized_bytes: &PyBytes = packed_user_op_signature_request_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+
+            let deserialized_instance =
+                deserialize_signature_request(serialized_bytes.as_bytes()).unwrap();
+            let reserialized: PyObject =
+                deserialized_instance.call_method0(py, "__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_signature_response() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let signature_response_class = core_module.getattr("SignatureResponse").unwrap();
+
+            // Create a SignatureResponse instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("signer", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs
+                .set_item("hash", PyBytes::new(py, b"hash_value"))
+                .unwrap();
+            kwargs
+                .set_item("signature", PyBytes::new(py, b"signature_value"))
+                .unwrap();
+            kwargs.set_item("signature_type", 1u8).unwrap();
+
+            let signature_response_instance =
+                signature_response_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let signer: String = signature_response_instance
+                .getattr("signer")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signer, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let hash: &PyBytes = signature_response_instance
+                .getattr("hash")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(hash.as_bytes(), b"hash_value");
+
+            let signature: &PyBytes = signature_response_instance
+                .getattr("signature")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signature.as_bytes(), b"signature_value");
+
+            let signature_type: u8 = signature_response_instance
+                .getattr("signature_type")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signature_type, 1u8);
+
+            // serialization/deserialization test
+            let serialized: &PyAny = signature_response_instance
+                .call_method0("__bytes__")
+                .unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = signature_response_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+}
