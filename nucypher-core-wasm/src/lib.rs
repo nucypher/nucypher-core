@@ -1617,7 +1617,7 @@ impl UserOperation {
     }
 
     #[wasm_bindgen(getter, js_name = factoryData)]
-    pub fn factory_data(&self) -> Box<[u8]> {
+    pub fn factory_data(&self) -> Option<Box<[u8]>> {
         self.0.factory_data.clone()
     }
 
@@ -1627,25 +1627,29 @@ impl UserOperation {
     }
 
     #[wasm_bindgen(getter, js_name = paymasterVerificationGasLimit)]
-    pub fn paymaster_verification_gas_limit(&self) -> u128 {
+    pub fn paymaster_verification_gas_limit(&self) -> Option<u128> {
         self.0.paymaster_verification_gas_limit
     }
 
     #[wasm_bindgen(getter, js_name = paymasterPostOpGasLimit)]
-    pub fn paymaster_post_op_gas_limit(&self) -> u128 {
+    pub fn paymaster_post_op_gas_limit(&self) -> Option<u128> {
         self.0.paymaster_post_op_gas_limit
     }
 
     #[wasm_bindgen(getter, js_name = paymasterData)]
-    pub fn paymaster_data(&self) -> Box<[u8]> {
+    pub fn paymaster_data(&self) -> Option<Box<[u8]>> {
         self.0.paymaster_data.clone()
     }
 
     #[wasm_bindgen(js_name = setFactoryData)]
-    pub fn set_factory_data(&mut self, factory: &str, data: &[u8]) -> Result<(), Error> {
+    pub fn set_factory_data(
+        &mut self,
+        factory: &str,
+        data: Option<Box<[u8]>>,
+    ) -> Result<(), Error> {
         let address = nucypher_core::Address::from_str(factory).map_err(map_js_err)?;
         self.0.factory = Some(address);
-        self.0.factory_data = data.to_vec().into_boxed_slice();
+        self.0.factory_data = data;
         Ok(())
     }
 
@@ -1655,13 +1659,13 @@ impl UserOperation {
         paymaster: &str,
         verification_gas_limit: u128,
         post_op_gas_limit: u128,
-        data: &[u8],
+        data: Option<Box<[u8]>>,
     ) -> Result<(), Error> {
         let address = nucypher_core::Address::from_str(paymaster).map_err(map_js_err)?;
         self.0.paymaster = Some(address);
-        self.0.paymaster_verification_gas_limit = verification_gas_limit;
-        self.0.paymaster_post_op_gas_limit = post_op_gas_limit;
-        self.0.paymaster_data = data.to_vec().into_boxed_slice();
+        self.0.paymaster_verification_gas_limit = Some(verification_gas_limit);
+        self.0.paymaster_post_op_gas_limit = Some(post_op_gas_limit);
+        self.0.paymaster_data = data;
         Ok(())
     }
 }

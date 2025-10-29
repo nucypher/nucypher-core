@@ -920,17 +920,19 @@ fn user_operation() {
     assert_eq!(user_op.pre_verification_gas(), 789);
     assert_eq!(user_op.max_fee_per_gas(), 101112);
     assert_eq!(user_op.max_priority_fee_per_gas(), 121314);
+
+    // optional values
     assert_eq!(user_op.factory(), None);
-    assert_eq!(user_op.factory_data(), b"".to_vec().into_boxed_slice());
+    assert_eq!(user_op.factory_data(), None);
     assert_eq!(user_op.paymaster(), None);
-    assert_eq!(user_op.paymaster_verification_gas_limit(), 0);
-    assert_eq!(user_op.paymaster_post_op_gas_limit(), 0);
-    assert_eq!(user_op.paymaster_data(), b"".to_vec().into_boxed_slice());
+    assert_eq!(user_op.paymaster_verification_gas_limit(), None);
+    assert_eq!(user_op.paymaster_post_op_gas_limit(), None);
+    assert_eq!(user_op.paymaster_data(), None);
 
     user_op
         .set_factory_data(
             "0x000000000000000000000000000000000000000a",
-            b"factory_data",
+            Some(b"factory_data".to_vec().into_boxed_slice()),
         )
         .unwrap();
     assert_eq!(
@@ -938,7 +940,7 @@ fn user_operation() {
         "0x000000000000000000000000000000000000000A"
     );
     assert_eq!(
-        user_op.factory_data(),
+        user_op.factory_data().unwrap(),
         b"factory_data".to_vec().into_boxed_slice()
     );
 
@@ -947,17 +949,17 @@ fn user_operation() {
             "0x000000000000000000000000000000000000000c",
             202122,
             303132,
-            b"paymaster_data",
+            Some(b"paymaster_data".to_vec().into_boxed_slice()),
         )
         .unwrap();
     assert_eq!(
         user_op.paymaster().unwrap(),
         "0x000000000000000000000000000000000000000C"
     );
-    assert_eq!(user_op.paymaster_verification_gas_limit(), 202122);
-    assert_eq!(user_op.paymaster_post_op_gas_limit(), 303132);
+    assert_eq!(user_op.paymaster_verification_gas_limit().unwrap(), 202122);
+    assert_eq!(user_op.paymaster_post_op_gas_limit().unwrap(), 303132);
     assert_eq!(
-        user_op.paymaster_data(),
+        user_op.paymaster_data().unwrap(),
         b"paymaster_data".to_vec().into_boxed_slice()
     );
 

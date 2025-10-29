@@ -1675,8 +1675,11 @@ impl UserOperation {
     }
 
     #[getter]
-    pub fn factory_data(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.factory_data).into()
+    pub fn factory_data(&self, py: Python) -> Option<PyObject> {
+        self.backend
+            .factory_data
+            .as_ref()
+            .map(|data| PyBytes::new(py, data).into())
     }
 
     #[getter]
@@ -1685,18 +1688,21 @@ impl UserOperation {
     }
 
     #[getter]
-    pub fn paymaster_verification_gas_limit(&self) -> u128 {
+    pub fn paymaster_verification_gas_limit(&self) -> Option<u128> {
         self.backend.paymaster_verification_gas_limit
     }
 
     #[getter]
-    pub fn paymaster_post_op_gas_limit(&self) -> u128 {
+    pub fn paymaster_post_op_gas_limit(&self) -> Option<u128> {
         self.backend.paymaster_post_op_gas_limit
     }
 
     #[getter]
-    pub fn paymaster_data(&self, py: Python) -> PyObject {
-        PyBytes::new(py, &self.backend.paymaster_data).into()
+    pub fn paymaster_data(&self, py: Python) -> Option<PyObject> {
+        self.backend
+            .paymaster_data
+            .as_ref()
+            .map(|data| PyBytes::new(py, data).into())
     }
 
     fn __bytes__(&self) -> PyObject {
@@ -2299,12 +2305,12 @@ mod tests {
                 .unwrap();
             assert!(factory.is_none());
 
-            let factory_data: &PyBytes = user_op_instance
+            let factory_data: &PyAny = user_op_instance
                 .getattr("factory_data")
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert_eq!(factory_data.as_bytes(), b"");
+            assert!(factory_data.is_none());
 
             let paymaster: &PyAny = user_op_instance
                 .getattr("paymaster")
@@ -2313,26 +2319,26 @@ mod tests {
                 .unwrap();
             assert!(paymaster.is_none());
 
-            let paymaster_verification_gas_limit: u128 = user_op_instance
+            let paymaster_verification_gas_limit: &PyAny = user_op_instance
                 .getattr("paymaster_verification_gas_limit")
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert_eq!(paymaster_verification_gas_limit, 0u128);
+            assert!(paymaster_verification_gas_limit.is_none());
 
-            let paymaster_post_op_gas_limit: u128 = user_op_instance
+            let paymaster_post_op_gas_limit: &PyAny = user_op_instance
                 .getattr("paymaster_post_op_gas_limit")
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert_eq!(paymaster_post_op_gas_limit, 0u128);
+            assert!(paymaster_post_op_gas_limit.is_none());
 
-            let paymaster_data: &PyBytes = user_op_instance
+            let paymaster_data: &PyAny = user_op_instance
                 .getattr("paymaster_data")
                 .unwrap()
                 .extract()
                 .unwrap();
-            assert_eq!(paymaster_data.as_bytes(), b"");
+            assert!(paymaster_data.is_none());
 
             // explicitly set optional fields
             kwargs
