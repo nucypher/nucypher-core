@@ -2364,7 +2364,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nucypher-core"
-version = "0.15.0"
+version = "0.15.1-dev.1"
 dependencies = [
  "ark-std",
  "chacha20poly1305",
@@ -2389,21 +2389,21 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.15.0"
+version = "0.15.1-dev.1"
 dependencies = [
  "derive_more 0.99.20",
  "ferveo-nucypher",
  "hex",
  "nucypher-core",
  "pyo3",
- "pyo3-build-config 0.26.0",
+ "pyo3-build-config",
  "serde_json",
  "umbral-pre",
 ]
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.15.0"
+version = "0.15.1-dev.1"
 dependencies = [
  "ark-std",
  "console_error_panic_hook",
@@ -2860,7 +2860,7 @@ dependencies = [
  "libc",
  "memoffset",
  "parking_lot",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
  "unindent",
@@ -2873,16 +2873,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9cb946f5ac61bb61a5014924910d936ebd2b23b705f7a4a3c40b05c720b079a3"
 dependencies = [
  "once_cell",
- "target-lexicon 0.12.16",
-]
-
-[[package]]
-name = "pyo3-build-config"
-version = "0.26.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fc6ddaf24947d12a9aa31ac65431fb1b851b8f4365426e182901eabfb87df5f"
-dependencies = [
- "target-lexicon 0.13.3",
+ "target-lexicon",
 ]
 
 [[package]]
@@ -2892,7 +2883,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd4d7c5337821916ea2a1d21d1092e8443cf34879e53a0ac653fbb98f44ff65c"
 dependencies = [
  "libc",
- "pyo3-build-config 0.18.3",
+ "pyo3-build-config",
 ]
 
 [[package]]
@@ -3850,12 +3841,6 @@ name = "target-lexicon"
 version = "0.12.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1"
-
-[[package]]
-name = "target-lexicon"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df7f62577c25e07834649fc3b39fafdc597c0a3527dc1c60129201ccfcbaa50c"
 
 [[package]]
 name = "tempfile"
