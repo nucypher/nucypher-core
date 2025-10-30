@@ -20,6 +20,7 @@ mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
 mod secret_box;
+mod session;
 mod signature_request;
 mod test_utils;
 mod threshold_message_kit;
@@ -34,9 +35,8 @@ pub use access_control::{encrypt_for_dkg, AccessControlPolicy, AuthenticatedData
 pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
-    session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
-    DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
-    EncryptionError, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
+    ThresholdDecryptionRequest, ThresholdDecryptionResponse,
 };
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;
@@ -48,6 +48,10 @@ pub use node_metadata::{
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;
+pub use session::{
+    key::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
+    DecryptionError, EncryptionError,
+};
 pub use signature_request::{
     deserialize_signature_request, AAVersion, BaseSignatureRequest, DirectSignatureRequest,
     PackedUserOperation, PackedUserOperationSignatureRequest, SignatureRequestType,
