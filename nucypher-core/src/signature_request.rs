@@ -668,6 +668,14 @@ impl SignatureResponse {
             signature_type,
         }
     }
+
+    /// Encrypts the signature response.
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdSignatureResponse {
+        EncryptedThresholdSignatureResponse::new(self, shared_secret)
+    }
 }
 
 // ProtocolObject implementations
@@ -954,6 +962,57 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdSignatureRequest {
 }
 
 impl<'a> ProtocolObject<'a> for EncryptedThresholdSignatureRequest {}
+
+/// An encrypted response from Ursula with a signature.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedThresholdSignatureResponse {
+    #[serde(with = "serde_bytes::as_base64")]
+    ciphertext: Box<[u8]>,
+}
+
+impl EncryptedThresholdSignatureResponse {
+    fn new(response: &SignatureResponse, shared_secret: &SessionSharedSecret) -> Self {
+        let ciphertext = encrypt_with_shared_secret(shared_secret, &response.to_bytes())
+            .expect("Encryption failed - out of memory?");
+        Self { ciphertext }
+    }
+
+    /// Decrypts the decryption request
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<SignatureResponse, DecryptionError> {
+        let decryption_response_bytes =
+            decrypt_with_shared_secret(shared_secret, &self.ciphertext)?;
+        let decryption_response = SignatureResponse::from_bytes(&decryption_response_bytes)
+            .map_err(DecryptionError::DeserializationFailed)?;
+        Ok(decryption_response)
+    }
+}
+
+impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdSignatureResponse {
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn brand() -> [u8; 4] {
+        *b"ETRe"
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for EncryptedThresholdSignatureResponse {}
 
 #[cfg(test)]
 mod tests {
@@ -1634,5 +1693,54 @@ mod tests {
                 .decrypt(&random_shared_secret)
                 .is_err());
         }
+    }
+
+    #[test]
+    fn test_encrypted_threshold_signing_response() {
+        let service_secret = SessionStaticSecret::random();
+        let requester_secret = SessionStaticSecret::random();
+
+        let signer = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let response = SignatureResponse::new(
+            signer,
+            b"response_hash",
+            b"response_signature",
+            SignatureRequestType::UserOp,
+        );
+
+        // service encrypts response to send back
+        let requester_public_key = requester_secret.public_key();
+
+        let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
+        let encrypted_response = response.encrypt(&service_shared_secret);
+
+        // mimic serialization/deserialization over the wire
+        let encrypted_response_bytes = encrypted_response.to_bytes();
+        let encrypted_response_from_bytes =
+            EncryptedThresholdSignatureResponse::from_bytes(&encrypted_response_bytes).unwrap();
+
+        // requester decrypts response
+        let service_public_key = service_secret.public_key();
+        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+        assert_eq!(
+            requester_shared_secret.as_bytes(),
+            service_shared_secret.as_bytes()
+        );
+        let decrypted_response = encrypted_response_from_bytes
+            .decrypt(&requester_shared_secret)
+            .unwrap();
+        assert_eq!(response, decrypted_response);
+        // just to be sure, check fields
+        assert_eq!(decrypted_response.signature, response.signature);
+        assert_eq!(decrypted_response.signer, response.signer);
+        assert_eq!(decrypted_response.hash, response.hash);
+        assert_eq!(decrypted_response.signature_type, response.signature_type);
+
+        // wrong shared key used
+        let random_secret_key = SessionStaticSecret::random();
+        let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
+        assert!(encrypted_response_from_bytes
+            .decrypt(&random_shared_secret)
+            .is_err());
     }
 }
