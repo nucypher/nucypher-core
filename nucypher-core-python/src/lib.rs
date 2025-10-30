@@ -27,7 +27,7 @@ use rust_nucypher_core::{
     UserOperation as SignatureRequestUserOperation,
 };
 
-use nucypher_core::ProtocolObject;
+use nucypher_core::{BaseSignatureRequest, ProtocolObject};
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
@@ -1781,6 +1781,19 @@ impl UserOperationSignatureRequest {
         self.backend.signature_type.as_u8()
     }
 
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        let encrypted_request = self
+            .backend
+            .encrypt(shared_secret.as_ref(), requester_public_key.as_ref());
+        EncryptedThresholdSignatureRequest {
+            backend: encrypted_request,
+        }
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::UserOperationSignatureRequest>(data)
@@ -1983,6 +1996,19 @@ impl PackedUserOperationSignatureRequest {
         self.backend.signature_type as u8
     }
 
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        let encrypted_request = self
+            .backend
+            .encrypt(shared_secret.as_ref(), requester_public_key.as_ref());
+        EncryptedThresholdSignatureRequest {
+            backend: encrypted_request,
+        }
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::PackedUserOperationSignatureRequest>(data)
@@ -2046,6 +2072,15 @@ impl SignatureResponse {
         self.backend.signature_type.as_u8()
     }
 
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdSignatureResponse {
+        EncryptedThresholdSignatureResponse {
+            backend: self.backend.encrypt(shared_secret.as_ref()),
+        }
+    }
+
     #[staticmethod]
     pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
         from_bytes::<_, nucypher_core::SignatureResponse>(data)
@@ -2053,6 +2088,104 @@ impl SignatureResponse {
 
     fn __bytes__(&self) -> PyObject {
         to_bytes(self)
+    }
+}
+
+//
+// Encrypted Threshold Signature Request
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdSignatureRequest {
+    backend: nucypher_core::EncryptedThresholdSignatureRequest,
+}
+
+#[pymethods]
+impl EncryptedThresholdSignatureRequest {
+    #[getter]
+    pub fn requester_public_key(&self) -> SessionStaticKey {
+        self.backend.requester_public_key.into()
+    }
+
+    #[getter]
+    pub fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    pub fn decrypt(&self, shared_secret: &SessionSharedSecret) -> PyResult<PyObject> {
+        self.backend
+            .decrypt(shared_secret.as_ref())
+            .map(direct_request_to_specific_type)
+            .map_err(|err| PyValueError::new_err(format!("{err}")))?
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::EncryptedThresholdSignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// Encrypted Threshold Signature Response
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdSignatureResponse {
+    backend: nucypher_core::EncryptedThresholdSignatureResponse,
+}
+
+#[pymethods]
+impl EncryptedThresholdSignatureResponse {
+    pub fn decrypt(&self, shared_secret: &SessionSharedSecret) -> PyResult<SignatureResponse> {
+        self.backend
+            .decrypt(shared_secret.as_ref())
+            .map(SignatureResponse::from)
+            .map_err(|err| PyValueError::new_err(format!("{err}")))
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::EncryptedThresholdSignatureResponse>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// Signature Request Deserializer
+//
+
+/// Utility function to deserialize any signature request from bytes - returns specific type directly
+#[pyfunction]
+pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
+    let direct_request = nucypher_core::deserialize_signature_request(data).map_err(|err| {
+        PyValueError::new_err(format!("Failed to deserialize signature request: {}", err))
+    })?;
+
+    // Convert to the specific Python type
+    direct_request_to_specific_type(direct_request)
+}
+
+fn direct_request_to_specific_type(
+    direct_request: nucypher_core::DirectSignatureRequest,
+) -> PyResult<PyObject> {
+    match direct_request {
+        nucypher_core::DirectSignatureRequest::UserOp(req) => Python::with_gil(|py| {
+            let python_req = UserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
+        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => Python::with_gil(|py| {
+            let python_req = PackedUserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
     }
 }
 
@@ -2095,6 +2228,8 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<PackedUserOperation>()?;
     core_module.add_class::<PackedUserOperationSignatureRequest>()?;
     core_module.add_class::<SignatureResponse>()?;
+    core_module.add_class::<EncryptedThresholdSignatureRequest>()?;
+    core_module.add_class::<EncryptedThresholdSignatureResponse>()?;
     core_module.add_function(wrap_pyfunction!(
         deserialize_signature_request,
         core_module
@@ -2168,30 +2303,6 @@ fn json_to_pyobject(py: Python, value: &serde_json::Value) -> PyResult<PyObject>
             }
             Ok(dict.to_object(py))
         }
-    }
-}
-
-//
-// Signature Request Deserializer
-//
-
-/// Utility function to deserialize any signature request from bytes - returns specific type directly
-#[pyfunction]
-pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
-    let direct_request = nucypher_core::deserialize_signature_request(data).map_err(|err| {
-        PyValueError::new_err(format!("Failed to deserialize signature request: {}", err))
-    })?;
-
-    // Convert to the specific Python type
-    match direct_request {
-        nucypher_core::DirectSignatureRequest::UserOp(req) => Python::with_gil(|py| {
-            let python_req = UserOperationSignatureRequest { backend: req };
-            Ok(python_req.into_py(py))
-        }),
-        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => Python::with_gil(|py| {
-            let python_req = PackedUserOperationSignatureRequest { backend: req };
-            Ok(python_req.into_py(py))
-        }),
     }
 }
 

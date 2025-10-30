@@ -707,7 +707,7 @@ class SessionSecretFactory:
 @final
 class SignatureRequestType:
     USER_OP: int = 0
-    PACKED_USER_OP: int = 1 
+    PACKED_USER_OP: int = 1
 
 
 @final
@@ -857,6 +857,13 @@ class UserOperationSignatureRequest:
     def signature_type(self) -> int:
         ...
 
+    def encrypt(
+        self,
+        shared_secret: SessionSharedSecret,
+        requester_public_key: SessionStaticKey
+    ) -> EncryptedThresholdSignatureRequest:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> UserOperationSignatureRequest:
         ...
@@ -979,6 +986,13 @@ class PackedUserOperationSignatureRequest:
     def signature_type(self) -> int:
         ...
 
+    def encrypt(
+        self,
+        shared_secret: SessionSharedSecret,
+        requester_public_key: SessionStaticKey
+    ) -> EncryptedThresholdSignatureRequest:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> PackedUserOperationSignatureRequest:
         ...
@@ -1016,7 +1030,13 @@ class SignatureResponse:
     def signature_type(self) -> int:
         """Get the signature type as integer."""
         ...
-    
+
+    def encrypt(
+        self,
+        shared_secret: SessionSharedSecret
+    ) -> EncryptedThresholdSignatureResponse:
+        ...
+
     @staticmethod
     def from_bytes(data: bytes) -> SignatureResponse:
         """Deserialize from bytes."""
@@ -1035,3 +1055,39 @@ def deserialize_signature_request(
     from bytes and return the specific type directly.
     """
     ...
+
+
+@final
+class EncryptedThresholdSignatureRequest:
+    requester_public_key: SessionStaticKey
+
+    cohort_id: int
+
+    def decrypt(
+            self,
+            shared_secret: SessionSharedSecret
+    ) -> Union[UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdSignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
+class EncryptedThresholdSignatureResponse:
+    def decrypt(
+        self,
+        shared_secret: SessionSharedSecret
+    ) -> SignatureResponse:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> EncryptedThresholdSignatureResponse:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...

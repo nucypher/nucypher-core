@@ -34,6 +34,8 @@ from ._nucypher_core import (
     PackedUserOperation,
     PackedUserOperationSignatureRequest,
     SignatureResponse,
+    EncryptedThresholdSignatureRequest,
+    EncryptedThresholdSignatureResponse,
     deserialize_signature_request,
 )
 

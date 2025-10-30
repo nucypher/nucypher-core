@@ -54,8 +54,9 @@ pub use session::{
 };
 pub use signature_request::{
     deserialize_signature_request, AAVersion, BaseSignatureRequest, DirectSignatureRequest,
-    PackedUserOperation, PackedUserOperationSignatureRequest, SignatureRequestType,
-    SignatureResponse, UserOperation, UserOperationSignatureRequest,
+    EncryptedThresholdSignatureRequest, EncryptedThresholdSignatureResponse, PackedUserOperation,
+    PackedUserOperationSignatureRequest, SignatureRequestType, SignatureResponse, UserOperation,
+    UserOperationSignatureRequest,
 };
 pub use threshold_message_kit::ThresholdMessageKit;
 pub use treasure_map::{EncryptedTreasureMap, TreasureMap};
