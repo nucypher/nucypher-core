@@ -2510,13 +2510,21 @@ mod tests {
             assert_eq!(paymaster_data.as_bytes(), b"paymaster_data");
 
             // serialization/deserialization test
-            let serialized: &PyAny = user_op_instance.call_method0("__bytes__").unwrap();
-            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let serialized_bytes: &PyBytes = user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
             let deserialized_instance = user_op_class
                 .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
                 .unwrap();
-            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
-            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            let reserialized_bytes: &PyBytes = deserialized_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
             assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
         });
     }
@@ -2614,13 +2622,19 @@ mod tests {
             assert_eq!(paymaster_and_data.as_bytes(), b"paymaster_data");
 
             // serialization/deserialization test
-            let serialized: &PyAny = packed_user_op_instance.call_method0("__bytes__").unwrap();
-            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let serialized_bytes: &PyBytes = packed_user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
             let deserialized_instance = packed_user_op_class
                 .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
                 .unwrap();
-            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
-            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            let reserialized_bytes: &PyBytes = deserialized_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
             assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
         });
     }
@@ -2710,7 +2724,9 @@ mod tests {
                 .unwrap();
             assert_eq!(aa_version, "0.8.0");
 
+            //
             // serialization/deserialization test
+            //
             let serialized_bytes: &PyBytes = user_op_signature_request_instance
                 .call_method0("__bytes__")
                 .unwrap()
@@ -2723,6 +2739,69 @@ mod tests {
                 deserialized_instance.call_method0(py, "__bytes__").unwrap();
             let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
             assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+
+            //
+            // encryption/decryption of request
+            //
+            let session_static_secret_class = core_module.getattr("SessionStaticSecret").unwrap();
+
+            let service_secret = session_static_secret_class.call_method0("random").unwrap();
+
+            let requester_secret = session_static_secret_class.call_method0("random").unwrap();
+            let requester_public_key = requester_secret.call_method0("public_key").unwrap();
+
+            // derive shared secret
+            let shared_secret = service_secret
+                .call_method1("derive_shared_secret", (requester_public_key,))
+                .unwrap();
+
+            // encrypt request
+            let encrypted_request = user_op_signature_request_instance
+                .call_method1("encrypt", (shared_secret, requester_public_key))
+                .unwrap();
+            assert_eq!(
+                encrypted_request
+                    .getattr("cohort_id")
+                    .unwrap()
+                    .extract::<u32>()
+                    .unwrap(),
+                user_op_signature_request_instance
+                    .getattr("cohort_id")
+                    .unwrap()
+                    .extract::<u32>()
+                    .unwrap()
+            );
+
+            let encrypted_requester_key =
+                encrypted_request.getattr("requester_public_key").unwrap();
+            let encrypted_key_bytes: &PyBytes = encrypted_requester_key
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_key_bytes: &PyBytes = requester_public_key
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                encrypted_key_bytes.as_bytes(),
+                original_key_bytes.as_bytes()
+            );
+
+            // decrypt request
+            let decrypted_request = encrypted_request
+                .call_method1("decrypt", (shared_secret,))
+                .unwrap();
+            let decrypted_request_bytes = decrypted_request
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
+            assert_eq!(
+                decrypted_request_bytes.as_bytes(),
+                serialized_bytes.as_bytes()
+            );
         });
     }
 
@@ -2763,6 +2842,7 @@ mod tests {
             let packed_user_op_signature_request_class = core_module
                 .getattr("PackedUserOperationSignatureRequest")
                 .unwrap();
+
             // Create a PackedUserOperationSignatureRequest instance using keyword arguments
             let request_kwargs = PyDict::new(py);
             request_kwargs
@@ -2815,7 +2895,9 @@ mod tests {
                 .unwrap();
             assert_eq!(aa_version, "mdt");
 
+            //
             // serialization/deserialization test
+            //
             let serialized_bytes: &PyBytes = packed_user_op_signature_request_instance
                 .call_method0("__bytes__")
                 .unwrap()
@@ -2828,6 +2910,68 @@ mod tests {
                 deserialized_instance.call_method0(py, "__bytes__").unwrap();
             let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
             assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+
+            //
+            // encryption/decryption of request
+            //
+            let session_static_secret_class = core_module.getattr("SessionStaticSecret").unwrap();
+
+            let service_secret = session_static_secret_class.call_method0("random").unwrap();
+
+            let requester_secret = session_static_secret_class.call_method0("random").unwrap();
+            let requester_public_key = requester_secret.call_method0("public_key").unwrap();
+
+            // derive shared secret
+            let shared_secret = service_secret
+                .call_method1("derive_shared_secret", (requester_public_key,))
+                .unwrap();
+
+            // encrypt request
+            let encrypted_request = packed_user_op_signature_request_instance
+                .call_method1("encrypt", (shared_secret, requester_public_key))
+                .unwrap();
+            assert_eq!(
+                encrypted_request
+                    .getattr("cohort_id")
+                    .unwrap()
+                    .extract::<u32>()
+                    .unwrap(),
+                packed_user_op_signature_request_instance
+                    .getattr("cohort_id")
+                    .unwrap()
+                    .extract::<u32>()
+                    .unwrap()
+            );
+            let encrypted_requester_key =
+                encrypted_request.getattr("requester_public_key").unwrap();
+            let encrypted_key_bytes: &PyBytes = encrypted_requester_key
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_key_bytes: &PyBytes = requester_public_key
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                encrypted_key_bytes.as_bytes(),
+                original_key_bytes.as_bytes()
+            );
+
+            // decrypt request
+            let decrypted_request = encrypted_request
+                .call_method1("decrypt", (shared_secret,))
+                .unwrap();
+            let decrypted_request_bytes = decrypted_request
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
+            assert_eq!(
+                decrypted_request_bytes.as_bytes(),
+                serialized_bytes.as_bytes()
+            );
         });
     }
 
@@ -2886,17 +3030,57 @@ mod tests {
                 .unwrap();
             assert_eq!(signature_type, 1u8);
 
+            //
             // serialization/deserialization test
-            let serialized: &PyAny = signature_response_instance
+            //
+            let serialized_bytes: &PyBytes = signature_response_instance
                 .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
                 .unwrap();
-            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
             let deserialized_instance = signature_response_class
                 .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
                 .unwrap();
-            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
-            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            let reserialized_bytes: &PyBytes = deserialized_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
             assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+
+            //
+            // encryption/decryption of response
+            //
+            let session_static_secret_class = core_module.getattr("SessionStaticSecret").unwrap();
+
+            let service_secret = session_static_secret_class.call_method0("random").unwrap();
+
+            let requester_secret = session_static_secret_class.call_method0("random").unwrap();
+            let requester_public_key = requester_secret.call_method0("public_key").unwrap();
+
+            // derive shared secret
+            let shared_secret = service_secret
+                .call_method1("derive_shared_secret", (requester_public_key,))
+                .unwrap();
+
+            // encrypt response
+            let encrypted_response = signature_response_instance
+                .call_method1("encrypt", (shared_secret,))
+                .unwrap();
+
+            // decrypt response
+            let decrypted_response = encrypted_response
+                .call_method1("decrypt", (shared_secret,))
+                .unwrap();
+            let decrypted_response_bytes = decrypted_response
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract::<&PyBytes>()
+                .unwrap();
+            assert_eq!(
+                decrypted_response_bytes.as_bytes(),
+                serialized_bytes.as_bytes()
+            );
         });
     }
 }
