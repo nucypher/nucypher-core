@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Expose `UserOperation`, `PackedUserOperation`, `UserOperationSigningRequest`, `PackedUserOperationSigningRequest`, `SignatureResponse` common objects and bindings for TACo Action Control. ([#113])
+- Added `UserOperation`, `PackedUserOperation`, `UserOperationSigningRequest`, `PackedUserOperationSigningRequest`, `SignatureResponse` types and bindings for TACo Action Control. ([#113])
+- Added `EncryptedThresholdSignatureRequest`/`EncryptedThresholdSignatureRequest` types and bindings to facilitate end-to-end encrypted requests/responses for TACo Action Control. ([#116])
 
 
 [#123]: https://github.com/nucypher/nucypher-core/pull/123
 [#113]: https://github.com/nucypher/nucypher-core/pull/113
+[#116]: https://github.com/nucypher/nucypher-core/pull/116
+
 
 ## [0.15.0] - 2025-08-15
 
