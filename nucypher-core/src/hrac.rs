@@ -2,8 +2,9 @@ use core::fmt;
 
 use generic_array::{sequence::Split, typenum::U16, GenericArray};
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{ArrayLike, Hex};
 use sha3::{digest::Update, Digest, Keccak256};
-use umbral_pre::{serde_bytes, PublicKey};
+use umbral_pre::PublicKey;
 
 /// "hashed resource access code".
 ///
@@ -16,7 +17,7 @@ use umbral_pre::{serde_bytes, PublicKey};
 /// Ursula does not, so we share it with her.
 #[allow(clippy::upper_case_acronyms)]
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct HRAC(#[serde(with = "serde_bytes::as_hex")] [u8; HRAC::SIZE]);
+pub struct HRAC(#[serde(with = "ArrayLike::<Hex>")] [u8; HRAC::SIZE]);
 
 impl HRAC {
     /// The size of HRAC in bytes.

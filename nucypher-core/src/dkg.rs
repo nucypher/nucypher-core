@@ -7,7 +7,7 @@ use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
 use serde::{Deserialize, Serialize};
-use umbral_pre::serde_bytes; // TODO should this be in umbral?
+use serde_encoded_bytes::{Base64, SliceLike};
 
 use crate::access_control::AccessControlPolicy;
 use crate::conditions::Context;
@@ -115,8 +115,8 @@ pub mod session {
     use rand_core::{CryptoRng, OsRng, RngCore};
     use secrecy::{ExposeSecret, ExposeSecretMut, SecretBox};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use serde_encoded_bytes::{ArrayLike, Hex};
     use sha2::Sha256;
-    use umbral_pre::serde_bytes;
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
     use zeroize::ZeroizeOnDrop;
 
@@ -208,14 +208,13 @@ pub mod session {
         where
             S: Serializer,
         {
-            serde_bytes::as_hex::serialize(self.0.as_bytes(), serializer)
+            ArrayLike::<Hex>::serialize(self.0.as_bytes(), serializer)
         }
     }
 
-    impl serde_bytes::TryFromBytes for SessionStaticKey {
+    impl TryFrom<[u8; 32]> for SessionStaticKey {
         type Error = core::array::TryFromSliceError;
-        fn try_from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
-            let array: [u8; 32] = bytes.try_into()?;
+        fn try_from(array: [u8; 32]) -> Result<Self, Self::Error> {
             Ok(SessionStaticKey(PublicKey::from(array)))
         }
     }
@@ -225,7 +224,7 @@ pub mod session {
         where
             D: Deserializer<'a>,
         {
-            serde_bytes::as_hex::deserialize(deserializer)
+            ArrayLike::<Hex>::deserialize(deserializer)
         }
     }
 
@@ -445,7 +444,7 @@ pub struct EncryptedThresholdDecryptionRequest {
     /// Public key of requester
     pub requester_public_key: SessionStaticKey,
 
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     /// Encrypted request
     ciphertext: Box<[u8]>,
 }
@@ -508,7 +507,7 @@ pub struct ThresholdDecryptionResponse {
     pub ritual_id: u32,
 
     /// The decryption share to include in the response.
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     pub decryption_share: Box<[u8]>,
 }
 
@@ -560,7 +559,7 @@ pub struct EncryptedThresholdDecryptionResponse {
     /// The ID of the ritual.
     pub ritual_id: u32,
 
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     ciphertext: Box<[u8]>,
 }
 

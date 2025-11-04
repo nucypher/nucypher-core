@@ -5,9 +5,10 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{Base64, SliceLike};
 use umbral_pre::{
-    decrypt_original, encrypt, serde_bytes, Capsule, EncryptionError, PublicKey, SecretKey,
-    Signature, Signer, VerifiedKeyFrag,
+    decrypt_original, encrypt, Capsule, EncryptionError, PublicKey, SecretKey, Signature, Signer,
+    VerifiedKeyFrag,
 };
 
 use crate::address::Address;
@@ -185,7 +186,7 @@ impl<'a> ProtocolObject<'a> for AuthorizedTreasureMap {}
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedTreasureMap {
     capsule: Capsule,
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     ciphertext: Box<[u8]>,
 }
 

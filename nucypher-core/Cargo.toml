@@ -31,3 +31,4 @@ rand_core = "0.6.4"
 rand_chacha = "0.3.1"
 rand = "0.8.5"
 secrecy = "0.10"
+serde-encoded-bytes = { version = "0.2", features = ["hex", "base64"] }

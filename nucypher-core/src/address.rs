@@ -4,8 +4,9 @@ use generic_array::{
     GenericArray,
 };
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{ArrayLike, Hex};
 use sha3::{digest::Update, Digest, Keccak256};
-use umbral_pre::{serde_bytes, PublicKey};
+use umbral_pre::PublicKey;
 
 // We could use the third-party `ethereum_types::Address` here,
 // but it has an inefficient `serde` implementation (serializes as hex instead of bytes).
@@ -14,7 +15,7 @@ use umbral_pre::{serde_bytes, PublicKey};
 
 /// Represents an Ethereum address (20 bytes).
 #[derive(PartialEq, Debug, Serialize, Deserialize, Copy, Clone, PartialOrd, Eq, Ord)]
-pub struct Address(#[serde(with = "serde_bytes::as_hex")] [u8; Address::SIZE]);
+pub struct Address(#[serde(with = "ArrayLike::<Hex>")] [u8; Address::SIZE]);
 
 impl Address {
     /// Size of canonical Ethereum address, in bytes.
