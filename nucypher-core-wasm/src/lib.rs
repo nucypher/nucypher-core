@@ -23,7 +23,7 @@ use umbral_pre::bindings_wasm::{
 };
 use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
-use wasm_bindgen_derive::TryFromJsValue;
+use wasm_bindgen_derive::{into_js_array, try_from_js_array, try_from_js_option, TryFromJsValue};
 
 use nucypher_core::ProtocolObject;
 
@@ -52,60 +52,6 @@ where
     U: ProtocolObject<'a>,
 {
     U::from_bytes(data).map(T::from).map_err(map_js_err)
-}
-
-/// Tries to convert an optional value (either `null` or a `#[wasm_bindgen]` marked structure)
-/// from `JsValue` to the Rust type.
-// TODO (rust-umbral#25): This is necessary since wasm-bindgen does not support
-// having a parameter of `Option<&T>`, and using `Option<T>` consumes the argument
-// (see https://github.com/rustwasm/wasm-bindgen/issues/2370).
-fn try_from_js_option<T>(value: impl AsRef<JsValue>) -> Result<Option<T>, Error>
-where
-    for<'a> T: TryFrom<&'a JsValue> + 'static,
-    for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
-{
-    let js_value = value.as_ref();
-
-    let typed_value = if js_value.is_null() {
-        None
-    } else {
-        Some(T::try_from(js_value).map_err(map_js_err)?)
-    };
-    Ok(typed_value)
-}
-
-/// Tries to convert a JS array from `JsValue` to a vector of Rust type elements.
-// TODO (rust-umbral#23): This is necessary since wasm-bindgen does not support
-// having a parameter of `Vec<&T>`
-// (see https://github.com/rustwasm/wasm-bindgen/issues/111).
-fn try_from_js_array<T>(value: impl AsRef<JsValue>) -> Result<Vec<T>, Error>
-where
-    for<'a> T: TryFrom<&'a JsValue>,
-    for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Display,
-{
-    let array: &js_sys::Array = value
-        .as_ref()
-        .dyn_ref()
-        .ok_or_else(|| Error::new("Got a non-array argument where an array was expected"))?;
-    let length: usize = array.length().try_into().map_err(map_js_err)?;
-    let mut result = Vec::<T>::with_capacity(length);
-    for js in array.iter() {
-        let typed_elem = T::try_from(&js).map_err(map_js_err)?;
-        result.push(typed_elem);
-    }
-    Ok(result)
-}
-
-fn into_js_array<T, U>(value: impl IntoIterator<Item = U>) -> T
-where
-    JsValue: From<U>,
-    T: JsCast,
-{
-    value
-        .into_iter()
-        .map(JsValue::from)
-        .collect::<js_sys::Array>()
-        .unchecked_into::<T>()
 }
 
 macro_rules! generate_from_bytes {
@@ -305,7 +251,7 @@ impl MessageKit {
         plaintext: &[u8],
         conditions: &OptionConditions,
     ) -> Result<MessageKit, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions).map_err(map_js_err)?;
 
         Ok(MessageKit(nucypher_core::MessageKit::new(
             policy_encrypting_key.as_ref(),
@@ -335,7 +281,8 @@ impl MessageKit {
         policy_encrypting_key: &PublicKey,
         vcfrags: &VerifiedCapsuleFragArray,
     ) -> Result<Box<[u8]>, Error> {
-        let typed_vcfrags = try_from_js_array::<VerifiedCapsuleFrag>(vcfrags)?;
+        let typed_vcfrags =
+            try_from_js_array::<VerifiedCapsuleFrag>(vcfrags).map_err(map_js_err)?;
         self.0
             .decrypt_reencrypted(
                 sk.as_ref(),
@@ -819,7 +766,7 @@ impl ThresholdDecryptionRequest {
         acp: &AccessControlPolicy,
         context: &OptionContext,
     ) -> Result<ThresholdDecryptionRequest, Error> {
-        let typed_context = try_from_js_option::<Context>(context)?;
+        let typed_context = try_from_js_option::<Context>(context).map_err(map_js_err)?;
 
         Ok(Self(nucypher_core::ThresholdDecryptionRequest::new(
             ritual_id,
@@ -991,9 +938,9 @@ impl ReencryptionRequest {
         conditions: &OptionConditions,
         context: &OptionContext,
     ) -> Result<ReencryptionRequest, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
-        let typed_context = try_from_js_option::<Context>(context)?;
-        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions).map_err(map_js_err)?;
+        let typed_context = try_from_js_option::<Context>(context).map_err(map_js_err)?;
+        let typed_capsules = try_from_js_array::<Capsule>(capsules).map_err(map_js_err)?;
         let backend_capules = typed_capsules
             .into_iter()
             .map(umbral_pre::Capsule::from)
@@ -1114,7 +1061,7 @@ impl ReencryptionResponse {
         policy_encrypting_key: &PublicKey,
         bob_encrypting_key: &PublicKey,
     ) -> Result<VerifiedCapsuleFragArray, Error> {
-        let typed_capsules = try_from_js_array::<Capsule>(capsules)?;
+        let typed_capsules = try_from_js_array::<Capsule>(capsules).map_err(map_js_err)?;
         let backend_capsules = typed_capsules
             .into_iter()
             .map(|capsule| capsule.as_ref().clone())
@@ -1160,8 +1107,9 @@ impl RetrievalKit {
         queried_addresses: &AddressArray,
         conditions: &OptionConditions,
     ) -> Result<RetrievalKit, Error> {
-        let typed_conditions = try_from_js_option::<Conditions>(conditions)?;
-        let typed_addresses = try_from_js_array::<Address>(queried_addresses)?;
+        let typed_conditions = try_from_js_option::<Conditions>(conditions).map_err(map_js_err)?;
+        let typed_addresses =
+            try_from_js_array::<Address>(queried_addresses).map_err(map_js_err)?;
         let backend_addresses = typed_addresses
             .into_iter()
             .map(|address| address.0)
@@ -1392,8 +1340,8 @@ impl FleetStateChecksum {
         other_nodes: &NodeMetadataArray,
         this_node: &OptionNodeMetadata,
     ) -> Result<FleetStateChecksum, Error> {
-        let typed_this_node = try_from_js_option::<NodeMetadata>(this_node)?;
-        let typed_nodes = try_from_js_array::<NodeMetadata>(other_nodes)?;
+        let typed_this_node = try_from_js_option::<NodeMetadata>(this_node).map_err(map_js_err)?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(other_nodes).map_err(map_js_err)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)
@@ -1427,7 +1375,7 @@ impl MetadataRequest {
         fleet_state_checksum: &FleetStateChecksum,
         announce_nodes: &NodeMetadataArray,
     ) -> Result<MetadataRequest, Error> {
-        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes)?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes).map_err(map_js_err)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)
@@ -1468,7 +1416,7 @@ impl MetadataResponsePayload {
         timestamp_epoch: u32,
         announce_nodes: &NodeMetadataArray,
     ) -> Result<MetadataResponsePayload, Error> {
-        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes)?;
+        let typed_nodes = try_from_js_array::<NodeMetadata>(announce_nodes).map_err(map_js_err)?;
         let backend_nodes = typed_nodes
             .into_iter()
             .map(|node| node.0)

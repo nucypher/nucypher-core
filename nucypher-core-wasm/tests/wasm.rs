@@ -7,48 +7,10 @@ use umbral_pre::bindings_wasm::{
 };
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen_derive::{into_js_array, into_js_option, try_from_js_array};
 use wasm_bindgen_test::*;
 
 use nucypher_core_wasm::*;
-//
-// Test utilities
-//
-
-fn into_js_option<T, U>(val: Option<U>) -> T
-where
-    JsValue: From<U>,
-    T: JsCast,
-{
-    let js_val = match val {
-        None => JsValue::NULL,
-        Some(val) => val.into(),
-    };
-    js_val.unchecked_into::<T>()
-}
-
-fn try_from_js_array<T>(val: impl Into<JsValue>) -> Vec<T>
-where
-    for<'a> T: TryFrom<&'a JsValue>,
-    for<'a> <T as TryFrom<&'a JsValue>>::Error: core::fmt::Debug,
-{
-    let js_array: js_sys::Array = val.into().dyn_into().unwrap();
-    js_array
-        .iter()
-        .map(|js| T::try_from(&js).unwrap())
-        .collect::<Vec<_>>()
-}
-
-fn into_js_array<T, U>(value: impl IntoIterator<Item = U>) -> T
-where
-    JsValue: From<U>,
-    T: JsCast,
-{
-    value
-        .into_iter()
-        .map(JsValue::from)
-        .collect::<js_sys::Array>()
-        .unchecked_into::<T>()
-}
 
 /// Generate a random DKG public key.
 fn random_dkg_pubkey() -> DkgPublicKey {
@@ -79,7 +41,7 @@ fn make_kfrags(delegating_sk: &SecretKey, receiving_sk: &SecretKey) -> Vec<Verif
     let receiving_pk = receiving_sk.public_key();
     let signer = Signer::new(delegating_sk);
     let js_kfrags = generate_kfrags(delegating_sk, &receiving_pk, &signer, 2, 3, false, false);
-    try_from_js_array::<VerifiedKeyFrag>(js_kfrags)
+    try_from_js_array::<VerifiedKeyFrag>(js_kfrags).unwrap()
 }
 
 fn make_fleet_state_checksum() -> FleetStateChecksum {
@@ -174,7 +136,7 @@ fn message_kit_decrypt_reencrypted() {
     );
 
     // Simulate reencryption on the JS side
-    let vkfrags = try_from_js_array::<VerifiedKeyFrag>(vkfrags_js);
+    let vkfrags = try_from_js_array::<VerifiedKeyFrag>(vkfrags_js).unwrap();
     let vcfrags = vkfrags
         .into_iter()
         .map(|vkfrag| reencrypt(&message_kit.capsule(), &vkfrag));
@@ -336,7 +298,7 @@ fn treasure_map_destinations() {
     let receiving_sk = SecretKey::random();
 
     let treasure_map = make_treasure_map(&publisher_sk, &receiving_sk);
-    let destinations_pairs = try_from_js_array::<JsValue>(treasure_map.destinations());
+    let destinations_pairs = try_from_js_array::<JsValue>(treasure_map.destinations()).unwrap();
 
     // Need to unpack the tuples further
     let mut destinations = Vec::new();
@@ -482,7 +444,7 @@ fn reencryption_response_verify() {
         )
         .unwrap();
 
-    let verified = try_from_js_array::<VerifiedCapsuleFrag>(verified_array);
+    let verified = try_from_js_array::<VerifiedCapsuleFrag>(verified_array).unwrap();
     assert_eq!(vcfrags, verified, "Capsule fragments do not match");
 
     let as_bytes = reencryption_response.to_bytes();
@@ -512,7 +474,7 @@ fn retrieval_kit() {
 
     let retrieval_kit_from_mk = RetrievalKit::from_message_kit(&message_kit);
     let addresses_from_rkit =
-        try_from_js_array::<Address>(retrieval_kit_from_mk.queried_addresses());
+        try_from_js_array::<Address>(retrieval_kit_from_mk.queried_addresses()).unwrap();
     assert_eq!(
         addresses_from_rkit.len(),
         0,
@@ -532,7 +494,8 @@ fn retrieval_kit() {
         &conditions_js,
     )
     .unwrap();
-    let addresses_from_rkit = try_from_js_array::<Address>(retrieval_kit.queried_addresses());
+    let addresses_from_rkit =
+        try_from_js_array::<Address>(retrieval_kit.queried_addresses()).unwrap();
     assert_eq!(
         addresses_from_rkit.len(),
         queried_addresses.len(),
@@ -636,7 +599,7 @@ fn metadata_request() {
     let announce_nodes_js = into_js_array(announce_nodes.iter().cloned());
     let metadata_request = MetadataRequest::new(&fleet_state_checksum, &announce_nodes_js).unwrap();
 
-    let nodes = try_from_js_array::<NodeMetadata>(metadata_request.announce_nodes());
+    let nodes = try_from_js_array::<NodeMetadata>(metadata_request.announce_nodes()).unwrap();
     assert_eq!(nodes, announce_nodes);
 
     let as_bytes = metadata_request.to_bytes();
@@ -654,7 +617,8 @@ fn metadata_request() {
 #[wasm_bindgen_test]
 fn metadata_response_payload() {
     let (metadata_response_payload, announce_nodes) = make_metadata_response_payload();
-    let nodes = try_from_js_array::<NodeMetadata>(metadata_response_payload.announce_nodes());
+    let nodes =
+        try_from_js_array::<NodeMetadata>(metadata_response_payload.announce_nodes()).unwrap();
     assert_eq!(nodes, announce_nodes, "Announce nodes does not match");
 }
 

@@ -560,7 +560,7 @@ dependencies = [
  "subproductdomain-nucypher",
  "thiserror",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.2.1",
  "zeroize",
 ]
 
@@ -956,7 +956,7 @@ dependencies = [
  "nucypher-core",
  "umbral-pre",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.3.0",
  "wasm-bindgen-test",
  "x25519-dalek",
 ]
@@ -1627,7 +1627,7 @@ dependencies = [
  "sha2",
  "subtle",
  "wasm-bindgen",
- "wasm-bindgen-derive",
+ "wasm-bindgen-derive 0.2.1",
  "zeroize",
 ]
 
@@ -1702,7 +1702,18 @@ checksum = "c1ab6c8bffb3f89584781211283fb57337d6902faab6eaee38f336977bdf177d"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
- "wasm-bindgen-derive-macro",
+ "wasm-bindgen-derive-macro 0.2.1",
+]
+
+[[package]]
+name = "wasm-bindgen-derive"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ab8fdb87408dab27d43267c311c89135b35d13f8b3081e88451ddeff742c93a"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-derive-macro 0.3.0",
 ]
 
 [[package]]
@@ -1710,6 +1721,17 @@ name = "wasm-bindgen-derive-macro"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b87c28b31d27616bc69a891700ef0445d2cbaa0340fdacb145145256d5f5fcbb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "wasm-bindgen-derive-macro"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2fbc080f15cb38f447d52bbae64630c2d4925a9ecb5d140d56c0910b69b4cc7"
 dependencies = [
  "proc-macro2",
  "quote",
