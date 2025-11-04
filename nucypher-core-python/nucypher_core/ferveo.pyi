@@ -48,7 +48,11 @@ class FerveoPublicKey:
 @final
 class Validator:
 
-    def __init__(self, address: str, public_key: FerveoPublicKey, share_index: int):
+    def __new__(
+        cls, address: str,
+        public_key: FerveoPublicKey,
+        share_index: int
+    ) -> Validator:
         ...
 
     address: str
@@ -85,11 +89,11 @@ class DkgPublicKey:
 @final
 class ValidatorMessage:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             validator: Validator,
             transcript: Transcript,
-    ):
+    ) -> ValidatorMessage:
         ...
 
     validator: Validator
@@ -99,14 +103,14 @@ class ValidatorMessage:
 @final
 class Dkg:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             tau: int,
             shares_num: int,
             security_threshold: int,
             validators: Sequence[Validator],
             me: Validator,
-    ):
+    ) -> Dkg:
         ...
 
     public_key: DkgPublicKey
@@ -183,7 +187,7 @@ class HandoverTranscript:
 class AggregatedTranscript:
     public_key: DkgPublicKey
 
-    def __init__(self, messages: Sequence[ValidatorMessage]):
+    def __new__(cls, messages: Sequence[ValidatorMessage]) -> AggregatedTranscript:
         ...
 
     def verify(self, validators_num: int, messages: Sequence[ValidatorMessage]) -> bool:

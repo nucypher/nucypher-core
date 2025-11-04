@@ -137,7 +137,7 @@ jobs:
         run: pip install mypy ruff
 
       - name: Run mypy.stubtest
-        run: python -m mypy.stubtest nucypher_core --allowlist stubtest-allowlist.txt
+        run: python -m mypy.stubtest nucypher_core
         working-directory: nucypher-core-python
 
       - name: Run ruff

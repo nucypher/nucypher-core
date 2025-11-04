@@ -21,7 +21,7 @@ from .umbral import (
 @final
 class Address:
 
-    def __init__(self, address_bytes: bytes):
+    def __new__(cls, address_bytes: bytes) -> Address:
         ...
 
     def __bytes__(self) -> bytes:
@@ -37,7 +37,7 @@ class Address:
 @final
 class Conditions:
 
-    def __init__(self, conditions: str):
+    def __new__(cls, conditions: str) -> Conditions:
         ...
 
     @staticmethod
@@ -51,7 +51,7 @@ class Conditions:
 @final
 class Context:
 
-    def __init__(self, context: str):
+    def __new__(cls, context: str) -> Context:
         ...
 
     def __str__(self) -> str:
@@ -65,12 +65,12 @@ class MessageKit:
     def from_bytes(data: bytes) -> MessageKit:
         ...
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             policy_encrypting_key: PublicKey,
             plaintext: bytes,
             conditions: Optional[Conditions]
-    ):
+    ) -> MessageKit:
         ...
 
     def decrypt(self, sk: SecretKey) -> bytes:
@@ -95,12 +95,12 @@ class MessageKit:
 @final
 class HRAC:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             publisher_verifying_key: PublicKey,
             bob_verifying_key: PublicKey,
             label: bytes,
-    ):
+    ) -> HRAC:
         ...
 
     @staticmethod
@@ -114,13 +114,13 @@ class HRAC:
 @final
 class EncryptedKeyFrag:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             signer: Signer,
             recipient_key: PublicKey,
             hrac: HRAC,
             verified_kfrag: VerifiedKeyFrag,
-    ):
+    ) -> EncryptedKeyFrag:
         ...
 
     def decrypt(
@@ -142,14 +142,14 @@ class EncryptedKeyFrag:
 @final
 class TreasureMap:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             signer: Signer,
             hrac: HRAC,
             policy_encrypting_key: PublicKey,
             assigned_kfrags: Mapping[Address, Tuple[PublicKey, VerifiedKeyFrag]],
             threshold: int,
-    ):
+    ) -> TreasureMap:
         ...
 
     def encrypt(self, signer: Signer, recipient_key: PublicKey) -> EncryptedTreasureMap:
@@ -197,8 +197,8 @@ class EncryptedTreasureMap:
 @final
 class ReencryptionRequest:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             capsules: Sequence[Capsule],
             hrac: HRAC,
             encrypted_kfrag: EncryptedKeyFrag,
@@ -206,7 +206,7 @@ class ReencryptionRequest:
             bob_verifying_key: PublicKey,
             conditions: Optional[Conditions],
             context: Optional[Context],
-    ):
+    ) -> ReencryptionRequest:
         ...
 
     hrac: HRAC
@@ -234,12 +234,12 @@ class ReencryptionRequest:
 @final
 class ReencryptionResponse:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             signer: Signer,
             capsules_and_vcfrags:
             Sequence[Tuple[Capsule, VerifiedCapsuleFrag]]
-    ):
+    ) -> ReencryptionResponse:
         ...
 
     def verify(
@@ -267,12 +267,12 @@ class RetrievalKit:
     def from_message_kit(message_kit: MessageKit) -> RetrievalKit:
         ...
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             capsule: Capsule,
             queried_addresses: Set[Address],
             conditions: Optional[Conditions],
-    ):
+    ) -> RetrievalKit:
         ...
 
     capsule: Capsule
@@ -292,12 +292,12 @@ class RetrievalKit:
 @final
 class RevocationOrder:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             signer: Signer,
             staking_provider_address: Address,
             encrypted_kfrag: EncryptedKeyFrag,
-    ):
+    ) -> RevocationOrder:
         ...
 
     def verify(
@@ -317,8 +317,8 @@ class RevocationOrder:
 @final
 class NodeMetadataPayload:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             staking_provider_address: Address,
             domain: str,
             timestamp_epoch: int,
@@ -329,7 +329,7 @@ class NodeMetadataPayload:
             host: str,
             port: int,
             operator_signature: RecoverableSignature,
-    ):
+    ) -> NodeMetadataPayload:
         ...
 
     staking_provider_address: Address
@@ -359,7 +359,7 @@ class NodeMetadataPayload:
 @final
 class NodeMetadata:
 
-    def __init__(self, signer: Signer, payload: NodeMetadataPayload):
+    def __new__(cls, signer: Signer, payload: NodeMetadataPayload) -> NodeMetadata:
         ...
 
     def verify(self) -> bool:
@@ -378,11 +378,11 @@ class NodeMetadata:
 @final
 class FleetStateChecksum:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             other_nodes: Sequence[NodeMetadata],
             this_node: Optional[NodeMetadata]
-    ):
+    ) -> FleetStateChecksum:
         ...
 
     def __bytes__(self) -> bytes:
@@ -392,11 +392,11 @@ class FleetStateChecksum:
 @final
 class MetadataRequest:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             fleet_state_checksum: FleetStateChecksum,
             announce_nodes: Sequence[NodeMetadata],
-    ):
+    ) -> MetadataRequest:
         ...
 
     fleet_state_checksum: FleetStateChecksum
@@ -414,7 +414,11 @@ class MetadataRequest:
 @final
 class MetadataResponsePayload:
 
-    def __init__(self, timestamp_epoch: int, announce_nodes: Sequence[NodeMetadata]):
+    def __new__(
+        cls,
+        timestamp_epoch: int,
+        announce_nodes: Sequence[NodeMetadata]
+    ) -> MetadataResponsePayload:
         ...
 
     timestamp_epoch: int
@@ -425,7 +429,11 @@ class MetadataResponsePayload:
 @final
 class MetadataResponse:
 
-    def __init__(self, signer: Signer, payload: MetadataResponsePayload):
+    def __new__(
+        cls,
+        signer: Signer,
+        payload: MetadataResponsePayload
+    ) -> MetadataResponse:
         ...
 
     def verify(self, verifying_pk: PublicKey) -> MetadataResponsePayload:
@@ -442,7 +450,11 @@ class MetadataResponse:
 @final
 class AuthenticatedData:
 
-    def __init__(self, public_key: DkgPublicKey, conditions: Conditions):
+    def __new__(
+        cls,
+        public_key: DkgPublicKey,
+        conditions: Conditions
+    ) -> AuthenticatedData:
         ...
 
     public_key: DkgPublicKey
@@ -472,7 +484,11 @@ def encrypt_for_dkg(
 @final
 class AccessControlPolicy:
 
-    def __init__(self, auth_data: AuthenticatedData, authorization: bytes):
+    def __new__(
+        cls,
+        auth_data: AuthenticatedData,
+        authorization: bytes
+    ) -> AccessControlPolicy:
         ...
 
     public_key: DkgPublicKey
@@ -495,7 +511,11 @@ class AccessControlPolicy:
 @final
 class ThresholdMessageKit:
 
-    def __init__(self, ciphertext: Ciphertext, acp: AccessControlPolicy):
+    def __new__(
+        cls,
+        ciphertext: Ciphertext,
+        acp: AccessControlPolicy
+    ) -> ThresholdMessageKit:
         ...
 
     acp: AccessControlPolicy
@@ -516,14 +536,14 @@ class ThresholdMessageKit:
 @final
 class ThresholdDecryptionRequest:
 
-    def __init__(
-            self,
+    def __new__(
+            cls,
             ritual_id: int,
             variant: FerveoVariant,
             ciphertext_header: CiphertextHeader,
             acp: AccessControlPolicy,
             context: Optional[Context]
-    ):
+    ) -> ThresholdDecryptionRequest:
         ...
 
     ritual_id: int
@@ -574,7 +594,11 @@ class EncryptedThresholdDecryptionRequest:
 @final
 class ThresholdDecryptionResponse:
 
-    def __init__(self, ritual_id: int, decryption_share: bytes):
+    def __new__(
+        cls,
+        ritual_id: int,
+        decryption_share: bytes
+    ) -> ThresholdDecryptionResponse:
         ...
 
     decryption_share: bytes
