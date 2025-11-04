@@ -4,6 +4,7 @@ members = [
     "nucypher-core-python",
     "nucypher-core-wasm",
 ]
+resolver = "2"
 
 # Prevents `local exceed maximum` error
 # See: https://github.com/rustwasm/wasm-pack/issues/981
