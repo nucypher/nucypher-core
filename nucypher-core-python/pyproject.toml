@@ -3,4 +3,4 @@ requires = ["setuptools", "wheel", "setuptools-rust"]
 
 [tool.ruff]
 exclude = ["nucypher_core/__init__.py"] # false-positive unused-import
-select = ["E", "F", "I"]
+lint.select = ["E", "F", "I"]
