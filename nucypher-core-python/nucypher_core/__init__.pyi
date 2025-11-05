@@ -720,8 +720,8 @@ class AAVersion:
 class UserOperation:
     """UserOperation for signature requests."""
     
-    def __init__(
-        self,
+    def __new__(
+        cls,
         sender: str,
         nonce: int,
         call_data: bytes,
@@ -736,7 +736,7 @@ class UserOperation:
         paymaster_verification_gas_limit: Optional[int] = None,
         paymaster_post_op_gas_limit: Optional[int] = None,
         paymaster_data: Optional[bytes] = None,
-    ) -> None:
+    ) -> UserOperation:
         """Create a new UserOperation with u128 gas limits."""
         ...
     
@@ -823,14 +823,14 @@ class UserOperation:
 @final
 class UserOperationSignatureRequest:
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         user_op: UserOperation,
         cohort_id: int,
         chain_id: int,
         aa_version: str,
         context: Optional[Context]
-    ):
+    ) -> UserOperationSignatureRequest:
         ...
 
     @property
@@ -869,8 +869,8 @@ class UserOperationSignatureRequest:
 class PackedUserOperation:
     """Packed UserOperation for optimized format with u128 gas limits."""
     
-    def __init__(
-        self,
+    def __new__(
+        cls,
         sender: str,
         nonce: int,
         init_code: bytes,
@@ -879,7 +879,7 @@ class PackedUserOperation:
         pre_verification_gas: int,
         gas_fees: bytes,
         paymaster_and_data: bytes,
-    ) -> None:
+    ) -> PackedUserOperation:
         """Create a new PackedUserOperation with u128 pre_verification_gas."""
         ...
     
@@ -945,14 +945,14 @@ class PackedUserOperation:
 @final
 class PackedUserOperationSignatureRequest:
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         packed_user_op: PackedUserOperation,
         cohort_id: int,
         chain_id: int,
         aa_version: str,
         context: Optional[Context]
-    ):
+    ) -> PackedUserOperationSignatureRequest:
         ...
 
     @property
@@ -991,9 +991,9 @@ class PackedUserOperationSignatureRequest:
 class SignatureResponse:
     """Response object containing signature hash, signature bytes, and type."""
 
-    def __init__(
-        self, signer: str, hash: bytes, signature: bytes, signature_type: int
-    ) -> None:
+    def __new__(
+        cls, signer: str, hash: bytes, signature: bytes, signature_type: int
+    ) -> SignatureResponse:
         """Create a new SignatureResponse."""
         ...
 
