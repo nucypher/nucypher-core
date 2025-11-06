@@ -706,7 +706,7 @@ class SessionSecretFactory:
 
 @final
 class SignatureRequestType:
-    USEROP: int = 0
+    USER_OP: int = 0
     PACKED_USER_OP: int = 1 
 
 

@@ -40,7 +40,7 @@ from ._nucypher_core import (
 # Constants for signature request types
 class SignatureRequestType:
     """Constants for signature request types."""
-    USEROP = 0
+    USER_OP = 0
     PACKED_USER_OP = 1
 
 
