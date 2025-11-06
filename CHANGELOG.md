@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Use `__new__` for Python binding constructors which is the correct way instead of `__init__`.
+- Use `__new__` for Python binding constructors which is the correct way instead of `__init__`. ([#123])
+
+### Added
+
+- Expose `UserOperation`, `PackedUserOperation`, `UserOperationSigningRequest`, `PackedUserOperationSigningRequest`, `SignatureResponse` common objects and bindings for TACo Action Control. ([#113])
 
 
 [#123]: https://github.com/nucypher/nucypher-core/pull/123
+[#113]: https://github.com/nucypher/nucypher-core/pull/113
 
 ## [0.15.0] - 2025-08-15
 

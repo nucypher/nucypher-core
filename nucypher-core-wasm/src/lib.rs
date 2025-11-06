@@ -11,7 +11,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::fmt;
+use core::{fmt, str::FromStr};
 
 use ferveo::bindings_wasm::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoVariant, JsResult, SharedSecret,
@@ -1522,5 +1522,396 @@ impl MetadataResponse {
     #[wasm_bindgen(js_name = toBytes)]
     pub fn to_bytes(&self) -> Box<[u8]> {
         to_bytes(self)
+    }
+}
+
+/// UserOperation
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct UserOperation(nucypher_core::UserOperation);
+
+generate_from_bytes!(UserOperation);
+generate_to_bytes!(UserOperation);
+generate_equals!(UserOperation);
+
+#[wasm_bindgen]
+impl UserOperation {
+    #[allow(clippy::too_many_arguments)]
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        sender: &str,
+        nonce: u64,
+        call_data: &[u8],
+        call_gas_limit: u128,
+        verification_gas_limit: u128,
+        pre_verification_gas: u128,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
+    ) -> Result<Self, Error> {
+        let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
+
+        Ok(Self(nucypher_core::UserOperation::new(
+            sender_address,
+            nonce,
+            call_data,
+            call_gas_limit,
+            verification_gas_limit,
+            pre_verification_gas,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn sender(&self) -> String {
+        self.0.sender.to_checksum_address()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn nonce(&self) -> u64 {
+        self.0.nonce
+    }
+
+    #[wasm_bindgen(getter, js_name = callData)]
+    pub fn call_data(&self) -> Box<[u8]> {
+        self.0.call_data.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = callGasLimit)]
+    pub fn call_gas_limit(&self) -> u128 {
+        self.0.call_gas_limit
+    }
+
+    #[wasm_bindgen(getter, js_name = verificationGasLimit)]
+    pub fn verification_gas_limit(&self) -> u128 {
+        self.0.verification_gas_limit
+    }
+
+    #[wasm_bindgen(getter, js_name = preVerificationGas)]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.0.pre_verification_gas
+    }
+
+    #[wasm_bindgen(getter, js_name = maxFeePerGas)]
+    pub fn max_fee_per_gas(&self) -> u128 {
+        self.0.max_fee_per_gas
+    }
+
+    #[wasm_bindgen(getter, js_name = maxPriorityFeePerGas)]
+    pub fn max_priority_fee_per_gas(&self) -> u128 {
+        self.0.max_priority_fee_per_gas
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn factory(&self) -> Option<String> {
+        self.0
+            .factory
+            .as_ref()
+            .map(|address| address.to_checksum_address())
+    }
+
+    #[wasm_bindgen(getter, js_name = factoryData)]
+    pub fn factory_data(&self) -> Option<Box<[u8]>> {
+        self.0.factory_data.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn paymaster(&self) -> Option<String> {
+        self.0.paymaster.map(|p| p.to_checksum_address())
+    }
+
+    #[wasm_bindgen(getter, js_name = paymasterVerificationGasLimit)]
+    pub fn paymaster_verification_gas_limit(&self) -> Option<u128> {
+        self.0.paymaster_verification_gas_limit
+    }
+
+    #[wasm_bindgen(getter, js_name = paymasterPostOpGasLimit)]
+    pub fn paymaster_post_op_gas_limit(&self) -> Option<u128> {
+        self.0.paymaster_post_op_gas_limit
+    }
+
+    #[wasm_bindgen(getter, js_name = paymasterData)]
+    pub fn paymaster_data(&self) -> Option<Box<[u8]>> {
+        self.0.paymaster_data.clone()
+    }
+
+    #[wasm_bindgen(js_name = setFactoryData)]
+    pub fn set_factory_data(
+        &mut self,
+        factory: &str,
+        data: Option<Box<[u8]>>,
+    ) -> Result<(), Error> {
+        let address = nucypher_core::Address::from_str(factory).map_err(map_js_err)?;
+        self.0.factory = Some(address);
+        self.0.factory_data = data;
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = setPaymasterData)]
+    pub fn set_paymaster_data(
+        &mut self,
+        paymaster: &str,
+        verification_gas_limit: u128,
+        post_op_gas_limit: u128,
+        data: Option<Box<[u8]>>,
+    ) -> Result<(), Error> {
+        let address = nucypher_core::Address::from_str(paymaster).map_err(map_js_err)?;
+        self.0.paymaster = Some(address);
+        self.0.paymaster_verification_gas_limit = Some(verification_gas_limit);
+        self.0.paymaster_post_op_gas_limit = Some(post_op_gas_limit);
+        self.0.paymaster_data = data;
+        Ok(())
+    }
+}
+
+/// PackedUserOperation
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct PackedUserOperation(nucypher_core::PackedUserOperation);
+
+generate_from_bytes!(PackedUserOperation);
+generate_to_bytes!(PackedUserOperation);
+generate_equals!(PackedUserOperation);
+
+#[wasm_bindgen]
+impl PackedUserOperation {
+    #[allow(clippy::too_many_arguments)]
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        sender: &str,
+        nonce: u64,
+        init_code: &[u8],
+        call_data: &[u8],
+        account_gas_limits: &[u8],
+        pre_verification_gas: u128,
+        gas_fees: &[u8],
+        paymaster_and_data: &[u8],
+    ) -> Result<Self, Error> {
+        let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
+        Ok(Self(nucypher_core::PackedUserOperation::new(
+            sender_address,
+            nonce,
+            init_code,
+            call_data,
+            account_gas_limits,
+            pre_verification_gas,
+            gas_fees,
+            paymaster_and_data,
+        )))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn sender(&self) -> String {
+        self.0.sender.to_checksum_address()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn nonce(&self) -> u64 {
+        self.0.nonce
+    }
+
+    #[wasm_bindgen(getter, js_name = initCode)]
+    pub fn init_code(&self) -> Box<[u8]> {
+        self.0.init_code.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = callData)]
+    pub fn call_data(&self) -> Box<[u8]> {
+        self.0.call_data.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = accountGasLimits)]
+    pub fn account_gas_limits(&self) -> Box<[u8]> {
+        self.0.account_gas_limits.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = preVerificationGas)]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.0.pre_verification_gas
+    }
+
+    #[wasm_bindgen(getter, js_name = gasFees)]
+    pub fn gas_fees(&self) -> Box<[u8]> {
+        self.0.gas_fees.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = paymasterAndData)]
+    pub fn paymaster_and_data(&self) -> Box<[u8]> {
+        self.0.paymaster_and_data.clone()
+    }
+
+    #[wasm_bindgen(js_name = fromUserOperation)]
+    pub fn from_user_operation(op: &UserOperation) -> Self {
+        Self(nucypher_core::PackedUserOperation::from_user_operation(
+            &op.0,
+        ))
+    }
+}
+
+/// UserOperationSignatureRequest
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct UserOperationSignatureRequest(nucypher_core::UserOperationSignatureRequest);
+
+generate_from_bytes!(UserOperationSignatureRequest);
+generate_to_bytes!(UserOperationSignatureRequest);
+generate_equals!(UserOperationSignatureRequest);
+
+#[wasm_bindgen]
+impl UserOperationSignatureRequest {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        user_op: &UserOperation,
+        cohort_id: u32,
+        chain_id: u64,
+        aa_version: &str,
+        context: &OptionContext,
+    ) -> Result<Self, Error> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version).map_err(map_js_err)?;
+        let typed_context = try_from_js_option::<Context>(context)?;
+        Ok(Self(nucypher_core::UserOperationSignatureRequest::new(
+            user_op.0.clone(),
+            cohort_id,
+            chain_id,
+            core_aa_version,
+            typed_context.as_ref().map(|context| &context.0),
+        )))
+    }
+
+    #[wasm_bindgen(getter, js_name = userOp)]
+    pub fn user_op(&self) -> UserOperation {
+        UserOperation(self.0.user_op.clone())
+    }
+    #[wasm_bindgen(getter, js_name = cohortId)]
+    pub fn cohort_id(&self) -> u32 {
+        self.0.cohort_id
+    }
+
+    #[wasm_bindgen(getter, js_name = chainId)]
+    pub fn chain_id(&self) -> u64 {
+        self.0.chain_id
+    }
+
+    #[wasm_bindgen(getter, js_name = aaVersion)]
+    pub fn aa_version(&self) -> String {
+        self.0.aa_version.as_str().to_string()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn context(&self) -> Option<Context> {
+        self.0.context.clone().map(Context)
+    }
+}
+
+/// PackedUserOperationSignatureRequest
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct PackedUserOperationSignatureRequest(nucypher_core::PackedUserOperationSignatureRequest);
+
+generate_from_bytes!(PackedUserOperationSignatureRequest);
+generate_to_bytes!(PackedUserOperationSignatureRequest);
+generate_equals!(PackedUserOperationSignatureRequest);
+
+#[wasm_bindgen]
+impl PackedUserOperationSignatureRequest {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        packed_user_op: &PackedUserOperation,
+        cohort_id: u32,
+        chain_id: u64,
+        aa_version: &str,
+        context: &OptionContext,
+    ) -> Result<Self, Error> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version).map_err(map_js_err)?;
+        let typed_context = try_from_js_option::<Context>(context)?;
+        Ok(Self(
+            nucypher_core::PackedUserOperationSignatureRequest::new(
+                packed_user_op.0.clone(),
+                cohort_id,
+                chain_id,
+                core_aa_version,
+                typed_context.as_ref().map(|context| &context.0),
+            ),
+        ))
+    }
+
+    #[wasm_bindgen(getter, js_name = packedUserOp)]
+    pub fn packed_user_op(&self) -> PackedUserOperation {
+        PackedUserOperation(self.0.packed_user_op.clone())
+    }
+    #[wasm_bindgen(getter, js_name = cohortId)]
+    pub fn cohort_id(&self) -> u32 {
+        self.0.cohort_id
+    }
+
+    #[wasm_bindgen(getter, js_name = chainId)]
+    pub fn chain_id(&self) -> u64 {
+        self.0.chain_id
+    }
+
+    #[wasm_bindgen(getter, js_name = aaVersion)]
+    pub fn aa_version(&self) -> String {
+        self.0.aa_version.as_str().to_string()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn context(&self) -> Option<Context> {
+        self.0.context.clone().map(Context)
+    }
+}
+
+/// SignatureResponse
+#[wasm_bindgen]
+#[derive(PartialEq, Eq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct SignatureResponse(nucypher_core::SignatureResponse);
+
+generate_from_bytes!(SignatureResponse);
+generate_to_bytes!(SignatureResponse);
+generate_equals!(SignatureResponse);
+
+#[wasm_bindgen]
+impl SignatureResponse {
+    #[wasm_bindgen(constructor)]
+    pub fn new(
+        signer: &str,
+        hash: &[u8],
+        signature: &[u8],
+        signature_type: u8,
+    ) -> Result<Self, Error> {
+        let core_signer = nucypher_core::Address::from_str(signer).map_err(map_js_err)?;
+        let core_signature_type =
+            nucypher_core::SignatureRequestType::from_u8(signature_type).map_err(map_js_err)?;
+        Ok(Self(nucypher_core::SignatureResponse::new(
+            core_signer,
+            hash,
+            signature,
+            core_signature_type,
+        )))
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn signer(&self) -> String {
+        self.0.signer.to_checksum_address()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn hash(&self) -> Box<[u8]> {
+        self.0.hash.clone()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn signature(&self) -> Box<[u8]> {
+        self.0.signature.clone()
+    }
+
+    #[wasm_bindgen(getter, js_name = signatureType)]
+    pub fn signature_type(&self) -> u8 {
+        self.0.signature_type.as_u8()
     }
 }

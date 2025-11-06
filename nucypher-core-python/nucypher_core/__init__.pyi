@@ -1,4 +1,15 @@
-from typing import Dict, List, Mapping, Optional, Sequence, Set, Tuple, final
+from typing import (
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+    final,
+)
 
 from .ferveo import (
     Ciphertext,
@@ -687,3 +698,340 @@ class SessionSecretFactory:
 
     def make_key(self, label: bytes) -> SessionStaticSecret:
         ...
+
+
+#
+# Signature request/response types
+#
+
+@final
+class SignatureRequestType:
+    USER_OP: int = 0
+    PACKED_USER_OP: int = 1 
+
+
+@final
+class AAVersion:
+    V08: str = "0.8.0"
+    MDT: str = "mdt"
+
+
+@final
+class UserOperation:
+    """UserOperation for signature requests."""
+    
+    def __new__(
+        cls,
+        sender: str,
+        nonce: int,
+        call_data: bytes,
+        call_gas_limit: int,
+        verification_gas_limit: int,
+        pre_verification_gas: int,
+        max_fee_per_gas: int,
+        max_priority_fee_per_gas: int,
+        factory: Optional[str] = None,
+        factory_data: Optional[bytes] = None,
+        paymaster: Optional[str] = None,
+        paymaster_verification_gas_limit: Optional[int] = None,
+        paymaster_post_op_gas_limit: Optional[int] = None,
+        paymaster_data: Optional[bytes] = None,
+    ) -> UserOperation:
+        """Create a new UserOperation with u128 gas limits."""
+        ...
+    
+    @property
+    def sender(self) -> str:
+        """Address of the sender (smart contract account)."""
+        ...
+    
+    @property
+    def nonce(self) -> int:
+        """Nonce for replay protection."""
+        ...
+
+    @property
+    def call_data(self) -> bytes:
+        """The calldata to execute."""
+        ...
+    
+    @property
+    def call_gas_limit(self) -> int:
+        """Gas limit for the call (u128 value)."""
+        ...
+    
+    @property
+    def verification_gas_limit(self) -> int:
+        """Gas limit for verification (u128 value)."""
+        ...
+    
+    @property
+    def pre_verification_gas(self) -> int:
+        """Gas to cover overhead (u128 value)."""
+        ...
+    
+    @property
+    def max_fee_per_gas(self) -> int:
+        """Maximum fee per gas unit (u128 value)."""
+        ...
+    
+    @property
+    def max_priority_fee_per_gas(self) -> int:
+        """Maximum priority fee per gas unit (u128 value)."""
+        ...
+
+    @property
+    def factory(self) -> Optional[str]:
+        """Address of factory contract for account creation (optional)."""
+        ...
+
+    @property
+    def factory_data(self) -> Optional[bytes]:
+        """Data for factory contract account creation (optional)."""
+        ...
+    
+    @property
+    def paymaster(self) -> Optional[str]:
+        """Paymaster address (optional)."""
+        ...
+    
+    @property
+    def paymaster_verification_gas_limit(self) -> Optional[int]:
+        """Gas limit for paymaster verification (u128 value)."""
+        ...
+    
+    @property
+    def paymaster_post_op_gas_limit(self) -> Optional[int]:
+        """Gas limit for paymaster post-operation (u128 value)."""
+        ...
+    
+    @property
+    def paymaster_data(self) -> Optional[bytes]:
+        """Paymaster-specific data."""
+        ...
+    
+    def __bytes__(self) -> bytes:
+        """Serialize to bytes."""
+        ...
+    
+    @staticmethod
+    def from_bytes(data: bytes) -> 'UserOperation':
+        """Deserialize from bytes."""
+        ...
+
+
+@final
+class UserOperationSignatureRequest:
+
+    def __new__(
+        cls,
+        user_op: UserOperation,
+        cohort_id: int,
+        chain_id: int,
+        aa_version: str,
+        context: Optional[Context]
+    ) -> UserOperationSignatureRequest:
+        ...
+
+    @property
+    def user_op(self) -> UserOperation:
+        ...
+
+    @property
+    def cohort_id(self) -> int:
+        ...
+
+    @property
+    def chain_id(self) -> int:
+        ...
+
+    @property
+    def aa_version(self) -> str:
+        ...
+
+    @property
+    def context(self) -> Optional[Context]:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> UserOperationSignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
+class PackedUserOperation:
+    """Packed UserOperation for optimized format with u128 gas limits."""
+    
+    def __new__(
+        cls,
+        sender: str,
+        nonce: int,
+        init_code: bytes,
+        call_data: bytes,
+        account_gas_limits: bytes,
+        pre_verification_gas: int,
+        gas_fees: bytes,
+        paymaster_and_data: bytes,
+    ) -> PackedUserOperation:
+        """Create a new PackedUserOperation with u128 pre_verification_gas."""
+        ...
+    
+    @staticmethod
+    def from_user_operation(user_op: UserOperation) -> 'PackedUserOperation':
+        """Create a PackedUserOperation from a UserOperation."""
+        ...
+    
+    def to_eip712_struct(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
+        """Convert to EIP-712 struct format."""
+        ...
+    
+    @property
+    def sender(self) -> str:
+        """Address of the sender (smart contract account)."""
+        ...
+    
+    @property
+    def nonce(self) -> int:
+        """Nonce for replay protection."""
+        ...
+    
+    @property
+    def init_code(self) -> bytes:
+        """Factory and data for account creation."""
+        ...
+    
+    @property
+    def call_data(self) -> bytes:
+        """The calldata to execute."""
+        ...
+    
+    @property
+    def account_gas_limits(self) -> bytes:
+        """Packed gas limits (verification gas limit << 128 | call gas limit)."""
+        ...
+    
+    @property
+    def pre_verification_gas(self) -> int:
+        """Gas to cover overhead (u128 value)."""
+        ...
+    
+    @property
+    def gas_fees(self) -> bytes:
+        """Packed gas fees (max priority fee << 128 | max fee)."""
+        ...
+    
+    @property
+    def paymaster_and_data(self) -> bytes:
+        """Packed paymaster data."""
+        ...
+    
+    def __bytes__(self) -> bytes:
+        """Serialize to bytes."""
+        ...
+    
+    @staticmethod
+    def from_bytes(data: bytes) -> 'PackedUserOperation':
+        """Deserialize from bytes."""
+        ...
+
+
+@final
+class PackedUserOperationSignatureRequest:
+
+    def __new__(
+        cls,
+        packed_user_op: PackedUserOperation,
+        cohort_id: int,
+        chain_id: int,
+        aa_version: str,
+        context: Optional[Context]
+    ) -> PackedUserOperationSignatureRequest:
+        ...
+
+    @property
+    def packed_user_op(self) -> PackedUserOperation:
+        ...
+
+    @property
+    def cohort_id(self) -> int:
+        ...
+
+    @property
+    def chain_id(self) -> int:
+        ...
+
+    @property
+    def aa_version(self) -> str:
+        ...
+
+    @property
+    def context(self) -> Optional[Context]:
+        ...
+
+    @property
+    def signature_type(self) -> int:
+        ...
+
+    @staticmethod
+    def from_bytes(data: bytes) -> PackedUserOperationSignatureRequest:
+        ...
+
+    def __bytes__(self) -> bytes:
+        ...
+
+
+@final
+class SignatureResponse:
+    """Response object containing signature hash, signature bytes, and type."""
+
+    def __new__(
+        cls, signer: str, hash: bytes, signature: bytes, signature_type: int
+    ) -> SignatureResponse:
+        """Create a new SignatureResponse."""
+        ...
+
+    @property
+    def signer(self) -> str:
+        """Address of signer."""
+        ...
+    
+    @property
+    def hash(self) -> bytes:
+        """Get the hash that was signed."""
+        ...
+    
+    @property
+    def signature(self) -> bytes:
+        """Get the signature bytes."""
+        ...
+    
+    @property
+    def signature_type(self) -> int:
+        """Get the signature type as integer."""
+        ...
+    
+    @staticmethod
+    def from_bytes(data: bytes) -> SignatureResponse:
+        """Deserialize from bytes."""
+        ...
+    
+    def __bytes__(self) -> bytes:
+        """Serialize to bytes."""
+        ...
+
+
+def deserialize_signature_request(
+    data: bytes
+) -> Union[UserOperationSignatureRequest, PackedUserOperationSignatureRequest]:
+    """
+    Utility function to deserialize any signature request 
+    from bytes and return the specific type directly.
+    """
+    ...

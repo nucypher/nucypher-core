@@ -6,6 +6,7 @@
 extern crate alloc;
 
 use alloc::collections::{BTreeMap, BTreeSet};
+use core::str::FromStr;
 use ferveo::bindings_python::{
     Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
     SharedSecret,
@@ -18,6 +19,12 @@ use pyo3::types::{PyBytes, PyUnicode};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
+};
+
+use nucypher_core as rust_nucypher_core;
+use rust_nucypher_core::{
+    PackedUserOperation as SignatureRequestPackedUserOperation, SignatureRequestType,
+    UserOperation as SignatureRequestUserOperation,
 };
 
 use nucypher_core::ProtocolObject;
@@ -71,6 +78,7 @@ where
         builtins.getattr("hash")?.call1(((arg1, arg2),))?.extract()
     })
 }
+
 #[pyclass(module = "nucypher_core")]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, derive_more::AsRef)]
 pub struct Address {
@@ -815,7 +823,7 @@ impl AccessControlPolicy {
     #[new]
     pub fn new(auth_data: &AuthenticatedData, authorization: &[u8]) -> Self {
         Self {
-            backend: nucypher_core::AccessControlPolicy::new(auth_data.as_ref(), authorization),
+            backend: nucypher_core::AccessControlPolicy::new(&auth_data.backend, authorization),
         }
     }
 
@@ -829,17 +837,19 @@ impl AccessControlPolicy {
 
     #[getter]
     pub fn public_key(&self) -> DkgPublicKey {
-        self.backend.auth_data.public_key.into()
+        self.backend.public_key().into()
     }
 
     #[getter]
     pub fn conditions(&self) -> Conditions {
-        self.backend.auth_data.conditions.clone().into()
+        Conditions {
+            backend: self.backend.conditions(),
+        }
     }
 
     #[getter]
-    pub fn authorization(&self) -> &[u8] {
-        self.backend.authorization.as_ref()
+    pub fn authorization(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.authorization).into()
     }
 
     #[staticmethod]
@@ -866,7 +876,7 @@ impl ThresholdMessageKit {
     #[new]
     pub fn new(ciphertext: &Ciphertext, acp: &AccessControlPolicy) -> Self {
         Self {
-            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), acp.as_ref()),
+            backend: nucypher_core::ThresholdMessageKit::new(ciphertext.as_ref(), &acp.backend),
         }
     }
 
@@ -925,7 +935,7 @@ impl ThresholdDecryptionRequest {
                 ritual_id,
                 ciphertext_header.as_ref(),
                 acp.as_ref(),
-                context.map(|context| context.backend.clone()).as_ref(),
+                context.map(|context| &context.backend),
                 variant.into(),
             ),
         })
@@ -1553,6 +1563,499 @@ impl MetadataResponse {
     }
 }
 
+//
+// UserOperation
+//
+
+/// Python bindings for UserOperation
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct UserOperation {
+    backend: SignatureRequestUserOperation,
+}
+
+#[pymethods]
+impl UserOperation {
+    #[new]
+    #[pyo3(signature = (sender, nonce, call_data, call_gas_limit, verification_gas_limit, pre_verification_gas, max_fee_per_gas, max_priority_fee_per_gas, factory=None, factory_data=None, paymaster=None, paymaster_verification_gas_limit=None, paymaster_post_op_gas_limit=None, paymaster_data=None))]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        sender: String,
+        nonce: u64,
+        call_data: &[u8],
+        call_gas_limit: u128,
+        verification_gas_limit: u128,
+        pre_verification_gas: u128,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
+        factory: Option<String>,
+        factory_data: Option<&[u8]>,
+        paymaster: Option<String>,
+        paymaster_verification_gas_limit: Option<u128>,
+        paymaster_post_op_gas_limit: Option<u128>,
+        paymaster_data: Option<&[u8]>,
+    ) -> PyResult<Self> {
+        // Convert hex string to Address
+        let sender_address = nucypher_core::Address::from_str(&sender)
+            .map_err(|e| PyValueError::new_err(format!("Invalid sender address: {}", e)))?;
+        let paymaster_address = paymaster
+            .as_ref()
+            .map(|p| nucypher_core::Address::from_str(p))
+            .transpose()
+            .map_err(|e| PyValueError::new_err(format!("Invalid paymaster address: {}", e)))?;
+        let factory_address = factory
+            .as_ref()
+            .map(|f| nucypher_core::Address::from_str(f))
+            .transpose()
+            .map_err(|e| PyValueError::new_err(format!("Invalid factory address: {}", e)))?;
+
+        Ok(Self {
+            backend: SignatureRequestUserOperation::new(
+                sender_address,
+                nonce,
+                call_data,
+                call_gas_limit,
+                verification_gas_limit,
+                pre_verification_gas,
+                max_fee_per_gas,
+                max_priority_fee_per_gas,
+                factory_address,
+                factory_data,
+                paymaster_address,
+                paymaster_verification_gas_limit,
+                paymaster_post_op_gas_limit,
+                paymaster_data,
+            ),
+        })
+    }
+
+    #[getter]
+    pub fn sender(&self) -> String {
+        self.backend.sender.to_checksum_address()
+    }
+
+    #[getter]
+    pub fn nonce(&self) -> u64 {
+        self.backend.nonce
+    }
+
+    #[getter]
+    pub fn call_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.call_data).into()
+    }
+
+    #[getter]
+    pub fn call_gas_limit(&self) -> u128 {
+        self.backend.call_gas_limit
+    }
+
+    #[getter]
+    pub fn verification_gas_limit(&self) -> u128 {
+        self.backend.verification_gas_limit
+    }
+
+    #[getter]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.backend.pre_verification_gas
+    }
+
+    #[getter]
+    pub fn max_fee_per_gas(&self) -> u128 {
+        self.backend.max_fee_per_gas
+    }
+
+    #[getter]
+    pub fn max_priority_fee_per_gas(&self) -> u128 {
+        self.backend.max_priority_fee_per_gas
+    }
+
+    #[getter]
+    pub fn factory(&self) -> Option<String> {
+        self.backend.factory.map(|f| f.to_checksum_address())
+    }
+
+    #[getter]
+    pub fn factory_data(&self, py: Python) -> Option<PyObject> {
+        self.backend
+            .factory_data
+            .as_ref()
+            .map(|data| PyBytes::new(py, data).into())
+    }
+
+    #[getter]
+    pub fn paymaster(&self) -> Option<String> {
+        self.backend.paymaster.map(|p| p.to_checksum_address())
+    }
+
+    #[getter]
+    pub fn paymaster_verification_gas_limit(&self) -> Option<u128> {
+        self.backend.paymaster_verification_gas_limit
+    }
+
+    #[getter]
+    pub fn paymaster_post_op_gas_limit(&self) -> Option<u128> {
+        self.backend.paymaster_post_op_gas_limit
+    }
+
+    #[getter]
+    pub fn paymaster_data(&self, py: Python) -> Option<PyObject> {
+        self.backend
+            .paymaster_data
+            .as_ref()
+            .map(|data| PyBytes::new(py, data).into())
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, SignatureRequestUserOperation>(data)
+    }
+}
+
+//
+// UserOperationSignatureRequest
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct UserOperationSignatureRequest {
+    backend: nucypher_core::UserOperationSignatureRequest,
+}
+
+#[pymethods]
+impl UserOperationSignatureRequest {
+    #[new]
+    pub fn new(
+        user_op: &UserOperation,
+        cohort_id: u32,
+        chain_id: u64,
+        aa_version: &str,
+        context: Option<&Context>,
+    ) -> PyResult<Self> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(Self {
+            backend: nucypher_core::UserOperationSignatureRequest::new(
+                user_op.backend.clone(),
+                cohort_id,
+                chain_id,
+                core_aa_version,
+                context.map(|c| &c.backend),
+            ),
+        })
+    }
+
+    #[getter]
+    fn user_op(&self) -> UserOperation {
+        UserOperation::from(self.backend.user_op.clone())
+    }
+
+    #[getter]
+    fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    #[getter]
+    fn chain_id(&self) -> u64 {
+        self.backend.chain_id
+    }
+
+    #[getter]
+    fn aa_version(&self) -> &str {
+        self.backend.aa_version.as_str()
+    }
+
+    #[getter]
+    fn context(&self) -> Option<Context> {
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        self.backend.signature_type.as_u8()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::UserOperationSignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// PackedUserOperation
+//
+
+/// Python bindings for PackedUserOperation
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct PackedUserOperation {
+    backend: SignatureRequestPackedUserOperation,
+}
+
+#[pymethods]
+impl PackedUserOperation {
+    #[new]
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        sender: String,
+        nonce: u64,
+        init_code: &[u8],
+        call_data: &[u8],
+        account_gas_limits: &[u8],
+        pre_verification_gas: u128,
+        gas_fees: &[u8],
+        paymaster_and_data: &[u8],
+    ) -> PyResult<Self> {
+        // Convert hex string to Address
+        let sender_address = nucypher_core::Address::from_str(&sender)
+            .map_err(|e| PyValueError::new_err(format!("Invalid sender address: {}", e)))?;
+
+        Ok(Self {
+            backend: SignatureRequestPackedUserOperation::new(
+                sender_address,
+                nonce,
+                init_code,
+                call_data,
+                account_gas_limits,
+                pre_verification_gas,
+                gas_fees,
+                paymaster_and_data,
+            ),
+        })
+    }
+
+    #[staticmethod]
+    pub fn from_user_operation(user_op: &UserOperation) -> Self {
+        Self {
+            backend: SignatureRequestPackedUserOperation::from_user_operation(&user_op.backend),
+        }
+    }
+
+    #[getter]
+    pub fn sender(&self) -> String {
+        self.backend.sender.to_checksum_address()
+    }
+
+    #[getter]
+    pub fn nonce(&self) -> u64 {
+        self.backend.nonce
+    }
+
+    #[getter]
+    pub fn init_code(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.init_code).into()
+    }
+
+    #[getter]
+    pub fn call_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.call_data).into()
+    }
+
+    #[getter]
+    pub fn account_gas_limits(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.account_gas_limits).into()
+    }
+
+    #[getter]
+    pub fn pre_verification_gas(&self) -> u128 {
+        self.backend.pre_verification_gas
+    }
+
+    #[getter]
+    pub fn gas_fees(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.gas_fees).into()
+    }
+
+    #[getter]
+    pub fn paymaster_and_data(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.paymaster_and_data).into()
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, SignatureRequestPackedUserOperation>(data)
+    }
+
+    pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let eip712_struct = self.backend.to_eip712_struct(&core_aa_version, chain_id);
+
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
+    }
+
+    #[pyo3(name = "_to_eip712_message")]
+    pub fn to_eip712_message(&self, aa_version: &str) -> PyResult<PyObject> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let message = self.backend.to_eip712_message(&core_aa_version);
+
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(message)))
+    }
+
+    #[pyo3(name = "_get_domain")]
+    pub fn get_domain(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let domain = self.backend.get_domain(&core_aa_version, chain_id);
+
+        Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
+    }
+}
+
+//
+// PackedUserOperationSignatureRequest
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct PackedUserOperationSignatureRequest {
+    backend: nucypher_core::PackedUserOperationSignatureRequest,
+}
+
+#[pymethods]
+impl PackedUserOperationSignatureRequest {
+    #[new]
+    pub fn new(
+        packed_user_op: &PackedUserOperation,
+        cohort_id: u32,
+        chain_id: u64,
+        aa_version: &str,
+        context: Option<&Context>,
+    ) -> PyResult<Self> {
+        let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(Self {
+            backend: nucypher_core::PackedUserOperationSignatureRequest::new(
+                packed_user_op.backend.clone(),
+                cohort_id,
+                chain_id,
+                core_aa_version,
+                context.map(|c| &c.backend),
+            ),
+        })
+    }
+
+    #[getter]
+    fn packed_user_op(&self) -> PackedUserOperation {
+        PackedUserOperation::from(self.backend.packed_user_op.clone())
+    }
+
+    #[getter]
+    fn cohort_id(&self) -> u32 {
+        self.backend.cohort_id
+    }
+
+    #[getter]
+    fn chain_id(&self) -> u64 {
+        self.backend.chain_id
+    }
+
+    #[getter]
+    fn aa_version(&self) -> &str {
+        self.backend.aa_version.as_str()
+    }
+
+    #[getter]
+    fn context(&self) -> Option<Context> {
+        self.backend
+            .context
+            .clone()
+            .map(|context| Context { backend: context })
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        self.backend.signature_type as u8
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::PackedUserOperationSignatureRequest>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
+//
+// SignatureResponse
+//
+
+#[pyclass(module = "nucypher_core")]
+#[derive(derive_more::From, derive_more::AsRef)]
+pub struct SignatureResponse {
+    backend: nucypher_core::SignatureResponse,
+}
+
+#[pymethods]
+impl SignatureResponse {
+    #[new]
+    pub fn new(
+        signer: String,
+        hash: &[u8],
+        signature: &[u8],
+        signature_type: u8,
+    ) -> PyResult<Self> {
+        let core_signer = nucypher_core::Address::from_str(&signer)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        let core_signature_type = SignatureRequestType::from_u8(signature_type)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
+        Ok(Self {
+            backend: nucypher_core::SignatureResponse::new(
+                core_signer,
+                hash,
+                signature,
+                core_signature_type,
+            ),
+        })
+    }
+
+    #[getter]
+    fn signer(&self) -> String {
+        self.backend.signer.to_checksum_address()
+    }
+
+    #[getter]
+    fn hash(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.hash).into()
+    }
+
+    #[getter]
+    fn signature(&self, py: Python) -> PyObject {
+        PyBytes::new(py, &self.backend.signature).into()
+    }
+
+    #[getter]
+    fn signature_type(&self) -> u8 {
+        self.backend.signature_type.as_u8()
+    }
+
+    #[staticmethod]
+    pub fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        from_bytes::<_, nucypher_core::SignatureResponse>(data)
+    }
+
+    fn __bytes__(&self) -> PyObject {
+        to_bytes(self)
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
@@ -1586,6 +2089,16 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_class::<AccessControlPolicy>()?;
     core_module.add_class::<ThresholdMessageKit>()?;
     core_module.add_function(wrap_pyfunction!(encrypt_for_dkg, core_module)?)?;
+    // Add signature request/response classes
+    core_module.add_class::<UserOperation>()?;
+    core_module.add_class::<UserOperationSignatureRequest>()?;
+    core_module.add_class::<PackedUserOperation>()?;
+    core_module.add_class::<PackedUserOperationSignatureRequest>()?;
+    core_module.add_class::<SignatureResponse>()?;
+    core_module.add_function(wrap_pyfunction!(
+        deserialize_signature_request,
+        core_module
+    )?)?;
 
     // Build the umbral module
     let umbral_module = PyModule::new(py, "umbral")?;
@@ -1619,4 +2132,660 @@ fn _nucypher_core(py: Python, core_module: &PyModule) -> PyResult<()> {
     core_module.add_submodule(ferveo_module)?;
 
     Ok(())
+}
+
+// Helper function to convert JSON value to Python object
+fn json_to_pyobject(py: Python, value: &serde_json::Value) -> PyResult<PyObject> {
+    use pyo3::types::{PyDict, PyList};
+    use serde_json::Value;
+
+    match value {
+        Value::Null => Ok(py.None()),
+        Value::Bool(b) => Ok(b.to_object(py)),
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Ok(i.to_object(py))
+            } else if let Some(u) = n.as_u64() {
+                Ok(u.to_object(py))
+            } else if let Some(f) = n.as_f64() {
+                Ok(f.to_object(py))
+            } else {
+                Err(PyValueError::new_err("Invalid number"))
+            }
+        }
+        Value::String(s) => Ok(s.to_object(py)),
+        Value::Array(arr) => {
+            let list = PyList::empty(py);
+            for item in arr {
+                list.append(json_to_pyobject(py, item)?)?;
+            }
+            Ok(list.to_object(py))
+        }
+        Value::Object(map) => {
+            let dict = PyDict::new(py);
+            for (k, v) in map {
+                dict.set_item(k, json_to_pyobject(py, v)?)?;
+            }
+            Ok(dict.to_object(py))
+        }
+    }
+}
+
+//
+// Signature Request Deserializer
+//
+
+/// Utility function to deserialize any signature request from bytes - returns specific type directly
+#[pyfunction]
+pub fn deserialize_signature_request(data: &[u8]) -> PyResult<PyObject> {
+    let direct_request = nucypher_core::deserialize_signature_request(data).map_err(|err| {
+        PyValueError::new_err(format!("Failed to deserialize signature request: {}", err))
+    })?;
+
+    // Convert to the specific Python type
+    match direct_request {
+        nucypher_core::DirectSignatureRequest::UserOp(req) => Python::with_gil(|py| {
+            let python_req = UserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
+        nucypher_core::DirectSignatureRequest::PackedUserOp(req) => Python::with_gil(|py| {
+            let python_req = PackedUserOperationSignatureRequest { backend: req };
+            Ok(python_req.into_py(py))
+        }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::types::PyModule;
+    use std::sync::Once;
+
+    static INIT: Once = Once::new();
+
+    fn init_python() {
+        INIT.call_once(|| {
+            pyo3::prepare_freethreaded_python();
+        });
+    }
+
+    #[test]
+    fn test_user_operation() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let user_op_class = core_module.getattr("UserOperation").unwrap();
+
+            // Create a UserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs.set_item("call_gas_limit", 21000u128).unwrap();
+            kwargs
+                .set_item("verification_gas_limit", 100000u128)
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs.set_item("max_fee_per_gas", 1000000000u128).unwrap();
+            kwargs
+                .set_item("max_priority_fee_per_gas", 2000000000u128)
+                .unwrap();
+
+            let user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let sender: String = user_op_instance
+                .getattr("sender")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let nonce: u64 = user_op_instance
+                .getattr("nonce")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(nonce, 1u64);
+
+            let call_data: &PyBytes = user_op_instance
+                .getattr("call_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_data.as_bytes(), b"call_data");
+
+            let call_gas_limit: u128 = user_op_instance
+                .getattr("call_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_gas_limit, 21000u128);
+
+            let verification_gas_limit: u128 = user_op_instance
+                .getattr("verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(verification_gas_limit, 100000u128);
+
+            let pre_verification_gas: u128 = user_op_instance
+                .getattr("pre_verification_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(pre_verification_gas, 21000u128);
+
+            let max_fee_per_gas: u128 = user_op_instance
+                .getattr("max_fee_per_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(max_fee_per_gas, 1000000000u128);
+
+            let max_priority_fee_per_gas: u128 = user_op_instance
+                .getattr("max_priority_fee_per_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(max_priority_fee_per_gas, 2000000000u128);
+
+            // optional fields
+            let factory: &PyAny = user_op_instance
+                .getattr("factory")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(factory.is_none());
+
+            let factory_data: &PyAny = user_op_instance
+                .getattr("factory_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(factory_data.is_none());
+
+            let paymaster: &PyAny = user_op_instance
+                .getattr("paymaster")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(paymaster.is_none());
+
+            let paymaster_verification_gas_limit: &PyAny = user_op_instance
+                .getattr("paymaster_verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(paymaster_verification_gas_limit.is_none());
+
+            let paymaster_post_op_gas_limit: &PyAny = user_op_instance
+                .getattr("paymaster_post_op_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(paymaster_post_op_gas_limit.is_none());
+
+            let paymaster_data: &PyAny = user_op_instance
+                .getattr("paymaster_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert!(paymaster_data.is_none());
+
+            // explicitly set optional fields
+            kwargs
+                .set_item("factory", "0xe49e04F40C272F405eCB9a668a73EEAD4b3B5624")
+                .unwrap();
+            kwargs
+                .set_item("factory_data", PyBytes::new(py, b"factory_data"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster", "0xB4687cf0aa7170f12E488059c46689bAcABCD311")
+                .unwrap();
+            kwargs
+                .set_item("paymaster_verification_gas_limit", 1u128)
+                .unwrap();
+            kwargs
+                .set_item("paymaster_post_op_gas_limit", 2u128)
+                .unwrap();
+            kwargs
+                .set_item("paymaster_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let updated_user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+            let factory: String = updated_user_op_instance
+                .getattr("factory")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(factory, "0xe49e04F40C272F405eCB9a668a73EEAD4b3B5624");
+            let factory_data: &PyBytes = updated_user_op_instance
+                .getattr("factory_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(factory_data.as_bytes(), b"factory_data");
+            let paymaster: String = updated_user_op_instance
+                .getattr("paymaster")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster, "0xB4687cf0aa7170f12E488059c46689bAcABCD311");
+            let paymaster_verification_gas_limit: u128 = updated_user_op_instance
+                .getattr("paymaster_verification_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_verification_gas_limit, 1u128);
+            let paymaster_post_op_gas_limit: u128 = updated_user_op_instance
+                .getattr("paymaster_post_op_gas_limit")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_post_op_gas_limit, 2u128);
+            let paymaster_data: &PyBytes = updated_user_op_instance
+                .getattr("paymaster_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_data.as_bytes(), b"paymaster_data");
+
+            // serialization/deserialization test
+            let serialized: &PyAny = user_op_instance.call_method0("__bytes__").unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = user_op_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_packed_user_operation() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let packed_user_op_class = core_module.getattr("PackedUserOperation").unwrap();
+
+            // Create a PackedUserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("init_code", PyBytes::new(py, b"init_code"))
+                .unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs
+                .set_item("account_gas_limits", PyBytes::new(py, b"gas_limits"))
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs
+                .set_item("gas_fees", PyBytes::new(py, b"gas_fees"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster_and_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let packed_user_op_instance = packed_user_op_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let sender: String = packed_user_op_instance
+                .getattr("sender")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let nonce: u64 = packed_user_op_instance
+                .getattr("nonce")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(nonce, 1u64);
+
+            let init_code: &PyBytes = packed_user_op_instance
+                .getattr("init_code")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(init_code.as_bytes(), b"init_code");
+
+            let call_data: &PyBytes = packed_user_op_instance
+                .getattr("call_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(call_data.as_bytes(), b"call_data");
+
+            let account_gas_limits: &PyBytes = packed_user_op_instance
+                .getattr("account_gas_limits")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(account_gas_limits.as_bytes(), b"gas_limits");
+
+            let pre_verification_gas: u128 = packed_user_op_instance
+                .getattr("pre_verification_gas")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(pre_verification_gas, 21000u128);
+
+            let gas_fees: &PyBytes = packed_user_op_instance
+                .getattr("gas_fees")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(gas_fees.as_bytes(), b"gas_fees");
+
+            let paymaster_and_data: &PyBytes = packed_user_op_instance
+                .getattr("paymaster_and_data")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(paymaster_and_data.as_bytes(), b"paymaster_data");
+
+            // serialization/deserialization test
+            let serialized: &PyAny = packed_user_op_instance.call_method0("__bytes__").unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = packed_user_op_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_user_operation_signature_request() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let user_op_class = core_module.getattr("UserOperation").unwrap();
+
+            // Create a UserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs.set_item("call_gas_limit", 21000u128).unwrap();
+            kwargs
+                .set_item("verification_gas_limit", 100000u128)
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs.set_item("max_fee_per_gas", 1000000000u128).unwrap();
+            kwargs
+                .set_item("max_priority_fee_per_gas", 2000000000u128)
+                .unwrap();
+
+            let user_op_instance = user_op_class.call((), Some(kwargs)).unwrap();
+            let user_op_signature_request_class = core_module
+                .getattr("UserOperationSignatureRequest")
+                .unwrap();
+
+            // Create a UserOperationSignatureRequest instance using keyword arguments
+            let request_kwargs = PyDict::new(py);
+            request_kwargs
+                .set_item("user_op", user_op_instance)
+                .unwrap();
+            request_kwargs.set_item("cohort_id", 42u32).unwrap();
+            request_kwargs.set_item("chain_id", 1u64).unwrap();
+            request_kwargs.set_item("aa_version", "0.8.0").unwrap();
+            let user_op_signature_request_instance = user_op_signature_request_class
+                .call((), Some(request_kwargs))
+                .unwrap();
+
+            // Verify attributes
+            let request_user_op: &PyAny = user_op_signature_request_instance
+                .getattr("user_op")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let serialized_request_user_op: &PyBytes = request_user_op
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_serialized_user_op: &PyBytes = user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                serialized_request_user_op.as_bytes(),
+                original_serialized_user_op.as_bytes()
+            );
+            let cohort_id: u32 = user_op_signature_request_instance
+                .getattr("cohort_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(cohort_id, 42u32);
+            let chain_id: u64 = user_op_signature_request_instance
+                .getattr("chain_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(chain_id, 1u64);
+            let aa_version: &str = user_op_signature_request_instance
+                .getattr("aa_version")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(aa_version, "0.8.0");
+
+            // serialization/deserialization test
+            let serialized_bytes: &PyBytes = user_op_signature_request_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+
+            let deserialized_instance =
+                deserialize_signature_request(serialized_bytes.as_bytes()).unwrap();
+            let reserialized: PyObject =
+                deserialized_instance.call_method0(py, "__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_packed_user_operation_signature_request() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let packed_user_op_class = core_module.getattr("PackedUserOperation").unwrap();
+
+            // Create a PackedUserOperation instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs
+                .set_item("init_code", PyBytes::new(py, b"init_code"))
+                .unwrap();
+            kwargs
+                .set_item("call_data", PyBytes::new(py, b"call_data"))
+                .unwrap();
+            kwargs
+                .set_item("account_gas_limits", PyBytes::new(py, b"gas_limits"))
+                .unwrap();
+            kwargs.set_item("pre_verification_gas", 21000u128).unwrap();
+            kwargs
+                .set_item("gas_fees", PyBytes::new(py, b"gas_fees"))
+                .unwrap();
+            kwargs
+                .set_item("paymaster_and_data", PyBytes::new(py, b"paymaster_data"))
+                .unwrap();
+
+            let packed_user_op_instance = packed_user_op_class.call((), Some(kwargs)).unwrap();
+            let packed_user_op_signature_request_class = core_module
+                .getattr("PackedUserOperationSignatureRequest")
+                .unwrap();
+            // Create a PackedUserOperationSignatureRequest instance using keyword arguments
+            let request_kwargs = PyDict::new(py);
+            request_kwargs
+                .set_item("packed_user_op", packed_user_op_instance)
+                .unwrap();
+            request_kwargs.set_item("cohort_id", 42u32).unwrap();
+            request_kwargs.set_item("chain_id", 1u64).unwrap();
+            request_kwargs.set_item("aa_version", "mdt").unwrap();
+            let packed_user_op_signature_request_instance = packed_user_op_signature_request_class
+                .call((), Some(request_kwargs))
+                .unwrap();
+
+            // Verify attributes
+            let request_packed_user_op: &PyAny = packed_user_op_signature_request_instance
+                .getattr("packed_user_op")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let serialized_request_packed_user_op: &PyBytes = request_packed_user_op
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            let original_serialized_packed_user_op: &PyBytes = packed_user_op_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(
+                serialized_request_packed_user_op.as_bytes(),
+                original_serialized_packed_user_op.as_bytes()
+            );
+
+            let cohort_id: u32 = packed_user_op_signature_request_instance
+                .getattr("cohort_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(cohort_id, 42u32);
+            let chain_id: u64 = packed_user_op_signature_request_instance
+                .getattr("chain_id")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(chain_id, 1u64);
+            let aa_version: &str = packed_user_op_signature_request_instance
+                .getattr("aa_version")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(aa_version, "mdt");
+
+            // serialization/deserialization test
+            let serialized_bytes: &PyBytes = packed_user_op_signature_request_instance
+                .call_method0("__bytes__")
+                .unwrap()
+                .extract()
+                .unwrap();
+
+            let deserialized_instance =
+                deserialize_signature_request(serialized_bytes.as_bytes()).unwrap();
+            let reserialized: PyObject =
+                deserialized_instance.call_method0(py, "__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract(py).unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
+
+    #[test]
+    fn test_signature_response() {
+        init_python();
+        Python::with_gil(|py| {
+            let core_module = PyModule::new(py, "_nucypher_core").unwrap();
+            _nucypher_core(py, core_module).unwrap();
+
+            let signature_response_class = core_module.getattr("SignatureResponse").unwrap();
+
+            // Create a SignatureResponse instance using keyword arguments
+            use pyo3::types::PyDict;
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("signer", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
+                .unwrap();
+            kwargs
+                .set_item("hash", PyBytes::new(py, b"hash_value"))
+                .unwrap();
+            kwargs
+                .set_item("signature", PyBytes::new(py, b"signature_value"))
+                .unwrap();
+            kwargs.set_item("signature_type", 1u8).unwrap();
+
+            let signature_response_instance =
+                signature_response_class.call((), Some(kwargs)).unwrap();
+
+            // Verify attributes
+            let signer: String = signature_response_instance
+                .getattr("signer")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signer, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
+
+            let hash: &PyBytes = signature_response_instance
+                .getattr("hash")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(hash.as_bytes(), b"hash_value");
+
+            let signature: &PyBytes = signature_response_instance
+                .getattr("signature")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signature.as_bytes(), b"signature_value");
+
+            let signature_type: u8 = signature_response_instance
+                .getattr("signature_type")
+                .unwrap()
+                .extract()
+                .unwrap();
+            assert_eq!(signature_type, 1u8);
+
+            // serialization/deserialization test
+            let serialized: &PyAny = signature_response_instance
+                .call_method0("__bytes__")
+                .unwrap();
+            let serialized_bytes: &PyBytes = serialized.extract().unwrap();
+            let deserialized_instance = signature_response_class
+                .call_method1("from_bytes", (serialized_bytes.as_bytes(),))
+                .unwrap();
+            let reserialized: &PyAny = deserialized_instance.call_method0("__bytes__").unwrap();
+            let reserialized_bytes: &PyBytes = reserialized.extract().unwrap();
+            assert_eq!(reserialized_bytes.as_bytes(), serialized_bytes.as_bytes());
+        });
+    }
 }
