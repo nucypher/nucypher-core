@@ -35,8 +35,9 @@ pub use address::Address;
 pub use conditions::{Conditions, Context};
 pub use dkg::{
     session::{SessionSecretFactory, SessionSharedSecret, SessionStaticKey, SessionStaticSecret},
-    DecryptionError, EncryptedThresholdDecryptionRequest, EncryptedThresholdDecryptionResponse,
-    EncryptionError, ThresholdDecryptionRequest, ThresholdDecryptionResponse,
+    DecryptionError, DecryptionShare, EncryptedThresholdDecryptionRequest,
+    EncryptedThresholdDecryptionResponse, EncryptionError, ThresholdDecryptionRequest,
+    ThresholdDecryptionResponse,
 };
 pub use fleet_state::FleetStateChecksum;
 pub use hrac::HRAC;

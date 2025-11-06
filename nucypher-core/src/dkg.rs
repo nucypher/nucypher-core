@@ -4,7 +4,9 @@ use core::fmt;
 
 use chacha20poly1305::aead::{Aead, AeadCore, KeyInit, OsRng};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-use ferveo::api::{CiphertextHeader, FerveoVariant};
+use ferveo::api::{
+    CiphertextHeader, DecryptionSharePrecomputed, DecryptionShareSimple, FerveoVariant,
+};
 use generic_array::typenum::Unsigned;
 use serde::{Deserialize, Serialize};
 use umbral_pre::serde_bytes; // TODO should this be in umbral?
@@ -480,6 +482,15 @@ impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdDecryptionRequest {
 
 impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionRequest {}
 
+/// Possible decryption share types.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
+pub enum DecryptionShare {
+    /// Simple share.
+    Simple(DecryptionShareSimple),
+    /// Precomputed share.
+    Precomputed(DecryptionSharePrecomputed),
+}
+
 /// A response from Ursula with a derived decryption share.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Clone)]
 pub struct ThresholdDecryptionResponse {
@@ -487,16 +498,15 @@ pub struct ThresholdDecryptionResponse {
     pub ritual_id: u32,
 
     /// The decryption share to include in the response.
-    #[serde(with = "serde_bytes::as_base64")]
-    pub decryption_share: Box<[u8]>,
+    pub decryption_share: DecryptionShare,
 }
 
 impl ThresholdDecryptionResponse {
     /// Creates and a new decryption response.
-    pub fn new(ritual_id: u32, decryption_share: &[u8]) -> Self {
+    pub fn new(ritual_id: u32, decryption_share: DecryptionShare) -> Self {
         ThresholdDecryptionResponse {
             ritual_id,
-            decryption_share: decryption_share.to_vec().into(),
+            decryption_share,
         }
     }
 
@@ -593,7 +603,7 @@ impl<'a> ProtocolObject<'a> for EncryptedThresholdDecryptionResponse {}
 
 #[cfg(test)]
 mod tests {
-    use ferveo::api::{encrypt as ferveo_encrypt, FerveoVariant, SecretBox};
+    use ferveo::api::{encrypt as ferveo_encrypt, DecryptionShareSimple, FerveoVariant, SecretBox};
     use generic_array::typenum::Unsigned;
     use rand_core::RngCore;
 
@@ -606,7 +616,7 @@ mod tests {
     use crate::test_utils::util::random_dkg_pubkey;
     use crate::versioning::{ProtocolObject, ProtocolObjectInner};
     use crate::{
-        AuthenticatedData, EncryptedThresholdDecryptionRequest,
+        AuthenticatedData, DecryptionShare, EncryptedThresholdDecryptionRequest,
         EncryptedThresholdDecryptionResponse, SessionSecretFactory, SessionStaticKey,
         ThresholdDecryptionRequest, ThresholdDecryptionResponse,
     };
@@ -786,6 +796,31 @@ mod tests {
         }
     }
 
+    // A `DecryptionShareSimple` object serialized with `rmp-serde=1`
+    const DECRYPTION_SHARE_SERIALIZED: &str = concat![
+        "9292c5024071e6c0850c76e1029e8543b839d25f54a0aed88cd4040257448d28",
+        "07a2c60114241ddd52c9eb10b420497debf152b01052f07eb6296171d5908bc4",
+        "f7a9a3daf6069e5949b31e1f59cd6cacc5b0517c526ea036853f14ed3b84f517",
+        "d04e509903b6f9d7d57d0d9291737e705065efb7c698fafb5b2b16e37bbca841",
+        "cf75cbac4a001ba280c767e39a929d62c07a25d308ad2d6baac40c8f791b01a5",
+        "e394950cfb4d8a78282ff0f979aa62ec30e507637971d8b71ef2c30eeb97b14b",
+        "309b0f660ff0da27dd423b5436f01700a14e1e405d4d031ccfe5ea59c503addd",
+        "5a4fde7d8551cb25516a5219fdf2a12a7941040a0c8aed182ac889ad45aa6800",
+        "8e41bd0360550ec09d1817e09cadc61bbc8e10539081cce32cfafaedb292cb81",
+        "09772a8910c0c40c4dd74e4f30347fab5eaf46e94de28a4d8e4ffc3813b0670c",
+        "0f66f697ddd3f833d542d72d5df5d390e23e3163163e17aa791ddcaadac96480",
+        "8867d2c64cbcd1961e0862e797103ec5dfdae9072ef9dcd116643965eb252364",
+        "0c02b43619e4c3f8d81ac36bc82591d6829782e4388656ddc76d97578a4ea18a",
+        "c480b2232d1a50fee599da763f76f0b2872b716706c8028616f6b0233bed044a",
+        "13b8f3dd4e114d57e4d0067e1e99b77166fe42760e4d7b948908069be6aeefb0",
+        "0cb007c512fd5d32896ceacb31dfa7b1387bd0923536f38a615e39e045a814e1",
+        "ed2bbc4de4c0c98a5029cd9052f20abe6ee28bbf169af51ab203e8f26549a3f7",
+        "26e784773e02e6cb7c12e98583c0ef36a66923c61c1b2a63770979f0d027e948",
+        "07512b4e0091c430abc30d9ba3e7d483540e55a0bf0785900e4db2fb9d77e24e",
+        "4bf9e69357a50988dfc8f95dd5cdbdf67c4fb6276337f862c420010000000000",
+        "0000000000000000000000000000000000000000000000000000",
+    ];
+
     #[test]
     fn threshold_decryption_response() {
         let ritual_id = 5;
@@ -793,9 +828,11 @@ mod tests {
         let service_secret = SessionStaticSecret::random();
         let requester_secret = SessionStaticSecret::random();
 
-        let decryption_share = b"The Tyranny of Merit";
+        let decryption_share: DecryptionShareSimple =
+            rmp_serde::from_slice(&hex::decode(DECRYPTION_SHARE_SERIALIZED).unwrap()).unwrap();
 
-        let response = ThresholdDecryptionResponse::new(ritual_id, decryption_share);
+        let response =
+            ThresholdDecryptionResponse::new(ritual_id, DecryptionShare::Simple(decryption_share));
 
         // service encrypts response to send back
         let requester_public_key = requester_secret.public_key();

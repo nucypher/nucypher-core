@@ -8,8 +8,8 @@ extern crate alloc;
 use alloc::collections::{BTreeMap, BTreeSet};
 use core::str::FromStr;
 use ferveo::bindings_python::{
-    Ciphertext, CiphertextHeader, DkgPublicKey, FerveoPublicKey, FerveoPythonError, FerveoVariant,
-    SharedSecret,
+    Ciphertext, CiphertextHeader, DecryptionSharePrecomputed, DecryptionShareSimple, DkgPublicKey,
+    FerveoPublicKey, FerveoPythonError, FerveoVariant, SharedSecret,
 };
 use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -1044,12 +1044,37 @@ pub struct ThresholdDecryptionResponse {
     backend: nucypher_core::ThresholdDecryptionResponse,
 }
 
+#[derive(FromPyObject)]
+pub enum DecryptionShare {
+    Simple(DecryptionShareSimple),
+    Precomputed(DecryptionSharePrecomputed),
+}
+
+impl IntoPy<PyObject> for DecryptionShare {
+    fn into_py(self, py: Python) -> PyObject {
+        match self {
+            Self::Simple(ds) => ds.into_py(py),
+            Self::Precomputed(ds) => ds.into_py(py),
+        }
+    }
+}
+
 #[pymethods]
 impl ThresholdDecryptionResponse {
     #[new]
-    pub fn new(ritual_id: u32, decryption_share: &[u8]) -> Self {
+    pub fn new(ritual_id: u32, decryption_share: DecryptionShare) -> Self {
         ThresholdDecryptionResponse {
-            backend: nucypher_core::ThresholdDecryptionResponse::new(ritual_id, decryption_share),
+            backend: nucypher_core::ThresholdDecryptionResponse::new(
+                ritual_id,
+                match decryption_share {
+                    DecryptionShare::Simple(ds) => {
+                        nucypher_core::DecryptionShare::Simple(ds.as_ref().clone())
+                    }
+                    DecryptionShare::Precomputed(ds) => {
+                        nucypher_core::DecryptionShare::Precomputed(ds.as_ref().clone())
+                    }
+                },
+            ),
         }
     }
 
@@ -1059,8 +1084,15 @@ impl ThresholdDecryptionResponse {
     }
 
     #[getter]
-    pub fn decryption_share(&self) -> &[u8] {
-        self.backend.decryption_share.as_ref()
+    pub fn decryption_share(&self) -> DecryptionShare {
+        match &self.backend.decryption_share {
+            nucypher_core::DecryptionShare::Simple(ds) => {
+                DecryptionShare::Simple(ds.clone().into())
+            }
+            nucypher_core::DecryptionShare::Precomputed(ds) => {
+                DecryptionShare::Precomputed(ds.clone().into())
+            }
+        }
     }
 
     pub fn encrypt(

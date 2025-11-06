@@ -18,6 +18,8 @@ from .ferveo import (
     FerveoPublicKey,
     FerveoVariant,
     SharedSecret,
+    DecryptionShareSimple,
+    DecryptionSharePrecomputed,
 )
 from .umbral import (
     Capsule,
@@ -608,11 +610,11 @@ class ThresholdDecryptionResponse:
     def __new__(
         cls,
         ritual_id: int,
-        decryption_share: bytes
+        decryption_share: DecryptionShareSimple | DecryptionSharePrecomputed
     ) -> ThresholdDecryptionResponse:
         ...
 
-    decryption_share: bytes
+    decryption_share: DecryptionShareSimple | DecryptionSharePrecomputed
 
     ritual_id: int
 
