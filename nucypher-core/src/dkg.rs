@@ -7,7 +7,7 @@ use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use ferveo::api::{CiphertextHeader, FerveoVariant};
 use generic_array::typenum::Unsigned;
 use serde::{Deserialize, Serialize};
-use umbral_pre::serde_bytes; // TODO should this be in umbral?
+use serde_encoded_bytes::{Base64, SliceLike};
 
 use crate::access_control::AccessControlPolicy;
 use crate::conditions::Context;
@@ -107,20 +107,38 @@ pub mod session {
 
     use generic_array::{
         typenum::{Unsigned, U32},
-        GenericArray,
+        ArrayLength, GenericArray,
     };
+    use hkdf::Hkdf;
     use rand::SeedableRng;
     use rand_chacha::ChaCha20Rng;
     use rand_core::{CryptoRng, OsRng, RngCore};
+    use secrecy::{ExposeSecret, ExposeSecretMut, SecretBox};
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use umbral_pre::serde_bytes;
+    use serde_encoded_bytes::{ArrayLike, Hex};
+    use sha2::Sha256;
     use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
     use zeroize::ZeroizeOnDrop;
 
-    use crate::secret_box::{kdf, SecretBox};
     use crate::versioning::{
         messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
     };
+
+    pub fn kdf<S: ArrayLength<u8>>(
+        seed: &[u8],
+        info: Option<&[u8]>,
+    ) -> SecretBox<GenericArray<u8, S>> {
+        let hk = Hkdf::<Sha256>::new(None, seed);
+
+        let mut okm = SecretBox::init_with(GenericArray::<u8, S>::default);
+
+        let def_info = info.unwrap_or_default();
+
+        // We can only get an error here if `S` is too large, and it's known at compile-time.
+        hk.expand(def_info, okm.expose_secret_mut()).unwrap();
+
+        okm
+    }
 
     /// A Diffie-Hellman shared secret
     #[derive(ZeroizeOnDrop)]
@@ -134,7 +152,8 @@ pub mod session {
         pub fn new(shared_secret: SharedSecret) -> Self {
             let info = b"SESSION_SHARED_SECRET_DERIVATION/";
             let derived_key = kdf::<U32>(shared_secret.as_bytes(), Some(info));
-            let derived_bytes = <[u8; 32]>::try_from(derived_key.as_secret().as_slice()).unwrap();
+            let derived_bytes =
+                <[u8; 32]>::try_from(derived_key.expose_secret().as_slice()).unwrap();
             Self { derived_bytes }
         }
 
@@ -189,14 +208,13 @@ pub mod session {
         where
             S: Serializer,
         {
-            serde_bytes::as_hex::serialize(self.0.as_bytes(), serializer)
+            ArrayLike::<Hex>::serialize(self.0.as_bytes(), serializer)
         }
     }
 
-    impl serde_bytes::TryFromBytes for SessionStaticKey {
+    impl TryFrom<[u8; 32]> for SessionStaticKey {
         type Error = core::array::TryFromSliceError;
-        fn try_from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
-            let array: [u8; 32] = bytes.try_into()?;
+        fn try_from(array: [u8; 32]) -> Result<Self, Self::Error> {
             Ok(SessionStaticKey(PublicKey::from(array)))
         }
     }
@@ -206,7 +224,7 @@ pub mod session {
         where
             D: Deserializer<'a>,
         {
-            serde_bytes::as_hex::deserialize(deserializer)
+            ArrayLike::<Hex>::deserialize(deserializer)
         }
     }
 
@@ -294,14 +312,14 @@ pub mod session {
 
     /// This class handles keyring material for session keys, by allowing deterministic
     /// derivation of `SessionStaticSecret` objects based on labels.
-    #[derive(Clone, ZeroizeOnDrop, PartialEq)]
+    #[derive(ZeroizeOnDrop)]
     pub struct SessionSecretFactory(SecretBox<SessionSecretFactorySeed>);
 
     impl SessionSecretFactory {
         /// Creates a session secret factory using the given RNG.
         pub fn random_with_rng(rng: &mut (impl CryptoRng + RngCore)) -> Self {
-            let mut bytes = SecretBox::new(SessionSecretFactorySeed::default());
-            rng.fill_bytes(bytes.as_mut_secret());
+            let mut bytes = SecretBox::init_with(SessionSecretFactorySeed::default);
+            rng.fill_bytes(bytes.expose_secret_mut());
             Self(bytes)
         }
 
@@ -325,18 +343,20 @@ pub mod session {
             if seed.len() != Self::seed_size() {
                 return Err(InvalidSessionSecretFactorySeedLength);
             }
-            Ok(Self(SecretBox::new(*SessionSecretFactorySeed::from_slice(
-                seed,
-            ))))
+            Ok(Self(SecretBox::init_with(|| {
+                *SessionSecretFactorySeed::from_slice(seed)
+            })))
         }
 
         /// Creates a `SessionStaticSecret` deterministically from the given label.
         pub fn make_key(&self, label: &[u8]) -> SessionStaticSecret {
             let prefix = b"SESSION_KEY_DERIVATION/";
             let info = [prefix, label].concat();
-            let seed = kdf::<SessionSecretFactoryDerivedKeySize>(self.0.as_secret(), Some(&info));
-            let mut rng =
-                ChaCha20Rng::from_seed(<[u8; 32]>::try_from(seed.as_secret().as_slice()).unwrap());
+            let seed =
+                kdf::<SessionSecretFactoryDerivedKeySize>(self.0.expose_secret(), Some(&info));
+            let mut rng = ChaCha20Rng::from_seed(
+                <[u8; 32]>::try_from(seed.expose_secret().as_slice()).unwrap(),
+            );
             SessionStaticSecret::random_from_rng(&mut rng)
         }
     }
@@ -424,7 +444,7 @@ pub struct EncryptedThresholdDecryptionRequest {
     /// Public key of requester
     pub requester_public_key: SessionStaticKey,
 
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     /// Encrypted request
     ciphertext: Box<[u8]>,
 }
@@ -487,7 +507,7 @@ pub struct ThresholdDecryptionResponse {
     pub ritual_id: u32,
 
     /// The decryption share to include in the response.
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     pub decryption_share: Box<[u8]>,
 }
 
@@ -539,7 +559,7 @@ pub struct EncryptedThresholdDecryptionResponse {
     /// The ID of the ritual.
     pub ritual_id: u32,
 
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     ciphertext: Box<[u8]>,
 }
 

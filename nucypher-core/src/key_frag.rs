@@ -4,9 +4,10 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{Base64, SliceLike};
 use umbral_pre::{
-    decrypt_original, encrypt, serde_bytes, Capsule, DecryptionError as UmbralDecryptionError,
-    EncryptionError, KeyFrag, PublicKey, SecretKey, Signature, Signer, VerifiedKeyFrag,
+    decrypt_original, encrypt, Capsule, DecryptionError as UmbralDecryptionError, EncryptionError,
+    KeyFrag, PublicKey, SecretKey, Signature, Signer, VerifiedKeyFrag,
 };
 
 use crate::hrac::HRAC;
@@ -98,7 +99,7 @@ impl fmt::Display for DecryptionError {
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedKeyFrag {
     capsule: Capsule,
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     ciphertext: Box<[u8]>,
 }
 

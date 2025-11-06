@@ -14,7 +14,10 @@ umbral-pre = { version = "0.11.0", features = ["serde"] }
 ferveo = { package = "ferveo-nucypher", version = "0.4.0" }
 ark-std = "0.4"
 serde = { version = "1", default-features = false, features = ["derive"] }
-generic-array = { version = "0.14", features = ["zeroize"] }
+# generic-array added deprecation warnings to its whole API in 0.14.8,
+# but many of our RustCrypto dependencies are still stuck on generic-array=0.14.x,
+# so it's warnings galore.
+generic-array = { version = "=0.14.7", features = ["zeroize"] }
 sha3 = "0.10"
 rmp-serde = "1"
 serde_with = "1.14"
@@ -27,3 +30,5 @@ zeroize = { version = "1.6.0", features = ["derive"] }
 rand_core = "0.6.4"
 rand_chacha = "0.3.1"
 rand = "0.8.5"
+secrecy = "0.10"
+serde-encoded-bytes = { version = "0.2", features = ["hex", "base64"] }

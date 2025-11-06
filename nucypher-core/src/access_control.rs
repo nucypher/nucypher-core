@@ -4,7 +4,7 @@ use alloc::string::String;
 use ferveo::api::{encrypt, Ciphertext, DkgPublicKey, SecretBox};
 use ferveo::Error;
 use serde::{Deserialize, Serialize};
-use umbral_pre::serde_bytes;
+use serde_encoded_bytes::{Base64, SliceLike};
 
 use crate::conditions::Conditions;
 use crate::versioning::{
@@ -89,7 +89,7 @@ pub struct AccessControlPolicy {
     pub auth_data: AuthenticatedData,
 
     /// The authorization data for the authenticated data
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     pub authorization: Box<[u8]>,
 }
 

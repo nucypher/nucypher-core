@@ -5,9 +5,10 @@ use core::fmt;
 
 use ferveo::api::ValidatorPublicKey as FerveoPublicKey;
 use serde::{Deserialize, Serialize};
+use serde_encoded_bytes::{Base64, SliceLike};
 use serde_with::serde_as;
 use sha3::{digest::Update, Digest, Keccak256};
-use umbral_pre::{serde_bytes, PublicKey, RecoverableSignature, Signature, Signer};
+use umbral_pre::{PublicKey, RecoverableSignature, Signature, Signer};
 
 use crate::address::Address;
 use crate::fleet_state::FleetStateChecksum;
@@ -63,7 +64,7 @@ pub struct NodeMetadataPayload {
     /// Ferveo public key to use for DKG participation.
     pub ferveo_public_key: FerveoPublicKey,
     /// The node's SSL certificate (serialized in DER format).
-    #[serde(with = "serde_bytes::as_base64")]
+    #[serde(with = "SliceLike::<Base64>")]
     pub certificate_der: Box<[u8]>,
     /// The hostname of the node's REST service.
     pub host: String,
