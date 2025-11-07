@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
-use nucypher_core::ProtocolObject;
+use nucypher_core::{BaseSignatureRequest, ProtocolObject};
 
 // Re-export certain types so they can be used from `nucypher-core` WASM bindings directly.
 pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
@@ -1807,6 +1807,17 @@ impl UserOperationSignatureRequest {
     pub fn context(&self) -> Option<Context> {
         self.0.context.clone().map(Context)
     }
+
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        EncryptedThresholdSignatureRequest(
+            self.0
+                .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
+        )
+    }
 }
 
 /// PackedUserOperationSignatureRequest
@@ -1864,6 +1875,17 @@ impl PackedUserOperationSignatureRequest {
     pub fn context(&self) -> Option<Context> {
         self.0.context.clone().map(Context)
     }
+
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        EncryptedThresholdSignatureRequest(
+            self.0
+                .encrypt(shared_secret.as_ref(), requester_public_key.as_ref()),
+        )
+    }
 }
 
 /// SignatureResponse
@@ -1913,5 +1935,81 @@ impl SignatureResponse {
     #[wasm_bindgen(getter, js_name = signatureType)]
     pub fn signature_type(&self) -> u8 {
         self.0.signature_type.as_u8()
+    }
+
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdSignatureResponse {
+        EncryptedThresholdSignatureResponse(self.0.encrypt(shared_secret.as_ref()))
+    }
+}
+
+//
+// EncryptedThresholdSignatureRequest
+//
+
+#[wasm_bindgen]
+extern "C" {
+    // This is just a *type alias* for TypeScript consumers.
+    #[wasm_bindgen(
+        typescript_type = "UserOperationSignatureRequest | PackedUserOperationSignatureRequest"
+    )]
+    pub type SignatureRequestUnion;
+}
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdSignatureRequest(nucypher_core::EncryptedThresholdSignatureRequest);
+
+generate_from_bytes!(EncryptedThresholdSignatureRequest);
+generate_to_bytes!(EncryptedThresholdSignatureRequest);
+
+#[wasm_bindgen]
+impl EncryptedThresholdSignatureRequest {
+    #[wasm_bindgen(getter, js_name = requesterPublicKey)]
+    pub fn requester_public_key(&self) -> SessionStaticKey {
+        SessionStaticKey::from(self.0.requester_public_key)
+    }
+
+    #[wasm_bindgen(getter, js_name = cohortId)]
+    pub fn cohort_id(&self) -> u32 {
+        self.0.cohort_id
+    }
+
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<SignatureRequestUnion, Error> {
+        let direct_request = self.0.decrypt(shared_secret.as_ref()).map_err(map_js_err)?;
+        match direct_request {
+            nucypher_core::DirectSignatureRequest::UserOp(req) => {
+                Ok(JsValue::from(UserOperationSignatureRequest(req)).into())
+            }
+            nucypher_core::DirectSignatureRequest::PackedUserOp(req) => {
+                Ok(JsValue::from(PackedUserOperationSignatureRequest(req)).into())
+            }
+        }
+    }
+}
+
+//
+// EncryptedThresholdSignatureResponse
+//
+
+#[wasm_bindgen]
+#[derive(PartialEq, Debug, derive_more::From, derive_more::AsRef)]
+pub struct EncryptedThresholdSignatureResponse(nucypher_core::EncryptedThresholdSignatureResponse);
+
+generate_from_bytes!(EncryptedThresholdSignatureResponse);
+generate_to_bytes!(EncryptedThresholdSignatureResponse);
+
+#[wasm_bindgen]
+impl EncryptedThresholdSignatureResponse {
+    pub fn decrypt(&self, shared_secret: &SessionSharedSecret) -> Result<SignatureResponse, Error> {
+        self.0
+            .decrypt(shared_secret.as_ref())
+            .map_err(map_js_err)
+            .map(SignatureResponse)
     }
 }

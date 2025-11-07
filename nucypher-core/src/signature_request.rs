@@ -11,8 +11,14 @@ use umbral_pre::serde_bytes;
 
 use crate::address::Address;
 use crate::conditions::Context;
+use crate::session::{
+    decrypt_with_shared_secret, encrypt_with_shared_secret,
+    key::{SessionSharedSecret, SessionStaticKey},
+    DecryptionError,
+};
 use crate::versioning::{
-    messagepack_deserialize, messagepack_serialize, ProtocolObject, ProtocolObjectInner,
+    messagepack_deserialize, messagepack_serialize, DeserializationError, ProtocolObject,
+    ProtocolObjectInner,
 };
 
 /// Enum for different signature types.
@@ -107,6 +113,12 @@ pub trait BaseSignatureRequest: Serialize + for<'de> Deserialize<'de> {
     fn signature_type(&self) -> SignatureRequestType;
     /// Returns the optional context for this signature request
     fn context(&self) -> Option<&Context>;
+    /// Encrypts the signature request.
+    fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest;
 }
 
 /// UserOperation for signature requests - https://eips.ethereum.org/EIPS/eip-4337
@@ -233,6 +245,18 @@ impl BaseSignatureRequest for UserOperationSignatureRequest {
 
     fn context(&self) -> Option<&Context> {
         self.context.as_ref()
+    }
+
+    fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        EncryptedThresholdSignatureRequest::new(
+            &DirectSignatureRequest::UserOp(self.clone()),
+            shared_secret,
+            requester_public_key,
+        )
     }
 }
 
@@ -600,6 +624,18 @@ impl BaseSignatureRequest for PackedUserOperationSignatureRequest {
     fn context(&self) -> Option<&Context> {
         self.context.as_ref()
     }
+
+    fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        EncryptedThresholdSignatureRequest::new(
+            &DirectSignatureRequest::PackedUserOp(self.clone()),
+            shared_secret,
+            requester_public_key,
+        )
+    }
 }
 
 /// Signature response
@@ -631,6 +667,14 @@ impl SignatureResponse {
             signature: signature.to_vec().into_boxed_slice(),
             signature_type,
         }
+    }
+
+    /// Encrypts the signature response.
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> EncryptedThresholdSignatureResponse {
+        EncryptedThresholdSignatureResponse::new(self, shared_secret)
     }
 }
 
@@ -807,7 +851,7 @@ impl DirectSignatureRequest {
         }
     }
 
-    /// Get the chain ID for this request  
+    /// Get the chain ID for this request
     pub fn chain_id(&self) -> u64 {
         match self {
             Self::UserOp(req) => req.chain_id(),
@@ -822,6 +866,18 @@ impl DirectSignatureRequest {
             Self::PackedUserOp(req) => req.context(),
         }
     }
+
+    /// Encrypts the signature request.
+    pub fn encrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> EncryptedThresholdSignatureRequest {
+        match self {
+            Self::UserOp(req) => req.encrypt(shared_secret, requester_public_key),
+            Self::PackedUserOp(req) => req.encrypt(shared_secret, requester_public_key),
+        }
+    }
 }
 
 /// Utility function to deserialize any signature request from bytes
@@ -829,9 +885,139 @@ pub fn deserialize_signature_request(bytes: &[u8]) -> Result<DirectSignatureRequ
     DirectSignatureRequest::from_bytes(bytes)
 }
 
+/// Utility function to serialize any signature request from bytes
+pub fn serialize_signature_request(request: &DirectSignatureRequest) -> Box<[u8]> {
+    match request {
+        DirectSignatureRequest::UserOp(req) => req.to_bytes(),
+        DirectSignatureRequest::PackedUserOp(req) => req.to_bytes(),
+    }
+}
+
+/// An encrypted signature request for Ursula to process and sign.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedThresholdSignatureRequest {
+    /// ID of the cohort
+    pub cohort_id: u32,
+
+    /// Public key of requester
+    pub requester_public_key: SessionStaticKey,
+
+    #[serde(with = "serde_bytes::as_base64")]
+    /// Encrypted request
+    ciphertext: Box<[u8]>,
+}
+
+impl EncryptedThresholdSignatureRequest {
+    fn new(
+        request: &DirectSignatureRequest,
+        shared_secret: &SessionSharedSecret,
+        requester_public_key: &SessionStaticKey,
+    ) -> Self {
+        let serialization_bytes = serialize_signature_request(request);
+        let ciphertext = encrypt_with_shared_secret(shared_secret, &serialization_bytes)
+            .expect("Encryption failed - out of memory?");
+        Self {
+            cohort_id: request.cohort_id(),
+            requester_public_key: *requester_public_key,
+            ciphertext,
+        }
+    }
+
+    /// Decrypts the decryption request
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<DirectSignatureRequest, DecryptionError> {
+        let decryption_request_bytes = decrypt_with_shared_secret(shared_secret, &self.ciphertext)?;
+        let decryption_request =
+            deserialize_signature_request(&decryption_request_bytes).map_err(|err| {
+                DecryptionError::DeserializationFailed(DeserializationError::BadPayload {
+                    error_msg: err.to_string(),
+                })
+            })?;
+        Ok(decryption_request)
+    }
+}
+
+impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdSignatureRequest {
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn brand() -> [u8; 4] {
+        *b"ETSR"
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for EncryptedThresholdSignatureRequest {}
+
+/// An encrypted response from Ursula with a signature.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedThresholdSignatureResponse {
+    #[serde(with = "serde_bytes::as_base64")]
+    ciphertext: Box<[u8]>,
+}
+
+impl EncryptedThresholdSignatureResponse {
+    fn new(response: &SignatureResponse, shared_secret: &SessionSharedSecret) -> Self {
+        let ciphertext = encrypt_with_shared_secret(shared_secret, &response.to_bytes())
+            .expect("Encryption failed - out of memory?");
+        Self { ciphertext }
+    }
+
+    /// Decrypts the decryption request
+    pub fn decrypt(
+        &self,
+        shared_secret: &SessionSharedSecret,
+    ) -> Result<SignatureResponse, DecryptionError> {
+        let decryption_response_bytes =
+            decrypt_with_shared_secret(shared_secret, &self.ciphertext)?;
+        let decryption_response = SignatureResponse::from_bytes(&decryption_response_bytes)
+            .map_err(DecryptionError::DeserializationFailed)?;
+        Ok(decryption_response)
+    }
+}
+
+impl<'a> ProtocolObjectInner<'a> for EncryptedThresholdSignatureResponse {
+    fn version() -> (u16, u16) {
+        (1, 0)
+    }
+
+    fn brand() -> [u8; 4] {
+        *b"ETRe"
+    }
+
+    fn unversioned_to_bytes(&self) -> Box<[u8]> {
+        messagepack_serialize(&self)
+    }
+
+    fn unversioned_from_bytes(minor_version: u16, bytes: &[u8]) -> Option<Result<Self, String>> {
+        if minor_version == 0 {
+            Some(messagepack_deserialize(bytes))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a> ProtocolObject<'a> for EncryptedThresholdSignatureResponse {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::session::key::SessionStaticSecret;
     use alloc::string::ToString;
 
     #[test]
@@ -1421,5 +1607,140 @@ mod tests {
         validate_eip712_domain(&mdt_domain, &packed_user_op, false);
         let mdt_message = eip712_struct_mdt.get("message").unwrap();
         validate_eip712_message(mdt_message.as_object().unwrap(), &packed_user_op, false);
+    }
+
+    #[test]
+    fn test_encrypted_threshold_signing_request() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let cohort_id = 1;
+        let chain_id = 137;
+
+        let user_op = UserOperation::new(
+            sender,
+            100,
+            b"execution_data",
+            150000,
+            250000,
+            60000,
+            30_000_000_000,
+            2_000_000_000,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        let user_op_request = UserOperationSignatureRequest::new(
+            user_op.clone(),
+            cohort_id,
+            chain_id,
+            AAVersion::V08,
+            None,
+        );
+
+        let packed_user_op = PackedUserOperation::from_user_operation(&user_op);
+        let packed_user_op_request = PackedUserOperationSignatureRequest::new(
+            packed_user_op,
+            cohort_id,
+            chain_id,
+            AAVersion::MDT,
+            None,
+        );
+
+        // generate service and requester keys
+        let service_secret = SessionStaticSecret::random();
+
+        let requester_secret = SessionStaticSecret::random();
+        let requester_public_key = requester_secret.public_key();
+
+        // requester encrypts request to send to service
+        let service_public_key = service_secret.public_key();
+        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+
+        // test requests
+        for request in [
+            DirectSignatureRequest::UserOp(user_op_request),
+            DirectSignatureRequest::PackedUserOp(packed_user_op_request),
+        ] {
+            let encrypted_request =
+                request.encrypt(&requester_shared_secret, &requester_public_key);
+
+            // mimic serialization/deserialization over the wire
+            let encrypted_request_bytes = encrypted_request.to_bytes();
+            let encrypted_request_from_bytes =
+                EncryptedThresholdSignatureRequest::from_bytes(&encrypted_request_bytes).unwrap();
+
+            assert_eq!(encrypted_request_from_bytes.cohort_id, cohort_id);
+            assert_eq!(
+                encrypted_request_from_bytes.requester_public_key,
+                requester_public_key
+            );
+
+            // service decrypts request
+            let service_shared_secret = service_secret
+                .derive_shared_secret(&encrypted_request_from_bytes.requester_public_key);
+            let decrypted_request = encrypted_request_from_bytes
+                .decrypt(&service_shared_secret)
+                .unwrap();
+            assert_eq!(decrypted_request, request);
+
+            // wrong shared key used
+            let random_secret_key = SessionStaticSecret::random();
+            let random_shared_secret =
+                random_secret_key.derive_shared_secret(&requester_public_key);
+            assert!(encrypted_request_from_bytes
+                .decrypt(&random_shared_secret)
+                .is_err());
+        }
+    }
+
+    #[test]
+    fn test_encrypted_threshold_signing_response() {
+        let service_secret = SessionStaticSecret::random();
+        let requester_secret = SessionStaticSecret::random();
+
+        let signer = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let response = SignatureResponse::new(
+            signer,
+            b"response_hash",
+            b"response_signature",
+            SignatureRequestType::UserOp,
+        );
+
+        // service encrypts response to send back
+        let requester_public_key = requester_secret.public_key();
+
+        let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
+        let encrypted_response = response.encrypt(&service_shared_secret);
+
+        // mimic serialization/deserialization over the wire
+        let encrypted_response_bytes = encrypted_response.to_bytes();
+        let encrypted_response_from_bytes =
+            EncryptedThresholdSignatureResponse::from_bytes(&encrypted_response_bytes).unwrap();
+
+        // requester decrypts response
+        let service_public_key = service_secret.public_key();
+        let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+        assert_eq!(
+            requester_shared_secret.as_bytes(),
+            service_shared_secret.as_bytes()
+        );
+        let decrypted_response = encrypted_response_from_bytes
+            .decrypt(&requester_shared_secret)
+            .unwrap();
+        assert_eq!(response, decrypted_response);
+        // just to be sure, check fields
+        assert_eq!(decrypted_response.signature, response.signature);
+        assert_eq!(decrypted_response.signer, response.signer);
+        assert_eq!(decrypted_response.hash, response.hash);
+        assert_eq!(decrypted_response.signature_type, response.signature_type);
+
+        // wrong shared key used
+        let random_secret_key = SessionStaticSecret::random();
+        let random_shared_secret = random_secret_key.derive_shared_secret(&requester_public_key);
+        assert!(encrypted_response_from_bytes
+            .decrypt(&random_shared_secret)
+            .is_err());
     }
 }

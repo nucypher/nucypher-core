@@ -1046,6 +1046,47 @@ fn user_operation_signature_request() {
     );
     let err = result.unwrap_err();
     assert_eq!(err.message(), "Invalid AA version: invalid_version");
+
+    //
+    //  encrypt/decrypt request
+    //
+    let service_secret = SessionStaticSecret::random();
+    let service_public_key = service_secret.public_key();
+    let requester_secret = SessionStaticSecret::random();
+    let shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+
+    // mimic encrypted request going over the wire
+    let requester_public_key = requester_secret.public_key();
+    let encrypted_request = v8_request.encrypt(&shared_secret, &requester_public_key);
+    let encrypted_request_bytes = encrypted_request.to_bytes();
+    let encrypted_request_from_bytes =
+        EncryptedThresholdSignatureRequest::from_bytes(&encrypted_request_bytes).unwrap();
+    assert_eq!(encrypted_request_from_bytes, encrypted_request);
+    assert_eq!(
+        encrypted_request_from_bytes.cohort_id(),
+        v8_request.cohort_id()
+    );
+    assert_eq!(
+        encrypted_request_from_bytes.requester_public_key(),
+        requester_public_key
+    );
+
+    // service decrypts request
+    let service_shared_secret =
+        service_secret.derive_shared_secret(&encrypted_request_from_bytes.requester_public_key());
+    let decrypted_request_union = encrypted_request_from_bytes
+        .decrypt(&service_shared_secret)
+        .unwrap();
+
+    // Verify that we got back a valid request by converting to JsValue
+    let _decrypted_js: JsValue = decrypted_request_union.into();
+
+    // wrong key used
+    let random_secret_key = SessionStaticSecret::random();
+    let random_shared_secret = random_secret_key.derive_shared_secret(&service_public_key);
+    assert!(encrypted_request_from_bytes
+        .decrypt(&random_shared_secret)
+        .is_err());
 }
 
 #[wasm_bindgen_test]
@@ -1180,6 +1221,48 @@ fn packed_user_operation_signature_request() {
     );
     let err = result.unwrap_err();
     assert_eq!(err.message(), "Invalid AA version: invalid_version");
+
+    //
+    //  encrypt/decrypt request
+    //
+    let service_secret = SessionStaticSecret::random();
+    let service_public_key = service_secret.public_key();
+    let requester_secret = SessionStaticSecret::random();
+    let shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+
+    // mimic encrypted request going over the wire
+    let requester_public_key = requester_secret.public_key();
+    let encrypted_request = v8_request.encrypt(&shared_secret, &requester_public_key);
+
+    let encrypted_request_bytes = encrypted_request.to_bytes();
+    let encrypted_request_from_bytes =
+        EncryptedThresholdSignatureRequest::from_bytes(&encrypted_request_bytes).unwrap();
+    assert_eq!(encrypted_request_from_bytes, encrypted_request);
+    assert_eq!(
+        encrypted_request_from_bytes.cohort_id(),
+        v8_request.cohort_id()
+    );
+    assert_eq!(
+        encrypted_request_from_bytes.requester_public_key(),
+        requester_public_key
+    );
+
+    // service decrypts request
+    let service_shared_secret =
+        service_secret.derive_shared_secret(&encrypted_request_from_bytes.requester_public_key());
+    let decrypted_request_union = encrypted_request_from_bytes
+        .decrypt(&service_shared_secret)
+        .unwrap();
+
+    // Verify that we got back a valid request by converting to JsValue
+    let _decrypted_js: JsValue = decrypted_request_union.into();
+
+    // wrong key used
+    let random_secret_key = SessionStaticSecret::random();
+    let random_shared_secret = random_secret_key.derive_shared_secret(&service_public_key);
+    assert!(encrypted_request_from_bytes
+        .decrypt(&random_shared_secret)
+        .is_err());
 }
 
 #[wasm_bindgen_test]
@@ -1213,4 +1296,42 @@ fn signature_response() {
     let deserialized_packed_response =
         SignatureResponse::from_bytes(&serialized_packed_response).unwrap();
     assert_eq!(packed_response, deserialized_packed_response);
+
+    //
+    // encrypt/decrypt response
+    //
+    let service_secret = SessionStaticSecret::random();
+
+    let requester_secret = SessionStaticSecret::random();
+    let requester_public_key = requester_secret.public_key();
+    // service encrypts response to send back
+    let service_shared_secret = service_secret.derive_shared_secret(&requester_public_key);
+    let encrypted_response = response.encrypt(&service_shared_secret);
+
+    // mimic serialization/deserialization over the wire
+    let encrypted_response_bytes = encrypted_response.to_bytes();
+    let encrypted_response_from_bytes =
+        EncryptedThresholdSignatureResponse::from_bytes(&encrypted_response_bytes).unwrap();
+
+    // requester decrypts response
+    let service_public_key = service_secret.public_key();
+    let requester_shared_secret = requester_secret.derive_shared_secret(&service_public_key);
+    let decrypted_response = encrypted_response_from_bytes
+        .decrypt(&requester_shared_secret)
+        .unwrap();
+    assert_eq!(response, decrypted_response);
+    assert_eq!(response.signer(), signer);
+    assert_eq!(response.hash(), decrypted_response.hash());
+    assert_eq!(response.signature(), decrypted_response.signature());
+    assert_eq!(
+        response.signature_type(),
+        decrypted_response.signature_type()
+    );
+
+    // wrong secret key used
+    let random_secret_key = SessionStaticSecret::random();
+    let random_shared_secret = random_secret_key.derive_shared_secret(&service_public_key);
+    assert!(encrypted_response_from_bytes
+        .decrypt(&random_shared_secret)
+        .is_err());
 }
