@@ -2364,7 +2364,7 @@ checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
 name = "nucypher-core"
-version = "0.15.1-dev.1"
+version = "0.15.1-dev.2"
 dependencies = [
  "ark-std",
  "chacha20poly1305",
@@ -2389,7 +2389,7 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-python"
-version = "0.15.1-dev.1"
+version = "0.15.1-dev.2"
 dependencies = [
  "derive_more 0.99.20",
  "ferveo-nucypher",
@@ -2403,7 +2403,7 @@ dependencies = [
 
 [[package]]
 name = "nucypher-core-wasm"
-version = "0.15.1-dev.1"
+version = "0.15.1-dev.2"
 dependencies = [
  "ark-std",
  "console_error_panic_hook",
