@@ -11,6 +11,7 @@ use umbral_pre::serde_bytes;
 
 use crate::address::Address;
 use crate::conditions::Context;
+use crate::prim_types::Uint256;
 use crate::session::{
     decrypt_with_shared_secret, encrypt_with_shared_secret,
     key::{SessionSharedSecret, SessionStaticKey},
@@ -127,7 +128,7 @@ pub struct UserOperation {
     /// Address of the sender (smart contract account)
     pub sender: Address,
     /// Nonce for replay protection
-    pub nonce: u64,
+    pub nonce: Uint256,
     /// The calldata to execute
     #[serde(with = "serde_bytes::as_base64")]
     pub call_data: Box<[u8]>,
@@ -160,7 +161,7 @@ impl UserOperation {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Address,
-        nonce: u64,
+        nonce: Uint256,
         call_data: &[u8],
         call_gas_limit: u128,
         verification_gas_limit: u128,
@@ -266,7 +267,7 @@ pub struct PackedUserOperation {
     /// Address of the sender (smart contract account)
     pub sender: Address,
     /// Nonce for replay protection
-    pub nonce: u64,
+    pub nonce: Uint256,
     /// Factory and data for account creation
     #[serde(with = "serde_bytes::as_base64")]
     pub init_code: Box<[u8]>,
@@ -291,7 +292,7 @@ impl PackedUserOperation {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: Address,
-        nonce: u64,
+        nonce: Uint256,
         init_code: &[u8],
         call_data: &[u8],
         account_gas_limits: &[u8],
@@ -400,7 +401,7 @@ impl PackedUserOperation {
 
         Self {
             sender: user_op.sender,
-            nonce: user_op.nonce,
+            nonce: user_op.nonce.clone(),
             init_code: init_code.to_vec().into_boxed_slice(),
             call_data: user_op.call_data.clone(),
             account_gas_limits: account_gas_limits.to_vec().into_boxed_slice(),
@@ -417,7 +418,10 @@ impl PackedUserOperation {
             "sender".into(),
             JsonValue::String(format!("0x{}", hex::encode(self.sender.as_ref()))),
         );
-        message.insert("nonce".into(), JsonValue::Number(self.nonce.into()));
+
+        // Convert U256 nonce to decimal string for JSON representation (since JsonNumber does not provide sufficient precision)
+        message.insert("nonce".into(), JsonValue::String(self.nonce.to_string()));
+
         message.insert(
             "initCode".into(),
             JsonValue::String(format!("0x{}", hex::encode(&self.init_code))),
@@ -1067,7 +1071,7 @@ mod tests {
 
         let user_op = UserOperation::new(
             sender,
-            42,
+            Uint256::from(42),
             b"call_data",
             100000,
             200000,
@@ -1083,7 +1087,7 @@ mod tests {
         );
 
         assert_eq!(user_op.sender, sender);
-        assert_eq!(user_op.nonce, 42);
+        assert_eq!(user_op.nonce, Uint256::from(42));
         assert_eq!(user_op.call_data.as_ref(), b"call_data");
         assert_eq!(user_op.call_gas_limit, 100000);
         assert_eq!(user_op.verification_gas_limit, 200000);
@@ -1114,7 +1118,7 @@ mod tests {
 
         let packed_user_op = PackedUserOperation::new(
             sender,
-            42,
+            Uint256::from(42),
             b"init_code",
             b"call_data",
             b"account_gas_limits",
@@ -1123,7 +1127,7 @@ mod tests {
             b"paymaster_and_data",
         );
         assert_eq!(packed_user_op.sender, sender);
-        assert_eq!(packed_user_op.nonce, 42);
+        assert_eq!(packed_user_op.nonce, Uint256::from(42));
         assert_eq!(packed_user_op.init_code.as_ref(), b"init_code");
         assert_eq!(packed_user_op.call_data.as_ref(), b"call_data");
         assert_eq!(
@@ -1222,7 +1226,7 @@ mod tests {
         let sender = Address::from_str("0x789abcdef0123456789abcdef0123456789abcde").unwrap();
         let user_op = UserOperation::new(
             sender,
-            1,
+            Uint256::from(1),
             b"",
             0,
             0,
@@ -1252,7 +1256,7 @@ mod tests {
         let sender_mdt = Address::from_str("0xabcdef0123456789abcdef0123456789abcdef01").unwrap();
         let user_op_mdt = UserOperation::new(
             sender_mdt,
-            2,
+            Uint256::from(2),
             b"call_data_mdt",
             0,
             0,
@@ -1290,7 +1294,7 @@ mod tests {
 
         let user_op = UserOperation::new(
             sender,
-            100,
+            Uint256::from(100),
             b"execution_data",
             150000,
             250000,
@@ -1338,7 +1342,7 @@ mod tests {
 
         let user_op = UserOperation::new(
             sender,
-            42,
+            Uint256::from(42),
             b"call_data",
             100000,
             200000,
@@ -1365,7 +1369,7 @@ mod tests {
 
         assert_eq!(request, deserialized);
         assert_eq!(deserialized.user_op.sender, sender);
-        assert_eq!(deserialized.user_op.nonce, 42);
+        assert_eq!(deserialized.user_op.nonce, Uint256::from(42));
         assert_eq!(deserialized.aa_version, AAVersion::V08);
         assert_eq!(deserialized.cohort_id, cohort_id);
         assert_eq!(deserialized.chain_id, chain_id);
@@ -1394,7 +1398,7 @@ mod tests {
 
         let packed_user_op = PackedUserOperation::new(
             sender,
-            42,
+            Uint256::from(42),
             b"init_code",
             b"call_data",
             b"account_gas_limits",
@@ -1415,7 +1419,7 @@ mod tests {
 
         assert_eq!(request, deserialized);
         assert_eq!(deserialized.packed_user_op.sender, sender);
-        assert_eq!(deserialized.packed_user_op.nonce, 42);
+        assert_eq!(deserialized.packed_user_op.nonce, Uint256::from(42));
         assert_eq!(deserialized.aa_version, AAVersion::V08);
         assert_eq!(deserialized.cohort_id, cohort_id);
         assert_eq!(deserialized.chain_id, chain_id);
@@ -1481,7 +1485,7 @@ mod tests {
         );
         assert_eq!(
             eip712_message.get("nonce").unwrap(),
-            &JsonValue::Number(packed_user_op.nonce.into())
+            &JsonValue::String(packed_user_op.nonce.to_string())
         );
         assert_eq!(
             eip712_message.get("initCode").unwrap(),
@@ -1560,7 +1564,7 @@ mod tests {
         let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
         let packed_user_op = PackedUserOperation::new(
             sender,
-            42,
+            Uint256::from(42),
             b"init_code",
             b"call_data",
             b"account_gas_limits",
@@ -1617,7 +1621,7 @@ mod tests {
 
         let user_op = UserOperation::new(
             sender,
-            100,
+            Uint256::from(100),
             b"execution_data",
             150000,
             250000,

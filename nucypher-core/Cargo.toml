@@ -29,3 +29,4 @@ rand_core = "0.6.4"
 rand_chacha = "0.3.1"
 rand = "0.8.5"
 ethers = "2.0.14"
+primitive-types = { version = "0.14.0", features = ["serde"] }

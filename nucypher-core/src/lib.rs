@@ -16,6 +16,7 @@ mod hrac;
 mod key_frag;
 mod message_kit;
 mod node_metadata;
+mod prim_types;
 mod reencryption;
 mod retrieval_kit;
 mod revocation_order;
@@ -45,6 +46,7 @@ pub use message_kit::MessageKit;
 pub use node_metadata::{
     MetadataRequest, MetadataResponse, MetadataResponsePayload, NodeMetadata, NodeMetadataPayload,
 };
+pub use prim_types::Uint256;
 pub use reencryption::{ReencryptionRequest, ReencryptionResponse};
 pub use retrieval_kit::RetrievalKit;
 pub use revocation_order::RevocationOrder;

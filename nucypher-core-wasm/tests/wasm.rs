@@ -899,7 +899,7 @@ fn threshold_message_kit() {
 fn user_operation() {
     let mut user_op = UserOperation::new(
         "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-        1,
+        "1",
         b"calldata",
         123,
         456,
@@ -913,7 +913,7 @@ fn user_operation() {
         user_op.sender(),
         "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"
     );
-    assert_eq!(user_op.nonce(), 1);
+    assert_eq!(user_op.nonce(), "1");
     assert_eq!(user_op.call_data(), b"calldata".to_vec().into_boxed_slice());
     assert_eq!(user_op.call_gas_limit(), 123);
     assert_eq!(user_op.verification_gas_limit(), 456);
@@ -972,7 +972,7 @@ fn user_operation() {
 fn user_operation_signature_request() {
     let user_op = UserOperation::new(
         "0x0000000000000000000000000000000000000000",
-        123,
+        "123",
         b"calldata",
         456,
         789,
@@ -1093,7 +1093,7 @@ fn user_operation_signature_request() {
 fn packed_user_operation() {
     let packed_user_op = PackedUserOperation::new(
         "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", // sender
-        123,                                          // nonce
+        "123",                                        // nonce
         b"initCode",                                  // init_code
         b"callData",                                  // call_data
         b"accountGasLimits",                          // account_gas_limits
@@ -1107,7 +1107,7 @@ fn packed_user_operation() {
         packed_user_op.sender(),
         "0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD"
     );
-    assert_eq!(packed_user_op.nonce(), 123);
+    assert_eq!(packed_user_op.nonce(), "123");
     assert_eq!(
         packed_user_op.init_code(),
         b"initCode".to_vec().into_boxed_slice()
@@ -1140,7 +1140,7 @@ fn packed_user_operation() {
 fn packed_user_operation_signature_request() {
     let packed_user_op = PackedUserOperation::new(
         "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", // sender
-        123,                                          // nonce
+        "123",                                        // nonce
         b"initCode",                                  // init_code
         b"callData",                                  // call_data
         b"accountGasLimits",                          // account_gas_limits

@@ -15,11 +15,13 @@ use pyo3::class::basic::CompareOp;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::pyclass::PyClass;
-use pyo3::types::{PyBytes, PyUnicode};
+use pyo3::types::{PyBytes, PyLong, PyUnicode};
 use umbral_pre::bindings_python::{
     Capsule, PublicKey, RecoverableSignature, SecretKey, Signer, VerificationError,
     VerifiedCapsuleFrag, VerifiedKeyFrag,
 };
+
+use num_bigint::BigUint;
 
 use nucypher_core as rust_nucypher_core;
 use rust_nucypher_core::{
@@ -27,7 +29,7 @@ use rust_nucypher_core::{
     UserOperation as SignatureRequestUserOperation,
 };
 
-use nucypher_core::{BaseSignatureRequest, ProtocolObject};
+use nucypher_core::{BaseSignatureRequest, ProtocolObject, Uint256};
 
 fn to_bytes<'a, T, U>(obj: &T) -> PyObject
 where
@@ -1581,7 +1583,7 @@ impl UserOperation {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
-        nonce: u64,
+        nonce: &PyLong,
         call_data: &[u8],
         call_gas_limit: u128,
         verification_gas_limit: u128,
@@ -1608,11 +1610,13 @@ impl UserOperation {
             .map(|f| nucypher_core::Address::from_str(f))
             .transpose()
             .map_err(|e| PyValueError::new_err(format!("Invalid factory address: {}", e)))?;
+        let uint256_nonce = Uint256::from_dec_str(&nonce.str()?.to_string())
+            .map_err(|e| PyValueError::new_err(format!("Invalid nonce: {}", e)))?;
 
         Ok(Self {
             backend: SignatureRequestUserOperation::new(
                 sender_address,
-                nonce,
+                uint256_nonce,
                 call_data,
                 call_gas_limit,
                 verification_gas_limit,
@@ -1635,8 +1639,10 @@ impl UserOperation {
     }
 
     #[getter]
-    pub fn nonce(&self) -> u64 {
-        self.backend.nonce
+    pub fn nonce(&self, py: Python) -> PyObject {
+        let bytes = self.backend.nonce.to_be_bytes();
+        let big = BigUint::from_bytes_be(&bytes);
+        big.into_py(py)
     }
 
     #[getter]
@@ -1821,7 +1827,7 @@ impl PackedUserOperation {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         sender: String,
-        nonce: u64,
+        nonce: &PyLong,
         init_code: &[u8],
         call_data: &[u8],
         account_gas_limits: &[u8],
@@ -1832,11 +1838,13 @@ impl PackedUserOperation {
         // Convert hex string to Address
         let sender_address = nucypher_core::Address::from_str(&sender)
             .map_err(|e| PyValueError::new_err(format!("Invalid sender address: {}", e)))?;
+        let uint256_nonce = Uint256::from_dec_str(&nonce.str()?.to_string())
+            .map_err(|e| PyValueError::new_err(format!("Invalid nonce: {}", e)))?;
 
         Ok(Self {
             backend: SignatureRequestPackedUserOperation::new(
                 sender_address,
-                nonce,
+                uint256_nonce,
                 init_code,
                 call_data,
                 account_gas_limits,
@@ -1860,8 +1868,10 @@ impl PackedUserOperation {
     }
 
     #[getter]
-    pub fn nonce(&self) -> u64 {
-        self.backend.nonce
+    pub fn nonce(&self, py: Python) -> PyObject {
+        let bytes = self.backend.nonce.to_be_bytes();
+        let big = BigUint::from_bytes_be(&bytes);
+        big.into_py(py)
     }
 
     #[getter]
@@ -2309,6 +2319,7 @@ fn json_to_pyobject(py: Python, value: &serde_json::Value) -> PyResult<PyObject>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use num_bigint::BigUint;
     use pyo3::types::PyModule;
     use std::sync::Once;
 
@@ -2335,7 +2346,7 @@ mod tests {
             kwargs
                 .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
                 .unwrap();
-            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs.set_item("nonce", 1).unwrap();
             kwargs
                 .set_item("call_data", PyBytes::new(py, b"call_data"))
                 .unwrap();
@@ -2359,12 +2370,9 @@ mod tests {
                 .unwrap();
             assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
 
-            let nonce: u64 = user_op_instance
-                .getattr("nonce")
-                .unwrap()
-                .extract()
-                .unwrap();
-            assert_eq!(nonce, 1u64);
+            let nonce: PyObject = user_op_instance.getattr("nonce").unwrap().into();
+            let nonce_value: BigUint = nonce.extract(py).unwrap();
+            assert_eq!(nonce_value, BigUint::from(1u32));
 
             let call_data: &PyBytes = user_op_instance
                 .getattr("call_data")
@@ -2544,7 +2552,7 @@ mod tests {
             kwargs
                 .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
                 .unwrap();
-            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs.set_item("nonce", 1).unwrap();
             kwargs
                 .set_item("init_code", PyBytes::new(py, b"init_code"))
                 .unwrap();
@@ -2572,12 +2580,9 @@ mod tests {
                 .unwrap();
             assert_eq!(sender, "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1");
 
-            let nonce: u64 = packed_user_op_instance
-                .getattr("nonce")
-                .unwrap()
-                .extract()
-                .unwrap();
-            assert_eq!(nonce, 1u64);
+            let nonce: PyObject = packed_user_op_instance.getattr("nonce").unwrap().into();
+            let nonce_value: BigUint = nonce.extract(py).unwrap();
+            assert_eq!(nonce_value, BigUint::from(1u32));
 
             let init_code: &PyBytes = packed_user_op_instance
                 .getattr("init_code")
@@ -2654,7 +2659,7 @@ mod tests {
             kwargs
                 .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
                 .unwrap();
-            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs.set_item("nonce", 1).unwrap();
             kwargs
                 .set_item("call_data", PyBytes::new(py, b"call_data"))
                 .unwrap();
@@ -2820,7 +2825,7 @@ mod tests {
             kwargs
                 .set_item("sender", "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1")
                 .unwrap();
-            kwargs.set_item("nonce", 1u64).unwrap();
+            kwargs.set_item("nonce", 1).unwrap();
             kwargs
                 .set_item("init_code", PyBytes::new(py, b"init_code"))
                 .unwrap();
