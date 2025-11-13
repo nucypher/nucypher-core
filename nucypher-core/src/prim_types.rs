@@ -45,7 +45,7 @@ impl Uint256 {
 #[cfg(test)]
 mod tests {
     use super::Uint256;
-    use alloc::string::{String, ToString};
+    use alloc::string::ToString;
 
     #[test]
     fn test_uint256_to_string() {
