@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::{wasm_bindgen, JsValue};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_derive::TryFromJsValue;
 
-use nucypher_core::{BaseSignatureRequest, ProtocolObject};
+use nucypher_core::{BaseSignatureRequest, ProtocolObject, Uint256};
 
 // Re-export certain types so they can be used from `nucypher-core` WASM bindings directly.
 pub use ferveo::bindings_wasm::{FerveoPublicKey, Keypair};
@@ -1540,7 +1540,7 @@ impl UserOperation {
     #[wasm_bindgen(constructor)]
     pub fn new(
         sender: &str,
-        nonce: u64,
+        nonce: &str,
         call_data: &[u8],
         call_gas_limit: u128,
         verification_gas_limit: u128,
@@ -1549,10 +1549,11 @@ impl UserOperation {
         max_priority_fee_per_gas: u128,
     ) -> Result<Self, Error> {
         let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
+        let u256_nonce = Uint256::from_dec_str(nonce).map_err(map_js_err)?;
 
         Ok(Self(nucypher_core::UserOperation::new(
             sender_address,
-            nonce,
+            u256_nonce,
             call_data,
             call_gas_limit,
             verification_gas_limit,
@@ -1574,8 +1575,8 @@ impl UserOperation {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn nonce(&self) -> u64 {
-        self.0.nonce
+    pub fn nonce(&self) -> String {
+        self.0.nonce.to_string()
     }
 
     #[wasm_bindgen(getter, js_name = callData)]
@@ -1685,7 +1686,7 @@ impl PackedUserOperation {
     #[wasm_bindgen(constructor)]
     pub fn new(
         sender: &str,
-        nonce: u64,
+        nonce: &str,
         init_code: &[u8],
         call_data: &[u8],
         account_gas_limits: &[u8],
@@ -1694,9 +1695,10 @@ impl PackedUserOperation {
         paymaster_and_data: &[u8],
     ) -> Result<Self, Error> {
         let sender_address = nucypher_core::Address::from_str(sender).map_err(map_js_err)?;
+        let u256_nonce = Uint256::from_dec_str(nonce).map_err(map_js_err)?;
         Ok(Self(nucypher_core::PackedUserOperation::new(
             sender_address,
-            nonce,
+            u256_nonce,
             init_code,
             call_data,
             account_gas_limits,
@@ -1712,8 +1714,8 @@ impl PackedUserOperation {
     }
 
     #[wasm_bindgen(getter)]
-    pub fn nonce(&self) -> u64 {
-        self.0.nonce
+    pub fn nonce(&self) -> String {
+        self.0.nonce.to_string()
     }
 
     #[wasm_bindgen(getter, js_name = initCode)]
