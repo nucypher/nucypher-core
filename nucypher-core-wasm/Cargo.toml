@@ -1,6 +1,6 @@
 [package]
 name = "nucypher-core-wasm"
-version = "0.15.1-dev.2"
+version = "0.15.1-dev.3"
 authors = [
     "Bogdan Opanchuk <bogdan@opanchuk.net>",
     "Piotr Roslaniec <p.roslaniec@gmail.com>"

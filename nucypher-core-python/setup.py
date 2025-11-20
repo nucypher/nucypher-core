@@ -10,7 +10,7 @@ setup(
     description="Protocol structures of Nucypher network",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="0.15.1-dev.2",
+    version="0.15.1-dev.3",
     author="Bogdan Opanchuk",
     author_email="bogdan@opanchuk.net",
     url="https://github.com/nucypher/nucypher-core/tree/main/nucypher-core-python",
