@@ -5,19 +5,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.15.1] - Unreleased
 
-### Fixed
-
-- Use `__new__` for Python binding constructors which is the correct way instead of `__init__`. ([#123])
-
 ### Added
 
 - Added `UserOperation`, `PackedUserOperation`, `UserOperationSigningRequest`, `PackedUserOperationSigningRequest`, `SignatureResponse` types and bindings for TACo Action Control. ([#113])
 - Added `EncryptedThresholdSignatureRequest`/`EncryptedThresholdSignatureRequest` types and bindings to facilitate end-to-end encrypted requests/responses for TACo Action Control. ([#116])
 
+### Fixed
+
+- Use `__new__` for Python binding constructors which is the correct way instead of `__init__`. ([#123])
+- Use `U256` type for nonce values in `UserOperation`, `PackedUserOperation`. ([#126])
+
 
 [#123]: https://github.com/nucypher/nucypher-core/pull/123
 [#113]: https://github.com/nucypher/nucypher-core/pull/113
 [#116]: https://github.com/nucypher/nucypher-core/pull/116
+[#126]: https://github.com/nucypher/nucypher-core/pull/126
 
 
 ## [0.15.0] - 2025-08-15
