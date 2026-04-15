@@ -65,6 +65,9 @@ pub const ENTRYPOINT_V07: &str = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 /// AA version enum for Account Abstraction versions
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AAVersion {
+    /// Version 0.7.0
+    #[serde(rename = "0.7.0")]
+    V07,
     /// Version 0.8.0
     #[serde(rename = "0.8.0")]
     V08,
@@ -77,6 +80,7 @@ impl AAVersion {
     /// Return the string representation
     pub fn as_str(&self) -> &'static str {
         match self {
+            Self::V07 => "0.7.0",
             Self::V08 => "0.8.0",
             Self::MDT => "mdt",
         }
@@ -88,6 +92,7 @@ impl FromStr for AAVersion {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "0.7.0" => Ok(Self::V07),
             "0.8.0" => Ok(Self::V08),
             "mdt" => Ok(Self::MDT),
             _ => Err(format!("Invalid AA version: {}", s)),
@@ -98,6 +103,7 @@ impl FromStr for AAVersion {
 impl fmt::Display for AAVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::V07 => write!(f, "{}", Self::V07.as_str()),
             Self::V08 => write!(f, "{}", Self::V08.as_str()),
             Self::MDT => write!(f, "{}", Self::MDT.as_str()),
         }
@@ -1052,11 +1058,14 @@ mod tests {
 
     #[test]
     fn test_aa_version() {
+        assert_eq!(AAVersion::from_str("0.7.0").unwrap(), AAVersion::V07);
         assert_eq!(AAVersion::from_str("0.8.0").unwrap(), AAVersion::V08);
         assert_eq!(AAVersion::from_str("mdt").unwrap(), AAVersion::MDT);
+
         let result = AAVersion::from_str("invalid_version");
         assert!(result.unwrap_err().contains("Invalid AA version"));
 
+        assert_eq!(AAVersion::V07.to_string(), "0.7.0",);
         assert_eq!(AAVersion::V08.to_string(), "0.8.0",);
         assert_eq!(AAVersion::MDT.to_string(), "mdt",);
     }
