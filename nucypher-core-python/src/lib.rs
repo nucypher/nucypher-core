@@ -1916,7 +1916,10 @@ impl PackedUserOperation {
     pub fn to_eip712_struct(&self, aa_version: &str, chain_id: u64) -> PyResult<PyObject> {
         let core_aa_version = nucypher_core::AAVersion::from_str(aa_version)
             .map_err(|err| PyValueError::new_err(err.to_string()))?;
-        let eip712_struct = self.backend.to_eip712_struct(&core_aa_version, chain_id);
+        let eip712_struct = self
+            .backend
+            .to_eip712_struct(&core_aa_version, chain_id)
+            .map_err(|err| PyValueError::new_err(err.to_string()))?;
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(eip712_struct)))
     }
@@ -1937,6 +1940,11 @@ impl PackedUserOperation {
         let domain = self.backend.get_domain(&core_aa_version, chain_id);
 
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
+    }
+
+    pub fn to_v07_encoding(&self, chain_id: u64) -> PyObject {
+        let encoding = self.backend.to_v07_encoding(chain_id);
+        Python::with_gil(|py| PyBytes::new(py, &encoding).into())
     }
 }
 

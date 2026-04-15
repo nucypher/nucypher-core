@@ -712,6 +712,7 @@ class SignatureRequestType:
 
 @final
 class AAVersion:
+    V07: str = "0.7.0"
     V08: str = "0.8.0"
     MDT: str = "mdt"
 
@@ -897,6 +898,10 @@ class PackedUserOperation:
     
     def to_eip712_struct(self, aa_version: str, chain_id: int) -> Dict[str, Any]:
         """Convert to EIP-712 struct format."""
+        ...
+
+    def to_v07_encoding(self, chain_id: int) -> bytes:
+        """Convert to v0.7.0 encoding format."""
         ...
     
     @property
