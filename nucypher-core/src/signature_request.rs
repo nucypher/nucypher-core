@@ -5,8 +5,10 @@ use alloc::{format, vec};
 use core::fmt;
 use core::str::FromStr;
 
+use ethers::abi::{encode, Token};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use sha3::{digest::Update, Digest, Keccak256};
 use umbral_pre::serde_bytes;
 
 use crate::address::Address;
@@ -498,7 +500,13 @@ impl PackedUserOperation {
         &self,
         aa_version: &AAVersion,
         chain_id: u64,
-    ) -> serde_json::Map<String, JsonValue> {
+    ) -> Result<serde_json::Map<String, JsonValue>, String> {
+        if *aa_version == AAVersion::V07 {
+            return Err(
+                "Not supported for AA v0.7.0 since it does not use EIP-712 signatures".into(),
+            );
+        }
+
         let mut result = serde_json::Map::new();
 
         // Create types
@@ -577,7 +585,51 @@ impl PackedUserOperation {
             JsonValue::Object(self.to_eip712_message(aa_version)),
         );
 
-        result
+        Ok(result)
+    }
+
+    /// Converts to V07 encoded data format
+    pub fn to_v07_encoding(&self, chain_id: u64) -> Vec<u8> {
+        // ABI encode PackedUserOperation values for V07 entryPoint
+        // Hash the dynamic byte fields
+        let init_code_hash = Keccak256::new().chain(self.init_code.as_ref()).finalize();
+        let call_data_hash = Keccak256::new().chain(self.call_data.as_ref()).finalize();
+        let paymaster_and_data_hash = Keccak256::new()
+            .chain(self.paymaster_and_data.as_ref())
+            .finalize();
+
+        let tokens = vec![
+            Token::Address(ethers::types::H160::from_slice(self.sender.as_ref())),
+            Token::Uint(ethers::types::U256::from_big_endian(
+                &self.nonce.to_be_bytes(),
+            )),
+            Token::FixedBytes(init_code_hash.to_vec()),
+            Token::FixedBytes(call_data_hash.to_vec()),
+            Token::FixedBytes(self.account_gas_limits.as_ref().to_vec()),
+            Token::Uint(ethers::types::U256::from(self.pre_verification_gas)),
+            Token::FixedBytes(self.gas_fees.as_ref().to_vec()),
+            Token::FixedBytes(paymaster_and_data_hash.to_vec()),
+        ];
+
+        // final encoding for V07 is keccak256(abi.encode(...))
+        let encoded_packed_user_op = encode(&tokens);
+        let hashed_packed_user_op = Keccak256::new()
+            .chain(encoded_packed_user_op)
+            .finalize()
+            .to_vec();
+        let final_tokens = vec![
+            Token::FixedBytes(hashed_packed_user_op),
+            Token::Address(ethers::types::H160::from_slice(
+                Address::from_str(ENTRYPOINT_V07)
+                    .expect("Invalid entry point address")
+                    .as_ref(),
+            )),
+            Token::Uint(ethers::types::U256::from(chain_id)),
+        ];
+        Keccak256::new()
+            .chain(encode(&final_tokens))
+            .finalize()
+            .to_vec()
     }
 }
 
@@ -1261,6 +1313,35 @@ mod tests {
         let deserialized_v08 = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
         assert_eq!(deserialized_v08.aa_version, AAVersion::V08);
 
+        // Test V07
+        let user_op = UserOperation::new(
+            sender,
+            Uint256::from(1),
+            b"",
+            0,
+            0,
+            0,
+            0,
+            0,
+            None,
+            Some(b""),
+            None,
+            Some(0),
+            Some(0),
+            Some(b""),
+        );
+        let request_v08 = UserOperationSignatureRequest::new(
+            user_op,
+            1,
+            137,
+            AAVersion::V07,
+            Some(&Context::new("test_context")),
+        );
+
+        let bytes = request_v08.to_bytes();
+        let deserialized_v08 = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_v08.aa_version, AAVersion::V07);
+
         // Test MDT
         let sender_mdt = Address::from_str("0xabcdef0123456789abcdef0123456789abcdef01").unwrap();
         let user_op_mdt = UserOperation::new(
@@ -1582,8 +1663,17 @@ mod tests {
             b"paymaster_and_data",
         );
 
+        // v07 which should error because v07 does not use EIP-712 structs for signing
+        let eip712_struct_v07 = packed_user_op.to_eip712_struct(&AAVersion::V07, 137);
+        assert!(eip712_struct_v07.is_err());
+        assert!(eip712_struct_v07
+            .unwrap_err()
+            .contains("Not supported for AA v0.7.0 since it does not use EIP-712 signatures"));
+
         // v08
-        let eip712_struct_v08 = packed_user_op.to_eip712_struct(&AAVersion::V08, 137);
+        let eip712_struct_v08 = packed_user_op
+            .to_eip712_struct(&AAVersion::V08, 137)
+            .unwrap();
 
         assert_eq!(
             eip712_struct_v08.get("primaryType").unwrap(),
@@ -1603,7 +1693,9 @@ mod tests {
         validate_eip712_message(v08_message.as_object().unwrap(), &packed_user_op, true);
 
         // mdt version
-        let eip712_struct_mdt = packed_user_op.to_eip712_struct(&AAVersion::MDT, 137);
+        let eip712_struct_mdt = packed_user_op
+            .to_eip712_struct(&AAVersion::MDT, 137)
+            .unwrap();
         assert_eq!(
             eip712_struct_mdt.get("primaryType").unwrap(),
             &JsonValue::String("PackedUserOperation".into())
@@ -1620,6 +1712,41 @@ mod tests {
         validate_eip712_domain(&mdt_domain, &packed_user_op, false);
         let mdt_message = eip712_struct_mdt.get("message").unwrap();
         validate_eip712_message(mdt_message.as_object().unwrap(), &packed_user_op, false);
+    }
+
+    #[test]
+    fn test_packed_user_operation_to_v07_encoding() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let packed_user_op = PackedUserOperation::new(
+            sender,
+            Uint256::from(42),
+            b"init_code",
+            b"call_data",
+            b"account_gas_limits",
+            50000,
+            b"gas_fees",
+            b"paymaster_and_data",
+        );
+
+        let encoded_data = packed_user_op.to_v07_encoding(137);
+        // The encoded data should be the ABI encoding of the PackedUserOperation struct with the correct fields
+        let decoded = ethers::abi::decode(
+            &[
+                ethers::abi::ParamType::FixedBytes(32), // keccak256(abi.encode(packedUserOp))
+                ethers::abi::ParamType::Address,        // v07 entrypoint contract
+                ethers::abi::ParamType::Uint(256),      // chainId
+            ],
+            &encoded_data,
+        )
+        .unwrap();
+        assert_eq!(
+            decoded[1].clone().into_address().unwrap(),
+            ethers::types::H160::from_slice(Address::from_str(ENTRYPOINT_V07).unwrap().as_ref())
+        );
+        assert_eq!(
+            decoded[2].clone().into_uint().unwrap(),
+            ethers::types::U256::from(137)
+        );
     }
 
     #[test]
