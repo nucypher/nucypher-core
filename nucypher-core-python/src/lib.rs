@@ -1942,9 +1942,9 @@ impl PackedUserOperation {
         Python::with_gil(|py| json_to_pyobject(py, &serde_json::Value::Object(domain)))
     }
 
-    pub fn to_v07_encoding(&self, chain_id: u64) -> PyObject {
-        let encoding = self.backend.to_v07_encoding(chain_id);
-        Python::with_gil(|py| PyBytes::new(py, &encoding).into())
+    pub fn to_v07_hash(&self, chain_id: u64) -> PyObject {
+        let v07_hash = self.backend.to_v07_hash(chain_id);
+        Python::with_gil(|py| PyBytes::new(py, &v07_hash).into())
     }
 }
 

@@ -588,10 +588,9 @@ impl PackedUserOperation {
         Ok(result)
     }
 
-    /// Converts to V07 encoded data format
-    pub fn to_v07_encoding(&self, chain_id: u64) -> Vec<u8> {
+    /// Converts PackedUserOperation fields to ABI encoded data format
+    pub fn to_v07_abi_encoded_fields(&self) -> Vec<u8> {
         // ABI encode PackedUserOperation values for V07 entryPoint
-        // Hash the dynamic byte fields
         let init_code_hash = Keccak256::new().chain(self.init_code.as_ref()).finalize();
         let call_data_hash = Keccak256::new().chain(self.call_data.as_ref()).finalize();
         let paymaster_and_data_hash = Keccak256::new()
@@ -610,14 +609,16 @@ impl PackedUserOperation {
             Token::FixedBytes(self.gas_fees.as_ref().to_vec()),
             Token::FixedBytes(paymaster_and_data_hash.to_vec()),
         ];
+        encode(&tokens)
+    }
 
-        // final encoding for V07 is keccak256(abi.encode(...))
-        let encoded_packed_user_op = encode(&tokens);
+    /// Converts to AA v07 encoded data format
+    pub fn to_v07_hash(&self, chain_id: u64) -> Vec<u8> {
         let hashed_packed_user_op = Keccak256::new()
-            .chain(encoded_packed_user_op)
+            .chain(self.to_v07_abi_encoded_fields())
             .finalize()
             .to_vec();
-        let final_tokens = vec![
+        let tokens = vec![
             Token::FixedBytes(hashed_packed_user_op),
             Token::Address(ethers::types::H160::from_slice(
                 Address::from_str(ENTRYPOINT_V07)
@@ -626,10 +627,7 @@ impl PackedUserOperation {
             )),
             Token::Uint(ethers::types::U256::from(chain_id)),
         ];
-        Keccak256::new()
-            .chain(encode(&final_tokens))
-            .finalize()
-            .to_vec()
+        Keccak256::new().chain(encode(&tokens)).finalize().to_vec()
     }
 }
 
@@ -1715,7 +1713,7 @@ mod tests {
     }
 
     #[test]
-    fn test_packed_user_operation_to_v07_encoding() {
+    fn test_packed_user_operation_to_v07_abi_encoded_fields() {
         let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
         let packed_user_op = PackedUserOperation::new(
             sender,
@@ -1728,25 +1726,92 @@ mod tests {
             b"paymaster_and_data",
         );
 
-        let encoded_data = packed_user_op.to_v07_encoding(137);
+        let encoded_user_op = packed_user_op.to_v07_abi_encoded_fields();
+
         // The encoded data should be the ABI encoding of the PackedUserOperation struct with the correct fields
         let decoded = ethers::abi::decode(
             &[
-                ethers::abi::ParamType::FixedBytes(32), // keccak256(abi.encode(packedUserOp))
-                ethers::abi::ParamType::Address,        // v07 entrypoint contract
-                ethers::abi::ParamType::Uint(256),      // chainId
+                ethers::abi::ParamType::Address,
+                ethers::abi::ParamType::Uint(256),
+                ethers::abi::ParamType::FixedBytes(32),
+                ethers::abi::ParamType::FixedBytes(32),
+                ethers::abi::ParamType::FixedBytes(32),
+                ethers::abi::ParamType::Uint(256),
+                ethers::abi::ParamType::FixedBytes(32),
+                ethers::abi::ParamType::FixedBytes(32),
             ],
-            &encoded_data,
+            &encoded_user_op,
         )
         .unwrap();
         assert_eq!(
-            decoded[1].clone().into_address().unwrap(),
-            ethers::types::H160::from_slice(Address::from_str(ENTRYPOINT_V07).unwrap().as_ref())
+            decoded[0].clone().into_address().unwrap(),
+            ethers::types::H160::from_slice(packed_user_op.sender.as_ref())
         );
         assert_eq!(
-            decoded[2].clone().into_uint().unwrap(),
-            ethers::types::U256::from(137)
+            decoded[1].clone().into_uint().unwrap(),
+            ethers::types::U256::from_big_endian(&packed_user_op.nonce.to_be_bytes(),)
         );
+        assert_eq!(
+            decoded[2].clone().into_fixed_bytes().unwrap(),
+            Keccak256::digest(&packed_user_op.init_code).as_slice()
+        );
+        assert_eq!(
+            decoded[3].clone().into_fixed_bytes().unwrap(),
+            Keccak256::digest(&packed_user_op.call_data).as_slice()
+        );
+        let mut expected_account_gas_limits = packed_user_op.account_gas_limits.to_vec();
+        expected_account_gas_limits.resize(32, 0); // pad to 32 bytes
+        assert_eq!(
+            decoded[4].clone().into_fixed_bytes().unwrap(),
+            expected_account_gas_limits
+        );
+        assert_eq!(
+            decoded[5].clone().into_uint().unwrap(),
+            ethers::types::U256::from(50000)
+        );
+        let mut expected_gas_fees = packed_user_op.gas_fees.to_vec();
+        expected_gas_fees.resize(32, 0); // pad to 32 bytes
+        assert_eq!(
+            decoded[6].clone().into_fixed_bytes().unwrap(),
+            expected_gas_fees
+        );
+        assert_eq!(
+            decoded[7].clone().into_fixed_bytes().unwrap(),
+            Keccak256::digest(&packed_user_op.paymaster_and_data).as_slice()
+        );
+    }
+
+    #[test]
+    fn test_packed_user_operation_to_v07_hash() {
+        let sender = Address::from_str("0x1234567890123456789012345678901234567890").unwrap();
+        let packed_user_op = PackedUserOperation::new(
+            sender,
+            Uint256::from(42),
+            b"init_code",
+            b"call_data",
+            b"account_gas_limits",
+            50000,
+            b"gas_fees",
+            b"paymaster_and_data",
+        );
+
+        let chain_id = 137;
+
+        let encoded_user_op = packed_user_op.to_v07_abi_encoded_fields();
+        let v07_encoding = packed_user_op.to_v07_hash(chain_id);
+
+        let hashed_encoded_user_op = Keccak256::digest(&encoded_user_op);
+
+        // The v07 encoding should be the keccak256 hash of the ABI encoding, entry point address, and chain id
+        let overall_tokens = vec![
+            Token::FixedBytes(hashed_encoded_user_op.as_slice().to_vec()),
+            Token::Address(ethers::types::H160::from_slice(
+                Address::from_str(ENTRYPOINT_V07).unwrap().as_ref(),
+            )),
+            Token::Uint(ethers::types::U256::from(chain_id)),
+        ];
+        let expected_v07_encoding = Keccak256::digest(&encode(&overall_tokens));
+        assert_eq!(expected_v07_encoding.as_slice(), v07_encoding.as_slice());
     }
 
     #[test]
