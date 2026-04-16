@@ -41,7 +41,7 @@ class Address:
     def __hash__(self) -> int:
         ...
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other, /) -> bool:
         ...
 
 
