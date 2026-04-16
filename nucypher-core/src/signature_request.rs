@@ -1328,7 +1328,7 @@ mod tests {
             Some(0),
             Some(b""),
         );
-        let request_v08 = UserOperationSignatureRequest::new(
+        let request_v07 = UserOperationSignatureRequest::new(
             user_op,
             1,
             137,
@@ -1336,9 +1336,9 @@ mod tests {
             Some(&Context::new("test_context")),
         );
 
-        let bytes = request_v08.to_bytes();
-        let deserialized_v08 = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
-        assert_eq!(deserialized_v08.aa_version, AAVersion::V07);
+        let bytes = request_v07.to_bytes();
+        let deserialized_v07 = UserOperationSignatureRequest::from_bytes(&bytes).unwrap();
+        assert_eq!(deserialized_v07.aa_version, AAVersion::V07);
 
         // Test MDT
         let sender_mdt = Address::from_str("0xabcdef0123456789abcdef0123456789abcdef01").unwrap();
