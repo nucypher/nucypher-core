@@ -49,5 +49,6 @@ class SignatureRequestType:
 # Constants for AA versions
 class AAVersion:
     """Constants for AA (Account Abstraction) versions."""
+    V07 = "0.7.0"
     V08 = "0.8.0"
     MDT = "mdt"

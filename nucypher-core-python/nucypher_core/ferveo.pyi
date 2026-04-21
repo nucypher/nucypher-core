@@ -41,7 +41,7 @@ class FerveoPublicKey:
     def serialized_size() -> int:
         ...
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object, /) -> bool:
         ...
 
 
@@ -243,7 +243,7 @@ class FerveoVariant:
     Simple: FerveoVariant
     Precomputed: FerveoVariant
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object, /) -> bool:
         ...
 
     def __hash__(self) -> int:

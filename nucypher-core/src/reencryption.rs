@@ -125,6 +125,7 @@ impl ReencryptionResponse {
     }
 
     /// Verifies the reencryption response and returns the contained kfrags on success.
+    #[allow(clippy::result_large_err)]
     pub fn verify(
         self,
         capsules: &[Capsule],
